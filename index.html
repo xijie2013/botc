@@ -492,7 +492,6 @@
         <button class="btn lpurple" onclick="resetRoles()">重置角色</button>
       </div>
       <div class="box bottom-bar" style="gap:6px;">
-        <button class="btn gold" onclick="stNewGame()" title="建一局新牌局并同步给玩家">🌅 开新局</button>
         <button class="btn purple" onclick="stPublish()" title="把当天提名/投票/死亡推送给所有玩家">📣 天亮公布</button>
       </div>
     </div>
@@ -1385,42 +1384,18 @@ function renderGrim(){
   ["list","roles","night","day","log"].forEach(t=>{ const el=document.getElementById("gt-"+t); if(el) el.classList.toggle("on",gtab===t); });
   const c=document.getElementById("gcontent"); let h="";
   if(gtab==="list"){
-    h+='<div class="listmode">'
-      +'<span class="regbtn'+(listMode==="all"?" on":"")+'" onclick="setListMode(\'all\')">全部22</span>'
-      +'<span class="regbtn'+(listMode==="game"?" on":"")+'" onclick="setListMode(\'game\')">本局速览</span>'
-      +'<span class="regbtn'+(listMode==="spy"?" on":"")+'" onclick="setListMode(\'spy\')">间谍视角</span></div>';
-    if(listMode==="spy"){
-      h+='<div class="rrow" style="opacity:.6;border:none">间谍视角：看到全部真实身份与状态（真魔典）</div>';
-      for(let i=0;i<N;i++){ const m=meta[i]||{}; const r=m.role?RMAP[m.role]:null; const t=seatToken(i); const nm=t?esc(t.name):'空';
-        const st=[]; if(isDeadSeat(i))st.push('出局'); if(m.poison)st.push('中毒'); if(m.drunk)st.push('醉酒');
-        h+='<div class="rrow">'+(i+1)+' · '+nm+' → '+(r?'<b style="color:'+TEAMC[r.team]+'">'+r.name+'</b>':'<span style="opacity:.5">未分配</span>')
-          +(st.length?' <span style="color:#b0402e">['+st.join('/')+']</span>':'')+'</div>'; }
-      c.innerHTML=h; return;
-    }
-    if(listMode==="game"){
-      // 本局会出现的角色：在场真镇民 + 恶魔伪装 + 全部外来者/爪牙/恶魔
-      const gameSet=gameOverviewSet();
-      h+='<div class="rrow" style="opacity:.6;border:none">仅列出本局可能出现的角色（在场镇民＋恶魔伪装＋全部外来者/爪牙/恶魔），供新手参考</div>';
-      ORDER.forEach(team=>{
-        const rs=ROLES.filter(r=>r.team===team && gameSet.has(r.id)); if(!rs.length) return;
-        h+='<div class="gsec" style="color:'+TEAMC[team]+'">'+TEAMLABEL[team]+'</div>';
-        rs.forEach(r=>{ h+='<div class="rrow"><b style="color:'+TEAMC[team]+'">'+r.name+'</b><br>'+r.ab+'</div>'; });
-      });
-      c.innerHTML=h; return;
-    }
-    h+='<div class="rrow" style="opacity:.6;border:none">拖动分配身份；单击锁定/解锁 · 可自定义各阵营数量（合计＝人数）</div>';
-    {
-      const cd=(customDist||DIST[N]||[0,0,0,0]).slice();
-      const total=cd[0]+cd[1]+cd[2]+cd[3];
-      const stp=(idx,lbl,team)=>'<span style="color:'+TEAMC[team]+';white-space:nowrap">'+lbl
-        +' <span class="dstep" onclick="setDistCount('+idx+',-1)">−</span>'+cd[idx]+'<span class="dstep" onclick="setDistCount('+idx+',1)">＋</span></span>';
-      h+='<div class="rrow" style="border:none;font-weight:700;color:#43286b;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center">牌组 '
-        +stp(0,'镇民','tf')+stp(1,'外来者','out')+stp(2,'爪牙','min')+stp(3,'恶魔','dem')
-        +'<span style="color:'+(total===N?'#2e7d32':'#b0402e')+'">共 '+total+'/'+N+'</span>'
-        +(customDist?'<span class="regbtn" onclick="resetDist()">恢复默认</span>':'')+'</div>';
-    }
-    ORDER.forEach(team=>{
-      h+='<div class="gsec" style="color:'+TEAMC[team]+'">'+TEAMLABEL[team]+'</div><div class="rlist">';
+    const cd=(customDist||DIST[N]||[0,0,0,0]).slice();
+    const total=cd[0]+cd[1]+cd[2]+cd[3];
+    let assigned=0; for(let i=0;i<N;i++){ const m=meta[i]; if(m&&m.role) assigned++; }
+    const ready = assigned===N;
+    // 顶部：开始新的一局（发满牌才可点，点击后同步本局角色给玩家）
+    h+='<button class="btn '+(ready?'gold':'')+'" style="width:100%;margin-bottom:8px;'+(ready?'':'opacity:.4;cursor:not-allowed;')+'" '
+      +(ready?'onclick="stNewGame()"':'disabled')+'>🌅 开始新的一局'+(ready?'':'（发满牌后可点）')+'</button>';
+    ORDER.forEach((team,idx)=>{
+      h+='<div class="gsec" style="color:'+TEAMC[team]+';display:flex;align-items:center;justify-content:space-between;margin-top:6px">'
+        +'<span>'+TEAMLABEL[team]+'</span>'
+        +'<span style="font-weight:700;white-space:nowrap"><span class="dstep" onclick="setDistCount('+idx+',-1)">−</span>'+cd[idx]+'<span class="dstep" onclick="setDistCount('+idx+',1)">＋</span></span></div>';
+      h+='<div class="rlist">';
       ROLES.filter(r=>r.team===team).forEach(r=>{
         const used=meta.some(m=>m.role===r.id), locked=lockedRoles.has(r.id);
         h+='<div class="rchip'+(used?' used':'')+(locked?' locked':'')+'" draggable="true" data-role="'+r.id+'" title="单击锁定/解锁 · '+esc(r.ab)+
@@ -1428,6 +1403,8 @@ function renderGrim(){
       });
       h+='</div>';
     });
+    h+='<div class="rrow" style="border:none;font-size:.9em;color:'+(total===N?'#2e7d32':'#b0402e')+'">阵营合计 '+total+'/'+N
+      +(customDist?' <span class="regbtn" onclick="resetDist()">恢复默认</span>':'')+'</div>';
     c.innerHTML=h;
     c.querySelectorAll('.rchip').forEach(el=>{
       el.addEventListener('dragstart',e=>e.dataTransfer.setData("text","role:"+el.dataset.role));
@@ -1921,7 +1898,7 @@ load(); render();
   function markTabHTML(){ let h='<div class="nb-sec">状态标记 · 点标记再点座位</div><div>';
     h+=STAT_ORDER.map(k=>{ const b=BADGE[k], on=sel&&sel.type==='stat'&&sel.val===k; const ic=MARK[k]?'<img src="'+MARK[k][1]+'" style="width:17px;height:17px;vertical-align:middle;margin-right:2px">':b.g; return '<span class="nbtok '+(on?'on':'')+'" onclick="_nbPick(\''+'stat'+'\',\''+k+'\')">'+ic+b.t+'</span>'; }).join('')+'</div>';
     h+='<div class="nb-sec">在场角色 · 点角色再点座位记录猜测</div><div>';
-    const rs=pub.roleset||[], used={}; (S.seats||[]).forEach(s=>{ if(s&&s.role) used[s.role]=true; });
+    const locked=new Set(pub.locked||[]); const rs=ROLES.filter(r=>!locked.has(r.id)).map(r=>r.id), used={}; (S.seats||[]).forEach(s=>{ if(s&&s.role) used[s.role]=true; });
     h+=rs.map(id=>{ const r=RMAP[id]; if(!r) return ''; const on=sel&&sel.type==='role'&&sel.val===id;
       return '<span class="nbtok '+(on?'on':'')+' '+(used[id]?'used':'')+'" style="color:'+(on?'':TEAMC[r.team])+'" onclick="_nbPick(\''+'role'+'\',\''+id+'\')">'+r.name+'</span>'; }).join('')+'</div>';
     h+='<div class="nb-sec">我的座位备注</div>';
@@ -1930,12 +1907,13 @@ load(); render();
     h+='<div style="font-size:11px;color:#6a4e8f;margin-top:8px;line-height:1.5">提示：直接点座位=写备注；先点上面标记/角色，再点座位=贴上或取消。</div>';
     return h;
   }
-  function refHTML(){ const rs=pub.roleset||[], d=pub.dist||[0,0,0,0];
+  function refHTML(){ const locked=new Set(pub.locked||[]); const d=pub.dist||DIST[pub.count]||[0,0,0,0];
     let h='<div class="nb-role"><b>本局 · 第'+(pub.day||1)+'天</b><br>'+pub.count+'人 · 镇民'+d[0]+' 外来者'+d[1]+' 爪牙'+d[2]+' 恶魔'+d[3]+'</div>';
-    h+='<div class="nb-sec">本局可能出现的角色（不代表谁是谁）</div>';
-    ORDER.forEach(t=>{ const list=rs.map(id=>RMAP[id]).filter(r=>r&&r.team===t); if(!list.length) return;
+    h+='<div class="nb-sec">剧本角色（灰色为本局未启用）</div>';
+    ORDER.forEach(t=>{ const list=ROLES.filter(r=>r.team===t); if(!list.length) return;
       h+='<div style="font-weight:800;color:'+TEAMC[t]+';margin:8px 0 3px">'+TEAMLABEL[t]+'</div>';
-      list.forEach(r=>h+='<div class="nb-role"><b style="color:'+TEAMC[t]+'">'+r.name+'</b><div style="color:#6a4e8f;margin-top:2px">'+E(r.ab||'')+'</div></div>'); });
+      list.forEach(r=>{ const off=locked.has(r.id);
+        h+='<div class="nb-role" style="'+(off?'opacity:.4;':'')+'"><b style="color:'+TEAMC[t]+'">'+r.name+(off?' · 未启用':'')+'</b><div style="color:#6a4e8f;margin-top:2px">'+E(r.ab||'')+'</div></div>'; }); });
     return h;
   }
   window._nbPick=function(type,val){ if(sel&&sel.type===type&&sel.val===val) sel=null; else sel={type,val}; renderNotes(); drawSeats(); };
@@ -1960,9 +1938,11 @@ load(); render();
     return { name:(window.__botcGameName||'本局'), count:N, day:night, seats:seats, roleset:roleset, dist:(customDist||DIST[N]||[0,0,0,0]), noms:noms };
   }
   window.stNewGame=async function(){ if(role!=='st'){ toast('请先以说书人登录（点📖）'); return; }
-    let nm='本局'; try{ nm=await uiPrompt('给这局起个名字（玩家会看到）：','本局',{title:'开新局'}); if(nm===null) return; }catch(e){}
-    window.__botcGameName=nm||'本局'; const gid='t'+Date.now(), p=buildPublic();
-    try{ await db.ref('storytellerUid').set(me.uid); await db.ref('games/'+gid+'/public').set(p); await db.ref('currentGame').set(gid); toast('✅ 已开新局并同步'); }
+    let nm='本局'; try{ nm=await uiPrompt('给这局起个名字（玩家会看到）：','本局',{title:'开始新的一局'}); if(nm===null) return; }catch(e){}
+    window.__botcGameName=nm||'本局'; const gid='t'+Date.now();
+    const seats=[]; for(let i=0;i<N;i++){ const t=seatToken(i); seats.push({name:(t&&t.name)?t.name:'', dead:false, cause:''}); }
+    const g={ name:window.__botcGameName, count:N, day:night, seats:seats, locked:[...lockedRoles], dist:(customDist||DIST[N]||[0,0,0,0]), noms:[] };
+    try{ await db.ref('storytellerUid').set(me.uid); await db.ref('games/'+gid+'/public').set(g); await db.ref('currentGame').set(gid); toast('✅ 已开始新的一局'); }
     catch(e){ toast('开局失败：'+(e.code||e.message||'')); } };
   window.stSyncSeats=async function(){ if(role!=='st'){ toast('请先登录说书人'); return; } if(!curGid){ toast('先点开新局'); return; }
     const p=buildPublic(); try{ await db.ref('games/'+curGid+'/public').update({seats:p.seats,count:p.count,roleset:p.roleset,dist:p.dist,day:p.day}); toast('↻ 座位/名单已同步'); }
@@ -1976,9 +1956,7 @@ load(); render();
   function autoSyncPublic(){ if(role!=='st'||!curGid||!me) return; clearTimeout(_syncT); _syncT=setTimeout(()=>{
     try{ const base='games/'+curGid+'/public/'; const updates={};
       for(let i=0;i<N;i++){ const t=seatToken(i); updates[base+'seats/'+i+'/name']=(t&&t.name)?t.name:''; }
-      updates[base+'count']=N;
-      const gs=gameOverviewSet(); const roleset=[]; ORDER.forEach(tm=>ROLES.filter(r=>r.team===tm&&gs.has(r.id)).forEach(r=>roleset.push(r.id)));
-      updates[base+'roleset']=roleset; updates[base+'dist']=(customDist||DIST[N]||[0,0,0,0]);
+      updates[base+'count']=N;   // 仅实时同步座位名单/人数；本局角色只在"开始新的一局"时同步
       db.ref().update(updates).catch(()=>{});
     }catch(e){}
   }, 500); }
