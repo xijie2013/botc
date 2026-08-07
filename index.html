@@ -1756,6 +1756,8 @@ load(); render();
 <script>
 (function(){
   const auth=firebase.auth(), db=firebase.database();
+  /* 按标签页独立登录：同一浏览器可同时开 魔典/大厅/玩家笔记 三个标签，各自身份互不影响 */
+  const AUTH_READY = auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(()=>{});
   let me=null, role='anon', face='hall', curGid=null, pub=null, S=null, sel=null, curSeat=-1, pnTab='seats';
   let notesRef=null;
 
@@ -1805,11 +1807,11 @@ load(); render();
   window._logout=function(){ auth.signOut(); };
 
   /* ---------- 认证状态 ---------- */
-  auth.onAuthStateChanged(async user=>{ me=user;
+  AUTH_READY.then(()=>auth.onAuthStateChanged(async user=>{ me=user;
     if(!user){ role='anon'; document.getElementById('stBadge').classList.remove('on'); _showFace('hall'); return; }
     if(user.email===ST_EMAIL){ role='st'; enterSt(); }
     else { role='player'; enterPlayer(); }
-  });
+  }));
 
   function enterSt(){ show('hallOverlay',false); show('playerOverlay',false); document.getElementById('stBadge').classList.add('on');
     db.ref('storytellerUid').transaction(cur=>cur||me.uid).catch(()=>{}); // 认领说书人身份（幂等）
