@@ -1747,6 +1747,9 @@ load(); render();
     <div class="err" id="pErr"></div>
     <input id="pId" type="text" placeholder="你的 ID（自己起，如 alice）" maxlength="20" autocomplete="off">
     <input id="pPw" type="password" placeholder="密码（至少 6 位）" onkeydown="if(event.key==='Enter')_pLogin()">
+    <label style="display:flex;align-items:center;gap:7px;justify-content:center;font-size:12.5px;color:#b3a6c8;margin:2px 0 10px;cursor:pointer">
+      <input id="pRemember" type="checkbox" style="width:auto;margin:0"> 在本机记住我（下次免敲密码）
+    </label>
     <button class="go" onclick="_pLogin()">进入笔记</button>
     <button class="cancel" onclick="_closeGate('pGate')">取消</button>
   </div>
@@ -1780,7 +1783,10 @@ load(); render();
 
   /* ---------- 登录门 ---------- */
   window.onBookClick=function(){ if(role==='st'){ setView(); return; } show('pGate',false); document.getElementById('stErr').textContent=''; show('stGate',true); setTimeout(()=>document.getElementById('stPw').focus(),60); };
-  window.openPlayerGate=function(){ if(role==='player'){ _showFace('player'); return; } show('stGate',false); document.getElementById('pErr').textContent=''; show('pGate',true); setTimeout(()=>document.getElementById('pId').focus(),60); };
+  window.openPlayerGate=function(){ if(role==='player'){ _showFace('player'); return; } show('stGate',false); document.getElementById('pErr').textContent='';
+    try{ const sid=localStorage.getItem('botc_pid')||''; const spw=localStorage.getItem('botc_ppw')||'';
+      if(sid) document.getElementById('pId').value=sid; if(spw){ document.getElementById('pPw').value=spw; document.getElementById('pRemember').checked=true; } }catch(e){}
+    show('pGate',true); setTimeout(()=>document.getElementById((document.getElementById('pId').value?'pPw':'pId')).focus(),60); };
 
   function authErr(e){ const c=(e&&e.code)||''; if(c.includes('wrong-password')||c.includes('invalid-credential'))return'密码不对'; if(c.includes('email-already-in-use'))return'该 ID 已被占用'; if(c.includes('weak-password'))return'密码太弱（至少6位）'; if(c.includes('too-many'))return'尝试太频繁，稍后再试'; if(c.includes('network'))return'网络问题，稍后再试'; return'出错：'+c; }
 
@@ -1802,9 +1808,13 @@ load(); render();
         try{ await auth.createUserWithEmailAndPassword(email,pw); await auth.currentUser.updateProfile({displayName:id}); toast('已创建你的笔记本'); done(); }
         catch(e2){ err.textContent=authErr(e2); }
       } else err.textContent=authErr(e); }
-    function done(){ show('pGate',false); document.getElementById('pPw').value=''; } };
+    function done(){ show('pGate',false);
+      try{ localStorage.setItem('botc_pid',id);
+        if(document.getElementById('pRemember').checked) localStorage.setItem('botc_ppw',pw); else localStorage.removeItem('botc_ppw');
+      }catch(e){}
+      document.getElementById('pPw').value=''; } };
 
-  window._logout=function(){ auth.signOut(); };
+  window._logout=function(){ try{ localStorage.removeItem('botc_ppw'); }catch(e){} auth.signOut(); };
 
   /* ---------- 认证状态 ---------- */
   AUTH_READY.then(()=>auth.onAuthStateChanged(async user=>{ me=user;
