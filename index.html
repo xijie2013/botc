@@ -324,6 +324,9 @@
   .cf-btns .cf-no:hover{border-color:#6a5688; color:#e6dcf5;}
 
   /* =================== 多人版：大厅 / 玩家 / 登录门 =================== */
+  /* 说书人工作台默认隐藏，确认身份为说书人后才显示，避免首屏闪现魔典 */
+  .stage{visibility:hidden;}
+  body.st-mode .stage{visibility:visible;}
   #hallOverlay,#playerOverlay{position:fixed; inset:0; z-index:70; display:none;
     background:radial-gradient(120% 90% at 50% 0%, #2a1c3c 0%, #1a1226 60%, #120b1c 100%);
     color:#efe6d2; font-family:inherit;}
@@ -1697,7 +1700,7 @@ load(); render();
 <div id="stBadge">🎲 说书人已登录 <button onclick="_logout()">退出</button></div>
 
 <!-- 大厅（默认，公开可见） -->
-<div id="hallOverlay">
+<div id="hallOverlay" class="on">
   <div class="ov-top">
     <div class="ov-brand">🏰 大厅 · 暗流涌动 <small id="hallSub"></small></div>
     <div class="rt">
@@ -1818,12 +1821,12 @@ load(); render();
 
   /* ---------- 认证状态 ---------- */
   AUTH_READY.then(()=>auth.onAuthStateChanged(async user=>{ me=user;
-    if(!user){ role='anon'; document.getElementById('stBadge').classList.remove('on'); _showFace('hall'); return; }
+    if(!user){ role='anon'; document.body.classList.remove('st-mode'); document.getElementById('stBadge').classList.remove('on'); _showFace('hall'); return; }
     if(user.email===ST_EMAIL){ role='st'; enterSt(); }
     else { role='player'; enterPlayer(); }
   }));
 
-  function enterSt(){ show('hallOverlay',false); show('playerOverlay',false); document.getElementById('stBadge').classList.add('on');
+  function enterSt(){ document.body.classList.add('st-mode'); show('hallOverlay',false); show('playerOverlay',false); document.getElementById('stBadge').classList.add('on');
     db.ref('storytellerUid').transaction(cur=>cur||me.uid).catch(()=>{}); // 认领说书人身份（幂等）
   }
 
@@ -1885,7 +1888,7 @@ load(); render();
   }
 
   /* ---------- 玩家笔记 ---------- */
-  function enterPlayer(){ show('hallOverlay',false); document.getElementById('stBadge').classList.remove('on');
+  function enterPlayer(){ document.body.classList.remove('st-mode'); show('hallOverlay',false); document.getElementById('stBadge').classList.remove('on');
     document.getElementById('pnName').textContent = me&&me.displayName?('· '+me.displayName):'';
     if(notesRef){ notesRef.off(); notesRef=null; }
     face='player'; show('playerOverlay',true);
