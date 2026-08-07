@@ -493,8 +493,7 @@
       </div>
       <div class="box bottom-bar" style="gap:6px;">
         <button class="btn gold" onclick="stNewGame()" title="建一局新牌局并同步给玩家">🌅 开新局</button>
-        <button class="btn purple" onclick="stPublish()" title="把当天公开信息推送给所有玩家">📣 天亮公布</button>
-        <button class="btn ghost" onclick="stSyncSeats()" title="把当前座位/名单同步到大厅">↻ 同步座位</button>
+        <button class="btn purple" onclick="stPublish()" title="把当天提名/投票/死亡推送给所有玩家">📣 天亮公布</button>
       </div>
     </div>
 
@@ -1971,6 +1970,19 @@ load(); render();
   window.stPublish=async function(){ if(role!=='st'){ toast('请先登录说书人'); return; } if(!curGid){ toast('先点开新局'); return; }
     const p=buildPublic(); try{ await db.ref('games/'+curGid+'/public').update({seats:p.seats,noms:p.noms,day:p.day,count:p.count}); toast('📣 已公布第 '+p.day+' 天'); }
     catch(e){ toast('公布失败：'+(e.code||'')); } };
+
+  /* ---------- 名单实时自动同步（说书人改动→自动推送公开名单，不含死亡/提名） ---------- */
+  let _syncT=null;
+  function autoSyncPublic(){ if(role!=='st'||!curGid||!me) return; clearTimeout(_syncT); _syncT=setTimeout(()=>{
+    try{ const base='games/'+curGid+'/public/'; const updates={};
+      for(let i=0;i<N;i++){ const t=seatToken(i); updates[base+'seats/'+i+'/name']=(t&&t.name)?t.name:''; }
+      updates[base+'count']=N;
+      const gs=gameOverviewSet(); const roleset=[]; ORDER.forEach(tm=>ROLES.filter(r=>r.team===tm&&gs.has(r.id)).forEach(r=>roleset.push(r.id)));
+      updates[base+'roleset']=roleset; updates[base+'dist']=(customDist||DIST[N]||[0,0,0,0]);
+      db.ref().update(updates).catch(()=>{});
+    }catch(e){}
+  }, 500); }
+  if(typeof window.save==='function'){ const _origSave=window.save; window.save=function(){ const r=_origSave.apply(this,arguments); try{ autoSyncPublic(); }catch(e){} return r; }; }
 
   window.addEventListener('resize',()=>{ if(mode!=='st') drawSeats(); });
 })();
