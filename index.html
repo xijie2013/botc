@@ -1798,6 +1798,10 @@ load(); render();
   const BADGE={ dead:{g:'💀',t:'出局'}, poison:{g:'🧪',t:'中毒'}, drunk:{g:'🍺',t:'醉酒'}, shield:{g:'🛡️',t:'守护'}, crossbow:{g:'🏹',t:'已开枪'}, master:{g:'👑',t:'主人'}, herring:{g:'🐟',t:'红鲱鱼'} };
   const STAT_ORDER=['poison','drunk','shield','crossbow','herring','master'];
   const CAUSE={ exec:{t:'处决',g:'⚖️',img:'assets/s-execution.png'}, claw:{t:'恶魔爪击',g:'🩸',img:'assets/g3-demonkill.png'}, slay:{t:'猎人击杀',g:'🎯',img:'assets/mk-slayer.png'} };
+  /* 与魔典一致的座位状态图标：[固定角度, 图片, 缩放, 光晕色] */
+  const MARK={ poison:[60,'assets/mk-poison.png',1,'#3fd44f'], drunk:[90,'assets/s-drunk.png',1,'#ffe14d'],
+    shield:[120,'assets/mk-shield.png',1,'#d8dae2'], crossbow:[150,'assets/mk-crossbow.png',1.2,'#4aa8ff'],
+    dead:[30,'assets/mk-dead.png',1,'#000'], master:[0,'assets/mk-master.png',1.1,'#f5c542'], herring:[180,'assets/mk-herring.png',1.2,'#ff4a3a'] };
 
   function toast(m){ const t=document.getElementById('fbToast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('on'),2600); }
   function E(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -1812,7 +1816,7 @@ load(); render();
     document.body.classList.toggle('st-mode', m==='st');
     window.BOTC_VIEWER = (m!=='st');
     if(m==='st'){ try{ if(typeof render==='function') render(); }catch(e){} }
-    else renderView();
+    else { const vt=document.getElementById('viewToggle'); if(vt) vt.innerHTML='<img src="assets/book-closed.png" alt="魔典">'; renderView(); }
   }
   window._gotoHall=function(){ setMode('hall'); };
 
@@ -1881,9 +1885,12 @@ load(); render();
       s.innerHTML=h;
       if(dead&&ps.cause&&CAUSE[ps.cause]) s.style.background="url('"+CAUSE[ps.cause].img+"') center / 70% no-repeat, radial-gradient(circle at 50% 35%, rgba(48,34,58,.9), rgba(22,15,30,.95))";
       const marks=(mine&&mine.status)?mine.status.slice():[];
-      if(marks.length){ const r=seatD/2, bd=Math.max(14,seatD*0.3), dist=r*1.28, RA=[35,70,300,325,205,235,105];
-        marks.forEach((k,j)=>{ const b=BADGE[k]; if(!b)return; const a=RA[j%RA.length]*Math.PI/180, bx=r+dist*Math.sin(a)-bd/2, by=r-dist*Math.cos(a)-bd/2;
-          const el=document.createElement('div'); el.className='vmark'; el.style.cssText='width:'+bd+'px;height:'+bd+'px;left:'+bx+'px;top:'+by+'px'; el.innerHTML='<span style="font-size:'+(bd*0.62)+'px">'+b.g+'</span>'; s.appendChild(el); }); }
+      if(dead && marks.indexOf('dead')<0) marks.push('dead');   // 出局也用魔典的骷髅图标
+      const r=seatD/2, bD=Math.max(18, seatD*0.24)*1.1, dist=r*1.3; let bhtml='';
+      ['dead','poison','drunk','shield','crossbow','master','herring'].forEach(k=>{ if(marks.indexOf(k)<0) return; const m2=MARK[k]; if(!m2) return;
+        const bd=bD*(m2[2]||1), a=m2[0]*Math.PI/180, bx=r+dist*Math.sin(a), by=r-dist*Math.cos(a);
+        bhtml+='<div class="shieldbadge" title="'+k+'" style="width:'+bd+'px;height:'+bd+'px;left:'+(bx-bd/2)+'px;top:'+(by-bd/2)+'px;filter:drop-shadow(0 0 2px '+m2[3]+') drop-shadow(0 0 4px '+m2[3]+');"><img src="'+m2[1]+'"></div>'; });
+      if(bhtml) s.insertAdjacentHTML('beforeend', bhtml);
       if(mode==='notes'){ s.style.cursor='pointer'; s.addEventListener('click',()=>seatTap(i)); }
       zone.appendChild(s);
     }
@@ -1913,7 +1920,7 @@ load(); render();
     if(nbTab==='mark') c.innerHTML=markTabHTML(); else if(nbTab==='nom') c.innerHTML=nomLogHTML(); else c.innerHTML=refHTML();
   }
   function markTabHTML(){ let h='<div class="nb-sec">状态标记 · 点标记再点座位</div><div>';
-    h+=STAT_ORDER.map(k=>{ const b=BADGE[k], on=sel&&sel.type==='stat'&&sel.val===k; return '<span class="nbtok '+(on?'on':'')+'" onclick="_nbPick(\''+'stat'+'\',\''+k+'\')">'+b.g+' '+b.t+'</span>'; }).join('')+'</div>';
+    h+=STAT_ORDER.map(k=>{ const b=BADGE[k], on=sel&&sel.type==='stat'&&sel.val===k; const ic=MARK[k]?'<img src="'+MARK[k][1]+'" style="width:17px;height:17px;vertical-align:middle;margin-right:2px">':b.g; return '<span class="nbtok '+(on?'on':'')+'" onclick="_nbPick(\''+'stat'+'\',\''+k+'\')">'+ic+b.t+'</span>'; }).join('')+'</div>';
     h+='<div class="nb-sec">在场角色 · 点角色再点座位记录猜测</div><div>';
     const rs=pub.roleset||[], used={}; (S.seats||[]).forEach(s=>{ if(s&&s.role) used[s.role]=true; });
     h+=rs.map(id=>{ const r=RMAP[id]; if(!r) return ''; const on=sel&&sel.type==='role'&&sel.val===id;
