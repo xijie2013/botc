@@ -599,7 +599,7 @@
       <button class="fsbtn" id="fsBtn" onclick="toggleFull()" title="网页全屏">⛶</button>
       <button class="fsbtn" id="refreshBtn" onclick="window._softRefresh?window._softRefresh():location.reload()" title="刷新（重新同步，不退出全屏）"><span class="ric">⟳</span></button>
       <button class="fsbtn" id="setBtn" onclick="openSettings()" title="设置">⚙</button>
-      <div id="stBadge">🎲 说书人<span id="stName"></span>已登录 <button onclick="_logout()">退出</button></div>
+      <div id="stBadge">说书人<span id="stName"></span>已登录 <button onclick="_logout()">退出</button></div>
       <div id="playerBadge">🖋 玩家<span id="pbName"></span>已登录 <button onclick="_logout()">退出</button></div>
     </div>
     <div class="banner-title" id="bannerTitle">暗流涌动</div>
@@ -871,6 +871,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v1.6.9', d:'2026-08-08', items:['设置里只显示最近一次更新','修复说书人角标不显示 ID','去掉说书人角标前的骰子图标']},
   {v:'v1.6.8', d:'2026-08-08', items:['点刷新不再弹提示条，改为刷新图标转一圈']},
   {v:'v1.6.7', d:'2026-08-08', items:['说书人改为用 ID+密码登录，角标显示“说书人{ID}已登录”','修复：底栏“第X夜/共X人”按钮过大导致换行（恢复尺寸上限）']},
   {v:'v1.6.6', d:'2026-08-08', items:['大厅只显示客人名单（去掉公布记录）','说书人/玩家登录信息统一样式：“…已登录”+退出','玩家登录角标去掉大厅按钮（改用点墨水瓶回大厅）']},
@@ -890,8 +891,8 @@ function applyFontScale(n){ document.body.classList.remove('fs-1','fs-2','fs-3')
 function _fsSync(){ const n=_fsCur(); const seg=document.getElementById('fsSeg'); if(seg){ seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', parseInt(b.dataset.fs,10)===n)); } }
 window.setFontScale=function(n){ try{ localStorage.setItem('botc_fs',n); }catch(e){} applyFontScale(n); _fsSync(); };
 window.openSettings=function(){ document.getElementById('setVer').textContent=APP_VERSION;
-  const log=document.getElementById('setLog');
-  log.innerHTML=CHANGELOG.map(c=>'<div class="cl-item"><span class="cl-v">'+c.v+'</span><span class="cl-d">'+c.d+'</span><ul>'+c.items.map(i=>'<li>'+i+'</li>').join('')+'</ul></div>').join('');
+  const log=document.getElementById('setLog'); const c=CHANGELOG[0];
+  log.innerHTML='<div class="cl-item"><span class="cl-v">'+c.v+'</span><span class="cl-d">'+c.d+'</span><ul>'+c.items.map(i=>'<li>'+i+'</li>').join('')+'</ul></div>';
   _fsSync(); document.getElementById('setModal').classList.add('on'); };
 window.closeSettings=function(){ document.getElementById('setModal').classList.remove('on'); };
 try{ applyFontScale(_fsCur()); }catch(e){}
@@ -2160,10 +2161,10 @@ load(); render();
   window._stLogin=async function(){ const id=document.getElementById('stId').value.trim().toLowerCase(), pw=document.getElementById('stPw').value, err=document.getElementById('stErr');
     if(!id||!pw){ err.textContent='请输入 ID 和密码'; return; } if(pw.length<6){ err.textContent='密码至少 6 位'; return; }
     if(!/^[\p{L}\p{N}_]+$/u.test(id)){ err.textContent='ID 只能用中文/字母/数字/下划线（不能有空格）'; return; }
-    err.textContent='登录中…';
+    err.textContent='登录中…'; try{ localStorage.setItem('botc_stid',id); }catch(e){}
     await _setPersist(!!document.getElementById('stRemember').checked);
     const email=idToLocal(id)+ST_DOM;
-    const done=()=>{ show('stGate',false); try{ localStorage.setItem('botc_stid',id); }catch(e){} document.getElementById('stPw').value=''; };
+    const done=()=>{ show('stGate',false); document.getElementById('stPw').value=''; };
     try{ await auth.signInWithEmailAndPassword(email,pw); done(); }
     catch(e){ if((e.code||'').match(/user-not-found|invalid-credential/)){
         try{ await auth.createUserWithEmailAndPassword(email,pw); await auth.currentUser.updateProfile({displayName:id}); toast('已创建说书人账号'); done(); }
@@ -2177,9 +2178,9 @@ load(); render();
   window._pLogin=async function(){ const id=document.getElementById('pId').value.trim().toLowerCase(), pw=document.getElementById('pPw').value, err=document.getElementById('pErr');
     if(!id||!pw){ err.textContent='请输入 ID 和密码'; return; } if(pw.length<6){ err.textContent='密码至少 6 位'; return; }
     if(!/^[\p{L}\p{N}_]+$/u.test(id)){ err.textContent='ID 只能用中文/字母/数字/下划线（不能有空格）'; return; }
-    const email=idToLocal(id)+PLAYER_DOM; err.textContent='登录中…';
+    const email=idToLocal(id)+PLAYER_DOM; err.textContent='登录中…'; try{ localStorage.setItem('botc_pid',id); }catch(e){}
     await _setPersist(!!document.getElementById('pRemember').checked);
-    const done=()=>{ show('pGate',false); try{ localStorage.setItem('botc_pid',id); if(document.getElementById('pRemember').checked) localStorage.setItem('botc_ppw',pw); else localStorage.removeItem('botc_ppw'); }catch(e){} document.getElementById('pPw').value=''; };
+    const done=()=>{ show('pGate',false); try{ if(document.getElementById('pRemember').checked) localStorage.setItem('botc_ppw',pw); else localStorage.removeItem('botc_ppw'); }catch(e){} document.getElementById('pPw').value=''; };
     try{ await auth.signInWithEmailAndPassword(email,pw); done(); }
     catch(e){ if((e.code||'').match(/user-not-found|invalid-credential/)){
         try{ await auth.createUserWithEmailAndPassword(email,pw); await auth.currentUser.updateProfile({displayName:id}); toast('已创建你的笔记本'); done(); }
@@ -2194,8 +2195,9 @@ load(); render();
     if((user.email||'').endsWith(ST_DOM)){ role='st'; enterSt(); }
     else { role='player'; enterPlayer(); }
   }));
-  function enterSt(){ document.getElementById('stBadge').classList.add('on'); document.body.classList.remove('pl'); document.getElementById('stName').textContent=(me&&me.displayName)||''; db.ref('storytellerUid').transaction(c=>c||me.uid).catch(()=>{}); bindStPlayers(); setMode('st'); }
-  function enterPlayer(){ document.getElementById('stBadge').classList.remove('on'); document.body.classList.add('pl'); document.getElementById('pbName').textContent=(me.displayName||'玩家'); bindNotes(); setMode('notes'); }
+  function _storedId(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
+  function enterSt(){ document.getElementById('stBadge').classList.add('on'); document.body.classList.remove('pl'); document.getElementById('stName').textContent=(me&&me.displayName)||_storedId('botc_stid'); db.ref('storytellerUid').transaction(c=>c||me.uid).catch(()=>{}); bindStPlayers(); setMode('st'); }
+  function enterPlayer(){ document.getElementById('stBadge').classList.remove('on'); document.body.classList.add('pl'); document.getElementById('pbName').textContent=((me&&me.displayName)||_storedId('botc_pid')||'玩家'); bindNotes(); setMode('notes'); }
   function bindNotes(){ if(notesRef){ notesRef.off(); notesRef=null; } if(role==='player'&&me&&curGid){ notesRef=db.ref('games/'+curGid+'/players/'+me.uid); notesRef.on('value',s=>{ S=s.val(); ensureS(); if(mode==='notes') renderView(); }); } }
 
   /* ---------- 软刷新：重新同步 + 重绘，不重载页面（保留全屏） ---------- */
