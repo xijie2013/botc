@@ -1977,7 +1977,7 @@ load(); render();
     <h2>玩 家 笔 记</h2>
     <div class="sub">用你的 ID 和密码进入私人笔记本。<br>第一次登录会自动创建。</div>
     <div class="err" id="pErr"></div>
-    <input id="pId" type="text" placeholder="你的 ID（自己起，如 alice）" maxlength="20" autocomplete="off">
+    <input id="pId" type="text" placeholder="你的 ID（可用中文，如 张三 / alice）" maxlength="20" autocomplete="off">
     <input id="pPw" type="password" placeholder="密码（至少 6 位）" onkeydown="if(event.key==='Enter')_pLogin()">
     <label style="display:flex;align-items:center;gap:7px;justify-content:center;font-size:12.5px;color:#b3a6c8;margin:2px 0 10px;cursor:pointer">
       <input id="pRemember" type="checkbox" style="width:auto;margin:0"> 在本机记住我（下次免敲密码）
@@ -2040,10 +2040,14 @@ load(); render();
         catch(e2){ err.textContent=(e2.code||'').includes('email-already-in-use')?'密码不对':authErr(e2); }
       } else err.textContent=authErr(e); } };
 
+  /* 把 ID 转成 Firebase 邮箱能接受的本地部分：纯 ASCII 原样保留（老用户不变）；
+     中文等非 ASCII 字符编码为 -<码点16进制>- ，'-' 在旧 ID 里不可能出现，故无冲突 */
+  function idToLocal(id){ let s=id.replace(/[^a-z0-9_]/g, c=>'-'+c.codePointAt(0).toString(16)+'-');
+    if(s.charAt(0)==='-') s='0'+s; if(s.charAt(s.length-1)==='-') s=s+'0'; return s; }
   window._pLogin=async function(){ const id=document.getElementById('pId').value.trim().toLowerCase(), pw=document.getElementById('pPw').value, err=document.getElementById('pErr');
     if(!id||!pw){ err.textContent='请输入 ID 和密码'; return; } if(pw.length<6){ err.textContent='密码至少 6 位'; return; }
-    if(!/^[a-z0-9_]+$/.test(id)){ err.textContent='ID 只能用字母数字下划线'; return; }
-    const email=id+PLAYER_DOM; err.textContent='登录中…';
+    if(!/^[\p{L}\p{N}_]+$/u.test(id)){ err.textContent='ID 只能用中文/字母/数字/下划线（不能有空格）'; return; }
+    const email=idToLocal(id)+PLAYER_DOM; err.textContent='登录中…';
     const done=()=>{ show('pGate',false); try{ localStorage.setItem('botc_pid',id); if(document.getElementById('pRemember').checked) localStorage.setItem('botc_ppw',pw); else localStorage.removeItem('botc_ppw'); }catch(e){} document.getElementById('pPw').value=''; };
     try{ await auth.signInWithEmailAndPassword(email,pw); done(); }
     catch(e){ if((e.code||'').match(/user-not-found|invalid-credential/)){
