@@ -200,6 +200,14 @@
   #winIcon{position:absolute; transform:translate(-50%,-50%); z-index:55; display:none; pointer-events:none;
     filter:drop-shadow(0 6px 22px rgba(0,0,0,.6));}
   #winIcon img{width:100%; display:block;}
+  /* ---- 中央时钟 ---- */
+  #clockLayer{position:absolute; inset:0; pointer-events:none;}
+  #clockFace{position:absolute; transform:translate(-50%,-50%);}
+  #clockFace img{width:100%; height:100%; display:block; filter:drop-shadow(0 5px 12px rgba(0,0,0,.5));}
+  .chand{position:absolute;}
+  .chand img{width:100%; height:100%; display:block; filter:drop-shadow(0 2px 3px rgba(0,0,0,.55));}
+  .chand.blue img{filter:grayscale(1) brightness(1.15) sepia(1) hue-rotate(175deg) saturate(4.5) drop-shadow(0 0 7px #3b7dff) drop-shadow(0 0 14px #3b7dff);}
+  .chand.red img{filter:grayscale(1) brightness(1.1) sepia(1) hue-rotate(-30deg) saturate(6) drop-shadow(0 0 7px #ff3b3b) drop-shadow(0 0 14px #ff3b3b);}
   #hoverBox .hb-role{font-weight:800; color:#e9c46a; margin-bottom:3px;}
   #hoverBox .hb-info b{color:#ffe08a;}
   #hoverBox .hb-line{text-align:left; margin-top:4px; line-height:1.4;}
@@ -526,6 +534,7 @@
     </div>
 
     <!-- RIGHT · seats -->
+    <div id="clockLayer"></div>
     <div class="table-zone" id="tableZone"></div>
     <div id="bubbleLayer"></div>
     <div id="hoverBox"></div>
@@ -1170,6 +1179,76 @@ function renderWin(){
     wi.style.left=tableCenter.x+'px'; wi.style.top=tableCenter.y+'px'; wi.style.width=Math.round(stg.clientWidth*0.26)+'px'; wi.style.display='block';
   } else { wi.style.display='none'; wi.dataset.w=''; }
 }
+/* ---------- 中央时钟 ---------- */
+var CLK={dayStart:null, nom:null, offset:0, _nomShownTs:0, _tick:null, _nomT:null};
+var _clkEls=null;
+var CLK_PIVOT={hour:{px:0.474,py:0.809,ar:97/519}, minute:{px:0.490,py:0.808,ar:100/683}};
+var CLK_HOLD=7000, CLK_DAY_MS=20*60*1000;
+function clockServerNow(){ return Date.now()+(CLK.offset||0); }
+function clockGeo(){ const st=document.getElementById('stage'); if(!st) return null;
+  const SW=st.clientWidth, SH=st.clientHeight; if(!SW||!SH) return null;
+  return {cx:SW*0.71, cy:SH*0.525, R:SH*0.34}; }
+function clockSeatCount(){ if(window.BOTC_VIEWER && window.__pubCount) return window.__pubCount; return (typeof N==='number'&&N)?N:8; }
+function dayAngles(elapsed){ const f=Math.max(0,Math.min(1,elapsed/CLK_DAY_MS)); const mins=480+f*120; /* 8:00→10:00 */
+  return { hour:(mins/60%12)*30, minute:(mins%60)*6 }; }
+function clkSetHand(el,absDeg,opt){ opt=opt||{}; const cur=el._deg||0; let t=absDeg;
+  while(t<cur) t+=360; if(opt.spin) t+=360; const dur=opt.dur==null?1:opt.dur;
+  if(dur<=0){ el.style.transition='none'; el.style.transform='rotate('+t+'deg)'; void el.offsetWidth; }
+  else { el.style.transition='transform '+dur+'s '+(opt.spin?'cubic-bezier(.2,.9,.25,1)':'linear'); el.style.transform='rotate('+t+'deg)'; }
+  el._deg=t; }
+function clockBuild(geo,layer){ layer.innerHTML='';
+  const dialD=geo.R*0.72;
+  const face=document.createElement('div'); face.id='clockFace';
+  face.style.left=geo.cx+'px'; face.style.top=geo.cy+'px'; face.style.width=dialD+'px'; face.style.height=dialD+'px';
+  face.innerHTML='<img src="assets/clock-face.png" onerror="this.parentNode.style.display=\'none\'">'; layer.appendChild(face);
+  const mk=(kind,pointerLen)=>{ const p=CLK_PIVOT[kind], Hd=pointerLen/p.py, Wd=Hd*p.ar;
+    const el=document.createElement('div'); el.className='chand '+kind;
+    el.style.width=Wd+'px'; el.style.height=Hd+'px';
+    el.style.left=(geo.cx-p.px*Wd)+'px'; el.style.top=(geo.cy-p.py*Hd)+'px';
+    el.style.transformOrigin=(p.px*100)+'% '+(p.py*100)+'%';
+    el.innerHTML='<img src="assets/clock-hand-'+kind+'.png">'; layer.appendChild(el); return el; };
+  return { face, hHour:mk('hour',geo.R*0.58), hMin:mk('minute',geo.R*0.86) };
+}
+function clockUpdate(snap){ if(!_clkEls) return; const now=clockServerNow();
+  const nomActive = CLK.nom && (now - CLK.nom.ts) < CLK_HOLD;
+  if(nomActive){ const N2=clockSeatCount()||1;
+    _clkEls.hHour.classList.add('blue'); _clkEls.hHour.classList.remove('red');
+    _clkEls.hMin.classList.add('red'); _clkEls.hMin.classList.remove('blue');
+    clkSetHand(_clkEls.hHour, CLK.nom.nr*360/N2, {dur:0});
+    clkSetHand(_clkEls.hMin, CLK.nom.ne*360/N2, {dur:0});
+    CLK._nomShownTs=CLK.nom.ts; return; }
+  _clkEls.hHour.classList.remove('blue','red'); _clkEls.hMin.classList.remove('blue','red');
+  const a = CLK.dayStart ? dayAngles(now-CLK.dayStart) : {hour:240, minute:0};
+  clkSetHand(_clkEls.hHour, a.hour, {dur:snap?0:1});
+  clkSetHand(_clkEls.hMin, a.minute, {dur:snap?0:1});
+}
+function triggerNomSpin(){ if(!_clkEls||!CLK.nom) return; const N2=clockSeatCount()||1;
+  _clkEls.hHour.classList.add('blue'); _clkEls.hHour.classList.remove('red');
+  _clkEls.hMin.classList.add('red'); _clkEls.hMin.classList.remove('blue');
+  clkSetHand(_clkEls.hHour, CLK.nom.nr*360/N2, {spin:true,dur:1.1});
+  clkSetHand(_clkEls.hMin, CLK.nom.ne*360/N2, {spin:true,dur:1.1});
+  CLK._nomShownTs=CLK.nom.ts;
+  clearTimeout(CLK._nomT); CLK._nomT=setTimeout(()=>clockUpdate(false), CLK_HOLD+80);
+}
+function ensureClockTick(){ if(CLK._tick) return; CLK._tick=setInterval(()=>clockUpdate(false),1000); }
+function renderClock(){ const geo=clockGeo(); const layer=document.getElementById('clockLayer'); if(!layer) return;
+  const show = !!geo && ( !window.BOTC_VIEWER || window.__pubHasGame );
+  if(!show){ layer.style.display='none'; if(layer.firstChild) layer.innerHTML=''; _clkEls=null;
+    if(CLK._tick){clearInterval(CLK._tick);CLK._tick=null;} return; }
+  layer.style.display='';
+  const key=Math.round(geo.cx)+'_'+Math.round(geo.cy)+'_'+Math.round(geo.R);
+  if(!_clkEls || layer.dataset.key!==key){ _clkEls=clockBuild(geo,layer); layer.dataset.key=key; }
+  clockUpdate(true); ensureClockTick();
+}
+window.renderClock=renderClock;
+window.clockApplyState=function(c){ c=c||{};
+  CLK.dayStart = c.dayStart||null;
+  const newNom = c.nom||null;
+  const isNewNom = newNom && (!CLK.nom || newNom.ts!==CLK.nom.ts) && (clockServerNow()-newNom.ts < CLK_HOLD);
+  CLK.nom = newNom;
+  renderClock();
+  if(isNewNom) triggerNomSpin();
+};
 /* ---------- 白天：提名 / 投票 / 处决 ---------- */
 function dayThreshold(){ return Math.ceil(countAlive()/2); }
 function ghostUsedAnywhere(seat){   // 鬼票只由「死后投出的票」消耗（记录在各提名的 ghostVoters 里）
@@ -1194,6 +1273,7 @@ function addNomination(nr,ne){ if(nr===""||ne==="") return; nr=+nr; ne=+ne; cons
       histSet(nr,'death','被贞洁者处决出局');
     } else histSet(ne,'info','贞洁者首次被提名 → 提名者非镇民（或贞洁者失效），无事发生');
   }
+  if(window._clockBroadcastNom) window._clockBroadcastNom(nr,ne);
   render(); }
 function removeNomination(day,idx){ if(nominations[day]){ const nom=nominations[day][idx];
   if(nom && nom.virginConsumed){ virginUsed=false; histSet(nom.nominee,'info',null);   // 撤销贞洁者能力消耗
@@ -1356,6 +1436,7 @@ function render(){
   renderSeats();
   renderBubbles();
   renderWin();
+  renderClock();
   save();
 }
 function renderLedger(){
@@ -1850,11 +1931,20 @@ load(); render();
 
   /* ---------- 当前牌局 / 公开数据订阅 ---------- */
   db.ref('currentGame').on('value', s=>{ const gid=s.val(); if(gid===curGid) return; curGid=gid; bindPub(); if(role==='player') bindNotes(); });
-  function bindPub(){ if(pubBound){pubBound.off();pubBound=null;} if(!curGid){ pub=null; if(mode!=='st') renderView(); return; }
-    pubBound=db.ref('games/'+curGid+'/public'); pubBound.on('value',s=>{ pub=s.val(); ensureS(); if(mode!=='st') renderView(); }); }
+  db.ref('.info/serverTimeOffset').on('value', s=>{ if(window.CLK) window.CLK.offset=s.val()||0; });
+  function bindPub(){ if(pubBound){pubBound.off();pubBound=null;} if(!curGid){ pub=null;
+      window.__pubHasGame=false; window.__pubCount=0; if(window.clockApplyState) window.clockApplyState(null);
+      if(mode!=='st') renderView(); return; }
+    pubBound=db.ref('games/'+curGid+'/public'); pubBound.on('value',s=>{ pub=s.val(); ensureS();
+      window.__pubHasGame=!!(pub&&pub.count); window.__pubCount=(pub&&pub.count)||0;
+      if(window.clockApplyState) window.clockApplyState(pub&&pub.clock);
+      if(mode!=='st') renderView(); }); }
+  /* 说书人：广播提名给时钟（所有端同步指向） */
+  window._clockBroadcastNom=function(nr,ne){ if(role!=='st'||!curGid) return;
+    db.ref('games/'+curGid+'/public/clock/nom').set({nr:nr, ne:ne, ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); };
 
   /* ---------- 渲染分发 ---------- */
-  function renderView(){ if(mode==='hall') renderHall(); else if(mode==='notes') renderNotes(); drawSeats(); }
+  function renderView(){ if(mode==='hall') renderHall(); else if(mode==='notes') renderNotes(); drawSeats(); if(window.renderClock) renderClock(); }
 
   /* ---------- 座位圈（访客，复刻说书人比例，画进 #tableZone） ---------- */
   function drawSeats(){ if(mode==='st') return; const zone=document.getElementById('tableZone'); if(!zone) return; zone.innerHTML='';
@@ -1952,7 +2042,7 @@ load(); render();
     let nm='本局'; try{ nm=await uiPrompt('给这局起个名字（玩家会看到）：','本局',{title:'开始新的一局'}); if(nm===null) return; }catch(e){}
     window.__botcGameName=nm||'本局'; const gid='t'+Date.now();
     const seats=[]; for(let i=0;i<N;i++){ const t=seatToken(i); seats.push({name:(t&&t.name)?t.name:'', dead:false, cause:''}); }
-    const g={ name:window.__botcGameName, count:N, day:night, seats:seats, locked:[...lockedRoles], dist:(customDist||DIST[N]||[0,0,0,0]), noms:[] };
+    const g={ name:window.__botcGameName, count:N, day:night, seats:seats, locked:[...lockedRoles], dist:(customDist||DIST[N]||[0,0,0,0]), noms:[], clock:null };
     try{ await db.ref('storytellerUid').set(me.uid); await db.ref('games/'+gid+'/public').set(g); await db.ref('currentGame').set(gid); toast('✅ 已开始新的一局'); }
     catch(e){ toast('开局失败：'+(e.code||e.message||'')); } };
   window.stSyncSeats=async function(){ if(role!=='st'){ toast('请先登录说书人'); return; } if(!curGid){ toast('先点开新局'); return; }
@@ -1962,7 +2052,8 @@ load(); render();
     const p=buildPublic(); try{ await db.ref('games/'+curGid+'/public').update({seats:p.seats,noms:p.noms,day:p.day,count:p.count}); toast('📣 已公布第 '+p.day+' 天'); }
     catch(e){ toast('公布失败：'+(e.code||'')); } };
   window.stDawn=async function(){ if(role!=='st'){ toast('请先登录说书人'); return; } if(!curGid){ toast('先点开新局'); return; }
-    const p=buildPublic(); try{ await db.ref('games/'+curGid+'/public').update({seats:p.seats,noms:p.noms,day:p.day,count:p.count}); toast('结束本夜 · 已更新死亡信息'); }
+    const p=buildPublic(); try{ await db.ref('games/'+curGid+'/public').update({seats:p.seats,noms:p.noms,day:p.day,count:p.count,
+        clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null}}); toast('结束本夜 · 天亮了，钟表开始走时'); }
     catch(e){ toast('更新失败：'+(e.code||'')); } };
 
   /* ---------- 名单实时自动同步（说书人改动→自动推送公开名单，不含死亡/提名） ---------- */
@@ -2011,7 +2102,7 @@ load(); render();
   };
   window._cfgDel=async function(i){ let ok=true; try{ ok=await uiConfirm('删除这个存档？'); }catch(e){} if(!ok) return; const a=_cfgLoadAll(); a.splice(i,1); _cfgSaveAll(a); renderCfgList(); };
 
-  window.addEventListener('resize',()=>{ if(mode!=='st') drawSeats(); });
+  window.addEventListener('resize',()=>{ if(mode!=='st'){ drawSeats(); if(window.renderClock) renderClock(); } });
 })();
 </script>
 </body>
