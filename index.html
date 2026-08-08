@@ -490,7 +490,7 @@
     <div class="grimoire grim-only">
       <div class="gtabs">
         <button id="gt-list" onclick="setGtab('list')">角色名单</button>
-        <button id="gt-roles" class="on" onclick="setGtab('roles')">在场角色</button>
+        <button id="gt-roles" class="on" onclick="setGtab('roles')">设置</button>
         <button id="gt-night" onclick="setGtab('night')">夜晚</button>
         <button id="gt-day" onclick="setGtab('day')">白天</button>
         <button id="gt-log" onclick="setGtab('log')">日志</button>
@@ -504,9 +504,6 @@
         </div>
         <button class="btn purple" onclick="dealRoles()">随机发牌</button>
         <button class="btn lpurple" onclick="resetRoles()">重置角色</button>
-      </div>
-      <div class="box bottom-bar" style="gap:6px;">
-        <button class="btn purple" onclick="stPublish()" title="把当天提名/投票/死亡推送给所有玩家">📣 天亮公布</button>
       </div>
     </div>
 
@@ -1503,8 +1500,6 @@ function renderGrim(){
     c.innerHTML=h; return;
   }
   if(gtab==="roles"){
-    const cnt={tf:0,out:0,min:0,dem:0}; meta.forEach(m=>{ if(m.role){ if(m.isDrunk) cnt.out++; else cnt[RMAP[m.role].team]++; } });
-    h+='<div class="rrow" style="border:none;opacity:.85">构成：镇民 '+cnt.tf+' · 外来者 '+cnt.out+' · 爪牙 '+cnt.min+' · 恶魔 '+cnt.dem+'</div>';
     if(meta.some(m=>m.role==="baron")) h+='<div class="rrow" style="border:none;color:#8a5f28">🜲 男爵在场：外来者应比常规多 2、镇民少 2</div>';
     const regRoles=[]; meta.forEach((mm,j)=>{ if(mm.role==="spy"||mm.role==="recluse") regRoles.push(j); });
     if(regRoles.length){
@@ -1526,11 +1521,6 @@ function renderGrim(){
         o+='<option value="'+i+'"'+(dSel===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+'（自以为是 '+RMAP[m.role].name+'）</option>'; });
       h+='<div class="gsec" style="display:flex;align-items:center;gap:8px">酒鬼<select onchange="setDrunk(this.value)" style="flex:1;min-width:0;font-weight:400;font-size:clamp(9px,.9vw,12px);padding:3px;border:1px solid rgba(122,83,32,.5);border-radius:5px;background:rgba(255,252,244,.85);color:#3a2a12;font-family:inherit">'+o+'</select></div>'; }
     h+='<div class="gsec">恶魔伪装</div><div class="bluffsel">'+bluffSel(0)+bluffSel(1)+bluffSel(2)+'</div>';
-    h+='<div class="gsec">在场角色</div>';
-    const ids=inPlayRoles();
-    if(!ids.length) h+='<div class="rrow" style="opacity:.6">（尚未发牌 · 点“随机发牌”或逐座指定身份）</div>';
-    ids.forEach(id=>{ const r=RMAP[id];
-      h+='<div class="rrow"><b style="color:'+TEAMC[r.team]+'">'+r.name+'</b> <span style="color:#8a7250">'+TEAMLABEL[r.team]+'</span><br>'+r.ab+'</div>'; });
     const bl=bluffs.filter(Boolean);
     if(bl.length){ h+='<div class="gsec">伪装介绍</div>';
       bl.forEach(id=>{ const r=RMAP[id]; if(r) h+='<div class="rrow"><b style="color:'+TEAMC[r.team]+'">'+r.name+'</b> <span style="color:#b0402e">伪装</span><br>'+r.ab+'</div>'; }); }
@@ -1555,6 +1545,11 @@ function renderGrim(){
       if(s.id==="empath") h+=numUI("empath","两侧存活邻座邪恶数",2);
       if(s.id==="washerwoman"||s.id==="librarian"||s.id==="investigator") h+=pingUI(s.id);
       if(night>=2 && s.id==="imp") h+=impKillUI(); });
+    const _dawnReady = steps.length>0 && steps.every(s=> nightChecks[night+":"+s.id]);
+    h+='<div style="margin-top:14px">'
+      +'<button class="btn purple" style="width:100%;font-weight:800;'+(_dawnReady?'':'opacity:.4;cursor:not-allowed;filter:grayscale(.85);')+'" '+(_dawnReady?'onclick="stDawn()"':'disabled')+'>🌅 天亮了</button>'
+      +(_dawnReady?'':'<div style="text-align:center;font-size:11px;color:#8a7250;margin-top:5px">完成本夜所有流程后可点亮</div>')
+      +'</div>';
   }
   c.innerHTML=h;
 }
@@ -1967,6 +1962,9 @@ load(); render();
   window.stPublish=async function(){ if(role!=='st'){ toast('请先登录说书人'); return; } if(!curGid){ toast('先点开新局'); return; }
     const p=buildPublic(); try{ await db.ref('games/'+curGid+'/public').update({seats:p.seats,noms:p.noms,day:p.day,count:p.count}); toast('📣 已公布第 '+p.day+' 天'); }
     catch(e){ toast('公布失败：'+(e.code||'')); } };
+  window.stDawn=async function(){ if(role!=='st'){ toast('请先登录说书人'); return; } if(!curGid){ toast('先点开新局'); return; }
+    const p=buildPublic(); try{ await db.ref('games/'+curGid+'/public').update({seats:p.seats,noms:p.noms,day:p.day,count:p.count}); toast('🌅 天亮了 · 已更新死亡信息'); }
+    catch(e){ toast('更新失败：'+(e.code||'')); } };
 
   /* ---------- 名单实时自动同步（说书人改动→自动推送公开名单，不含死亡/提名） ---------- */
   let _syncT=null;
