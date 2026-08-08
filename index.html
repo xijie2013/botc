@@ -205,11 +205,11 @@
   #clockFace{position:absolute; transform:translate(-50%,-50%);}
   #clockFace img{width:100%; height:100%; display:block; filter:drop-shadow(0 5px 12px rgba(0,0,0,.5));}
   .chand{position:absolute;}
-  .chand img{width:100%; height:100%; display:block; transition:filter 1.1s ease;}
-  .chand.blue img{filter:grayscale(1) brightness(1.15) sepia(1) hue-rotate(175deg) saturate(4.5) drop-shadow(0 0 7px #3b7dff) drop-shadow(0 0 14px #3b7dff);}
-  .chand.red img{filter:grayscale(1) brightness(1.1) sepia(1) hue-rotate(-30deg) saturate(6) drop-shadow(0 0 7px #ff3b3b) drop-shadow(0 0 14px #ff3b3b);}
+  .chand img{width:100%; height:100%; display:block; transition:filter 2.4s ease;}   /* 荧光逐渐变强 */
+  .chand.blue img{filter:drop-shadow(0 0 5px #6ab0ff) drop-shadow(0 0 13px #2f7bff) drop-shadow(0 0 24px #2f7bff);}
+  .chand.red img{filter:drop-shadow(0 0 5px #ff7a7a) drop-shadow(0 0 13px #ff2f2f) drop-shadow(0 0 24px #ff2f2f);}
   .cshadow{position:absolute;}
-  .cshadow img{width:100%; height:100%; display:block; filter:brightness(0) opacity(.34) blur(1.4px);}
+  .cshadow img{width:100%; height:100%; display:block; filter:brightness(0) opacity(.52) blur(1.6px);}   /* 加重的投影 */
   #hoverBox .hb-role{font-weight:800; color:#e9c46a; margin-bottom:3px;}
   #hoverBox .hb-info b{color:#ffe08a;}
   #hoverBox .hb-line{text-align:left; margin-top:4px; line-height:1.4;}
@@ -1185,7 +1185,8 @@ function renderWin(){
 var CLK={dayStart:null, nom:null, offset:0, _tick:null, _loadTs:Date.now(), _realBusy:false, _nomSeenTs:0, _outTimer:null, _busyTimer:null};
 var _clkEls=null;
 var CLK_PIVOT={hour:{px:0.4938,py:0.8345,ar:0.14038}, minute:{px:0.4969,py:0.7931,ar:0.12173}};
-var CLK_HOLD=9000, CLK_DAY_MS=20*60*1000, CLK_SPIN_MS=2600, CLK_SPINS=3;
+var CLK_HOLD=10000, CLK_DAY_MS=20*60*1000;
+var CLK_SPIN_H=3000, CLK_TURN_H=2, CLK_SPIN_M=5000, CLK_TURN_M=5;   /* 时针慢·2圈·先落位；分针快·5圈·后落位 */
 function clockServerNow(){ return Date.now()+(CLK.offset||0); }
 function clockGeo(){ const st=document.getElementById('stage'); if(!st) return null;
   const SW=st.clientWidth, SH=st.clientHeight; if(!SW||!SH) return null;
@@ -1232,8 +1233,8 @@ function scheduleRouletteOut(nom){ const delay=Math.max(0,(nom.ts+CLK_HOLD)-cloc
 function startRoulette(nom){ if(!_clkEls) return; const N2=clockSeatCount()||1; CLK._realBusy=true;
   _clkEls.hHour.classList.add('blue'); _clkEls.hHour.classList.remove('red');
   _clkEls.hMin.classList.add('red'); _clkEls.hMin.classList.remove('blue');
-  clkSpin(_clkEls.hHour, nom.nr*360/N2, CLK_SPINS, CLK_SPIN_MS);
-  clkSpin(_clkEls.hMin, nom.ne*360/N2, CLK_SPINS, CLK_SPIN_MS);
+  clkSpin(_clkEls.hHour, nom.nr*360/N2, CLK_TURN_H, CLK_SPIN_H);
+  clkSpin(_clkEls.hMin, nom.ne*360/N2, CLK_TURN_M, CLK_SPIN_M);
   scheduleRouletteOut(nom); }
 function snapNomination(nom){ if(!_clkEls) return; const N2=clockSeatCount()||1; CLK._realBusy=true;
   _clkEls.hHour.classList.add('blue'); _clkEls.hHour.classList.remove('red');
@@ -1244,10 +1245,10 @@ function snapNomination(nom){ if(!_clkEls) return; const N2=clockSeatCount()||1;
 function endRoulette(){ if(!_clkEls){ CLK._realBusy=false; CLK.nom=null; return; }
   const a=dayAngles(clockServerNow()-clockAnchor());
   _clkEls.hHour.classList.remove('blue','red'); _clkEls.hMin.classList.remove('blue','red');
-  clkSpin(_clkEls.hHour, a.hour, CLK_SPINS, CLK_SPIN_MS);
-  clkSpin(_clkEls.hMin, a.minute, CLK_SPINS, CLK_SPIN_MS);
+  clkSpin(_clkEls.hHour, a.hour, CLK_TURN_H, CLK_SPIN_H);
+  clkSpin(_clkEls.hMin, a.minute, CLK_TURN_M, CLK_SPIN_M);
   CLK.nom=null;
-  clearTimeout(CLK._busyTimer); CLK._busyTimer=setTimeout(()=>{ CLK._realBusy=false; }, CLK_SPIN_MS+60); }
+  clearTimeout(CLK._busyTimer); CLK._busyTimer=setTimeout(()=>{ CLK._realBusy=false; }, CLK_SPIN_M+60); }
 function ensureClockTick(){ if(CLK._tick) return; CLK._tick=setInterval(()=>clockUpdate(false),1000); }
 function renderClock(){ const geo=clockGeo(); const layer=document.getElementById('clockLayer'); if(!layer) return;
   const show = !!geo && ( !window.BOTC_VIEWER || window.__pubHasGame );
