@@ -565,12 +565,12 @@
   }
   #stBadge{font-size:11.5px; color:#e9c46a; background:rgba(24,16,36,.85);
     border:1px solid rgba(233,196,106,.5); border-radius:14px; padding:4px 11px; display:none; align-items:center; gap:8px; white-space:nowrap;}
-  #stBadge.on{display:inline-flex;} #stBadge button{background:none; border:none; color:#c8bcdd; cursor:pointer; font-size:12px; padding:0;}
+  #stBadge.on{display:inline-flex;}
   #playerBadge{font-size:11.5px; color:#e9c46a; background:rgba(24,16,36,.85);
     border:1px solid rgba(233,196,106,.5); border-radius:14px; padding:4px 11px; display:none; align-items:center; gap:8px; white-space:nowrap;}
-  body.mode-notes #playerBadge{display:inline-flex;}
-  #playerBadge button{background:rgba(233,196,106,.15); border:1px solid rgba(233,196,106,.4); border-radius:10px; color:#e9c46a; cursor:pointer; font-size:11px; padding:2px 8px;}
-  #playerBadge button:hover{background:rgba(233,196,106,.3);}
+  body.pl #playerBadge{display:inline-flex;}   /* 玩家已登录：大厅/笔记都显示角标 */
+  #stBadge button, #playerBadge button{background:rgba(233,196,106,.15); border:1px solid rgba(233,196,106,.4); border-radius:10px; color:#e9c46a; cursor:pointer; font-size:11px; padding:2px 8px;}
+  #stBadge button:hover, #playerBadge button:hover{background:rgba(233,196,106,.3);}
   /* 本局存档弹窗 */
   #cfgModal{position:fixed; inset:0; z-index:150; display:none; align-items:center; justify-content:center; background:rgba(10,6,16,.62);}
   #cfgModal.on{display:flex;}
@@ -596,7 +596,7 @@
       <button class="fsbtn" id="refreshBtn" onclick="window._softRefresh?window._softRefresh():location.reload()" title="刷新（重新同步，不退出全屏）">⟳</button>
       <button class="fsbtn" id="setBtn" onclick="openSettings()" title="设置">⚙</button>
       <div id="stBadge">🎲 说书人已登录 <button onclick="_logout()">退出</button></div>
-      <div id="playerBadge">🖋 <span id="pbName">玩家</span> <button onclick="_gotoHall()">大厅</button> <button onclick="_logout()">退出</button></div>
+      <div id="playerBadge">🖋 玩家<span id="pbName"></span>已登录 <button onclick="_logout()">退出</button></div>
     </div>
     <div class="banner-title" id="bannerTitle">暗流涌动</div>
     <div class="inkhotspot" onclick="openPlayerGate()">
@@ -652,8 +652,6 @@
     <div class="vpanel" id="hallPanel">
       <div class="box"><div class="box-h" id="hallTitle">客人名单</div></div>
       <div class="box grow"><div class="namelist" id="hallNames"></div></div>
-      <div class="box"><div class="box-h">公布记录</div></div>
-      <div class="box grow"><div class="namelist" id="hallLog" style="font-size:calc(1 * var(--sw) / 100)"></div></div>
     </div>
 
     <!-- LEFT · 玩家笔记（访客） -->
@@ -869,6 +867,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v1.6.6', d:'2026-08-08', items:['大厅只显示客人名单（去掉公布记录）','说书人/玩家登录信息统一样式：“…已登录”+退出','玩家登录角标去掉大厅按钮（改用点墨水瓶回大厅）']},
   {v:'v1.6.5', d:'2026-08-08', items:['登录信息移到左上角设置按钮右侧','玩家笔记页再点墨水瓶可返回大厅','勾选“记住我”后（含说书人）下次自动登录、免密码']},
   {v:'v1.6.4', d:'2026-08-08', items:['修复：玩家笔记状态标记（中毒等）图标被拉伸变形，改为保持原比例']},
   {v:'v1.6.3', d:'2026-08-08', items:['修复：玩家笔记/大厅误用魔典暗背景，改回始终用酒馆大厅背景']},
@@ -2178,12 +2177,12 @@ load(); render();
 
   /* ---------- 认证状态 ---------- */
   AUTH_READY.then(()=>auth.onAuthStateChanged(user=>{ me=user;
-    if(!user){ role='anon'; document.getElementById('stBadge').classList.remove('on'); if(notesRef){notesRef.off();notesRef=null;} S=null; setMode('hall'); return; }
+    if(!user){ role='anon'; document.getElementById('stBadge').classList.remove('on'); document.body.classList.remove('pl'); if(notesRef){notesRef.off();notesRef=null;} S=null; setMode('hall'); return; }
     if(user.email===ST_EMAIL){ role='st'; enterSt(); }
     else { role='player'; enterPlayer(); }
   }));
-  function enterSt(){ document.getElementById('stBadge').classList.add('on'); db.ref('storytellerUid').transaction(c=>c||me.uid).catch(()=>{}); bindStPlayers(); setMode('st'); }
-  function enterPlayer(){ document.getElementById('stBadge').classList.remove('on'); document.getElementById('pbName').textContent=(me.displayName||'玩家'); bindNotes(); setMode('notes'); }
+  function enterSt(){ document.getElementById('stBadge').classList.add('on'); document.body.classList.remove('pl'); db.ref('storytellerUid').transaction(c=>c||me.uid).catch(()=>{}); bindStPlayers(); setMode('st'); }
+  function enterPlayer(){ document.getElementById('stBadge').classList.remove('on'); document.body.classList.add('pl'); document.getElementById('pbName').textContent=(me.displayName||'玩家'); bindNotes(); setMode('notes'); }
   function bindNotes(){ if(notesRef){ notesRef.off(); notesRef=null; } if(role==='player'&&me&&curGid){ notesRef=db.ref('games/'+curGid+'/players/'+me.uid); notesRef.on('value',s=>{ S=s.val(); ensureS(); if(mode==='notes') renderView(); }); } }
 
   /* ---------- 软刷新：重新同步 + 重绘，不重载页面（保留全屏） ---------- */
