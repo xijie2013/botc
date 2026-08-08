@@ -357,7 +357,7 @@
   /* 游戏内确认框 */
   .cfmask{position:fixed; inset:0; background:rgba(10,6,16,.62); display:none; align-items:center; justify-content:center; z-index:320;}
   .cfmask.on{display:flex;}
-  .cfbox{width:min(86vw,360px); background:linear-gradient(180deg,#2b2038,#20172a); border:2px solid #e9c46a; border-radius:14px;
+  .cfbox{width:min(86vw,360px); max-height:calc(100dvh - 24px); overflow-y:auto; background:linear-gradient(180deg,#2b2038,#20172a); border:2px solid #e9c46a; border-radius:14px;
     padding:20px 22px 18px; color:#efe6d2; text-align:center; box-shadow:0 14px 44px rgba(0,0,0,.6), inset 0 0 34px rgba(233,196,106,.07);
     animation:cfin .18s ease;}
   @keyframes cfin{from{transform:translateY(14px) scale(.96); opacity:.2} to{transform:none; opacity:1}}
@@ -466,10 +466,10 @@
   .pntok.used{opacity:.42;}
 
   /* 登录门 */
-  .gate{position:fixed; inset:0; z-index:120; display:none; align-items:center; justify-content:center; padding:24px;
+  .gate{position:fixed; inset:0; z-index:120; display:none; align-items:center; justify-content:center; padding:16px; overflow-y:auto;
     background:rgba(10,6,16,.72); backdrop-filter:blur(3px);}
   .gate.on{display:flex;}
-  .gatebox{width:min(92vw,360px); background:linear-gradient(180deg,#2b2038,#20172a); border:2px solid #e9c46a; border-radius:16px;
+  .gatebox{width:min(92vw,360px); max-height:calc(100dvh - 24px); overflow-y:auto; background:linear-gradient(180deg,#2b2038,#20172a); border:2px solid #e9c46a; border-radius:16px;
     padding:24px 22px 20px; text-align:center; box-shadow:0 14px 44px rgba(0,0,0,.6), inset 0 0 34px rgba(233,196,106,.07);}
   .gatebox .ink{width:96px; height:96px; margin-bottom:6px; filter:drop-shadow(0 6px 14px rgba(0,0,0,.55));}
   .gatebox h2{margin:6px 0 4px; font-size:20px; color:#e9c46a; letter-spacing:2px;}
@@ -508,6 +508,35 @@
   #rotateGate .rg-s{font-size:14px; color:#c9b6e6;}
   @keyframes rotHint{0%,22%{transform:rotate(0);} 55%,100%{transform:rotate(-90deg);}}
   @media (pointer:coarse) and (orientation:portrait){ #rotateGate{display:flex;} html,body{overflow:hidden;} }
+  /* ======= 手机横屏（矮屏）适配 ======= */
+  @media (max-height:480px){
+    /* 登录门：缩小以完整显示 */
+    .gatebox{padding:14px 18px 15px;}
+    .gatebox .ink{width:50px; height:50px; margin-bottom:2px;}
+    .gatebox h2{font-size:16px; margin:2px 0 2px; letter-spacing:1px;}
+    .gatebox .sub{font-size:11px; line-height:1.4; margin-bottom:9px;}
+    .gatebox input{padding:8px 10px; margin-bottom:7px; font-size:14px;}
+    .gatebox .go{padding:9px; font-size:14px;}
+    .gatebox .cancel{margin-top:7px;}
+    /* 确认/输入框缩小 */
+    .cfbox{padding:14px 16px 13px;}
+    .cf-title{font-size:14px; margin-bottom:7px;}
+    .cf-msg{font-size:12.5px; margin-bottom:10px;}
+    .cf-input{padding:8px; margin-bottom:10px;}
+    .cf-btns button{min-width:88px; padding:8px 12px; font-size:13px;}
+    /* 投票浮条：改成贴底细条，尽量不挡座位 */
+    #voteBar.on{display:flex; align-items:center; gap:10px;}
+    #voteBar{bottom:6px; padding:6px 12px; min-width:0; max-width:96vw; border-radius:13px;}
+    #voteBar .vb-line{font-size:12px; margin-bottom:0; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    #voteBar .vb-wait{font-size:12px;}
+    #voteBar .vb-btns{gap:6px; flex:0 0 auto;}
+    #voteBar button{padding:6px 12px; font-size:12px; max-width:none; flex:0 0 auto;}
+    /* 笔记内容字大一点，便于手机阅读 */
+    #notesPanel .nbcontent{font-size:12px;}
+    .nbtabs button{font-size:12px;}
+    /* 顶部角标略缩，避免拥挤 */
+    #playerBadge, #stBadge{font-size:11px; padding:3px 9px;}
+  }
   #stBadge{position:fixed; top:12px; right:14px; z-index:60; font-size:11.5px; color:#e9c46a; background:rgba(24,16,36,.85);
     border:1px solid rgba(233,196,106,.5); border-radius:14px; padding:4px 11px; display:none; align-items:center; gap:8px;}
   #stBadge.on{display:inline-flex;} #stBadge button{background:none; border:none; color:#c8bcdd; cursor:pointer; font-size:12px; padding:0;}
