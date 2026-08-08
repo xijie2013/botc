@@ -1389,8 +1389,8 @@ function renderGrim(){
     let assigned=0; for(let i=0;i<N;i++){ const m=meta[i]; if(m&&m.role) assigned++; }
     const ready = assigned===N;
     // 顶部：开始新的一局（发满牌才可点，点击后同步本局角色给玩家）
-    h+='<button class="btn '+(ready?'gold':'')+'" style="width:100%;margin-bottom:8px;'+(ready?'':'opacity:.4;cursor:not-allowed;')+'" '
-      +(ready?'onclick="stNewGame()"':'disabled')+'>🌅 开始新的一局'+(ready?'':'（发满牌后可点）')+'</button>';
+    h+='<button class="btn purple" style="width:100%;margin-bottom:8px;'+(ready?'':'opacity:.4;cursor:not-allowed;')+'" '
+      +(ready?'onclick="stNewGame()"':'disabled title="发满牌后可点"')+'>新的一局</button>';
     ORDER.forEach((team,idx)=>{
       h+='<div class="gsec" style="color:'+TEAMC[team]+';display:flex;align-items:center;justify-content:space-between;margin-top:6px">'
         +'<span>'+TEAMLABEL[team]+'</span>'
