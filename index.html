@@ -66,7 +66,7 @@
   .stage.grim .view-toggle{width:clamp(60px,6.62vw,103px); height:clamp(60px,6.62vw,103px);}
   .view-toggle img{width:100%; height:100%; object-fit:contain; display:block;}
   /* 左上角工具栏：全屏 / 刷新 / 设置 */
-  #toolBar{position:fixed; top:12px; left:12px; z-index:60; display:flex; gap:8px;}
+  #toolBar{position:fixed; top:12px; left:12px; z-index:60; display:flex; gap:8px; align-items:center;}
   .fsbtn{width:clamp(30px,2.6vw,40px); height:clamp(30px,2.6vw,40px);
     border-radius:9px; border:1px solid rgba(233,196,106,.55); background:rgba(24,16,36,.62); color:#e9c46a;
     font-size:clamp(15px,1.5vw,20px); line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center;
@@ -563,11 +563,11 @@
     /* 顶部角标略缩，避免拥挤 */
     #playerBadge, #stBadge{font-size:11px; padding:3px 9px;}
   }
-  #stBadge{position:fixed; top:12px; right:14px; z-index:60; font-size:11.5px; color:#e9c46a; background:rgba(24,16,36,.85);
-    border:1px solid rgba(233,196,106,.5); border-radius:14px; padding:4px 11px; display:none; align-items:center; gap:8px;}
+  #stBadge{font-size:11.5px; color:#e9c46a; background:rgba(24,16,36,.85);
+    border:1px solid rgba(233,196,106,.5); border-radius:14px; padding:4px 11px; display:none; align-items:center; gap:8px; white-space:nowrap;}
   #stBadge.on{display:inline-flex;} #stBadge button{background:none; border:none; color:#c8bcdd; cursor:pointer; font-size:12px; padding:0;}
-  #playerBadge{position:fixed; top:12px; right:14px; z-index:60; font-size:11.5px; color:#e9c46a; background:rgba(24,16,36,.85);
-    border:1px solid rgba(233,196,106,.5); border-radius:14px; padding:4px 11px; display:none; align-items:center; gap:8px;}
+  #playerBadge{font-size:11.5px; color:#e9c46a; background:rgba(24,16,36,.85);
+    border:1px solid rgba(233,196,106,.5); border-radius:14px; padding:4px 11px; display:none; align-items:center; gap:8px; white-space:nowrap;}
   body.mode-notes #playerBadge{display:inline-flex;}
   #playerBadge button{background:rgba(233,196,106,.15); border:1px solid rgba(233,196,106,.4); border-radius:10px; color:#e9c46a; cursor:pointer; font-size:11px; padding:2px 8px;}
   #playerBadge button:hover{background:rgba(233,196,106,.3);}
@@ -595,6 +595,8 @@
       <button class="fsbtn" id="fsBtn" onclick="toggleFull()" title="网页全屏">⛶</button>
       <button class="fsbtn" id="refreshBtn" onclick="window._softRefresh?window._softRefresh():location.reload()" title="刷新（重新同步，不退出全屏）">⟳</button>
       <button class="fsbtn" id="setBtn" onclick="openSettings()" title="设置">⚙</button>
+      <div id="stBadge">🎲 说书人已登录 <button onclick="_logout()">退出</button></div>
+      <div id="playerBadge">🖋 <span id="pbName">玩家</span> <button onclick="_gotoHall()">大厅</button> <button onclick="_logout()">退出</button></div>
     </div>
     <div class="banner-title" id="bannerTitle">暗流涌动</div>
     <div class="inkhotspot" onclick="openPlayerGate()">
@@ -867,6 +869,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v1.6.5', d:'2026-08-08', items:['登录信息移到左上角设置按钮右侧','玩家笔记页再点墨水瓶可返回大厅','勾选“记住我”后（含说书人）下次自动登录、免密码']},
   {v:'v1.6.4', d:'2026-08-08', items:['修复：玩家笔记状态标记（中毒等）图标被拉伸变形，改为保持原比例']},
   {v:'v1.6.3', d:'2026-08-08', items:['修复：玩家笔记/大厅误用魔典暗背景，改回始终用酒馆大厅背景']},
   {v:'v1.6.2', d:'2026-08-08', items:['手机端“标准”字号/按钮改为与电脑完全同比例（整页按舞台等比缩小，不再有最小字号导致的偏大/错位）']},
@@ -2038,8 +2041,6 @@ load(); render();
 
 <!-- ================= 多人版 DOM ================= -->
 <div id="fbToast"></div>
-<div id="stBadge">🎲 说书人已登录 <button onclick="_logout()">退出</button></div>
-<div id="playerBadge">🖋 <span id="pbName">玩家</span> <button onclick="_gotoHall()">大厅</button> <button onclick="_logout()">退出</button></div>
 <div id="voteBar"></div>
 <div id="rotateGate"><div class="phone"></div><div class="rg-t">请把手机横过来</div><div class="rg-s">血染钟楼在横屏下体验更好 🔄</div></div>
 <div id="cfgModal"><div class="cbox"><h3><span>本局存档 · 角色配置</span><span class="cX" onclick="_cfgClose()">✕</span></h3><div id="cfgList"></div></div></div>
@@ -2072,6 +2073,9 @@ load(); render();
     <div class="sub">只有你能进入魔典与公布信息。</div>
     <div class="err" id="stErr"></div>
     <input id="stPw" type="password" placeholder="说书人密码" onkeydown="if(event.key==='Enter')_stLogin()">
+    <label style="display:flex;align-items:center;gap:7px;justify-content:center;font-size:12.5px;color:#b3a6c8;margin:2px 0 10px;cursor:pointer">
+      <input id="stRemember" type="checkbox" style="width:auto;margin:0"> 在本机记住我（下次免敲密码）
+    </label>
     <button class="go" onclick="_stLogin()">进入魔典</button>
     <button class="cancel" onclick="_closeGate('stGate')">取消</button>
   </div>
@@ -2098,7 +2102,11 @@ load(); render();
 <script>
 (function(){
   const auth=firebase.auth(), db=firebase.database();
-  const AUTH_READY = auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(()=>{});
+  /* 记住我：勾选→LOCAL 持久化（跨会话自动登录，免密码）；否则→SESSION（关标签即登出） */
+  function _remembered(){ try{ return localStorage.getItem('botc_remember')==='1'; }catch(e){ return false; } }
+  function _setPersist(remember){ try{ localStorage.setItem('botc_remember', remember?'1':''); }catch(e){}
+    return auth.setPersistence(remember?firebase.auth.Auth.Persistence.LOCAL:firebase.auth.Auth.Persistence.SESSION).catch(()=>{}); }
+  const AUTH_READY = auth.setPersistence(_remembered()?firebase.auth.Auth.Persistence.LOCAL:firebase.auth.Auth.Persistence.SESSION).catch(()=>{});
   let me=null, role='anon', mode='hall', curGid=null, pub=null, S=null, sel=null, nbTab='mark';
   let notesRef=null, pubBound=null;
 
@@ -2131,16 +2139,18 @@ load(); render();
   window._gotoHall=function(){ setMode('hall'); };
 
   /* ---------- 登录门 ---------- */
-  window.onBookClick=function(){ if(role==='st'){ if(typeof setView==='function') setView(); return; } show('pGate',false); document.getElementById('stErr').textContent=''; show('stGate',true); setTimeout(()=>document.getElementById('stPw').focus(),60); };
-  window.openPlayerGate=function(){ if(role==='player'){ setMode('notes'); return; } show('stGate',false); document.getElementById('pErr').textContent='';
+  window.onBookClick=function(){ if(role==='st'){ if(typeof setView==='function') setView(); return; } show('pGate',false); document.getElementById('stErr').textContent=''; document.getElementById('stRemember').checked=_remembered(); show('stGate',true); setTimeout(()=>document.getElementById('stPw').focus(),60); };
+  window.openPlayerGate=function(){ if(role==='player'){ setMode(mode==='notes'?'hall':'notes'); return; }   /* 已登录：墨水瓶在笔记/大厅间来回切换 */
+    show('stGate',false); document.getElementById('pErr').textContent='';
     try{ const sid=localStorage.getItem('botc_pid')||'', spw=localStorage.getItem('botc_ppw')||'';
-      if(sid) document.getElementById('pId').value=sid; if(spw){ document.getElementById('pPw').value=spw; document.getElementById('pRemember').checked=true; } }catch(e){}
+      if(sid) document.getElementById('pId').value=sid; if(spw){ document.getElementById('pPw').value=spw; } document.getElementById('pRemember').checked=_remembered(); }catch(e){}
     show('pGate',true); setTimeout(()=>document.getElementById(document.getElementById('pId').value?'pPw':'pId').focus(),60); };
 
   function authErr(e){ const c=(e&&e.code)||''; if(c.includes('wrong-password')||c.includes('invalid-credential'))return'密码不对'; if(c.includes('email-already-in-use'))return'该 ID 已被占用'; if(c.includes('weak-password'))return'密码太弱（至少6位）'; if(c.includes('too-many'))return'尝试太频繁，稍后再试'; if(c.includes('network'))return'网络问题，稍后再试'; return'出错：'+c; }
 
   window._stLogin=async function(){ const pw=document.getElementById('stPw').value, err=document.getElementById('stErr');
     if(!pw){ err.textContent='请输入密码'; return; } if(pw.length<6){ err.textContent='密码至少 6 位'; return; } err.textContent='登录中…';
+    await _setPersist(!!document.getElementById('stRemember').checked);
     const done=()=>{ show('stGate',false); document.getElementById('stPw').value=''; };
     try{ await auth.signInWithEmailAndPassword(ST_EMAIL,pw); done(); }
     catch(e){ if((e.code||'').match(/user-not-found|invalid-credential/)){
@@ -2156,6 +2166,7 @@ load(); render();
     if(!id||!pw){ err.textContent='请输入 ID 和密码'; return; } if(pw.length<6){ err.textContent='密码至少 6 位'; return; }
     if(!/^[\p{L}\p{N}_]+$/u.test(id)){ err.textContent='ID 只能用中文/字母/数字/下划线（不能有空格）'; return; }
     const email=idToLocal(id)+PLAYER_DOM; err.textContent='登录中…';
+    await _setPersist(!!document.getElementById('pRemember').checked);
     const done=()=>{ show('pGate',false); try{ localStorage.setItem('botc_pid',id); if(document.getElementById('pRemember').checked) localStorage.setItem('botc_ppw',pw); else localStorage.removeItem('botc_ppw'); }catch(e){} document.getElementById('pPw').value=''; };
     try{ await auth.signInWithEmailAndPassword(email,pw); done(); }
     catch(e){ if((e.code||'').match(/user-not-found|invalid-credential/)){
@@ -2163,7 +2174,7 @@ load(); render();
         catch(e2){ err.textContent=authErr(e2); }
       } else err.textContent=authErr(e); } };
 
-  window._logout=function(){ try{ localStorage.removeItem('botc_ppw'); }catch(e){} auth.signOut(); };
+  window._logout=function(){ try{ localStorage.removeItem('botc_ppw'); localStorage.setItem('botc_remember',''); }catch(e){} auth.signOut(); };
 
   /* ---------- 认证状态 ---------- */
   AUTH_READY.then(()=>auth.onAuthStateChanged(user=>{ me=user;
