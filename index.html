@@ -210,6 +210,27 @@
   .chand.red img{filter:drop-shadow(0 0 5px #ff7a7a) drop-shadow(0 0 13px #ff2f2f) drop-shadow(0 0 24px #ff2f2f);}
   .cshadow{position:absolute;}
   .cshadow img{width:100%; height:100%; display:block; filter:brightness(0) opacity(.52) blur(1.6px);}   /* 加重的投影 */
+  /* ---- 结算特效 ---- */
+  #resultLayer{position:fixed; inset:0; z-index:200; display:none; flex-direction:column; align-items:center; justify-content:center; font-family:inherit;}
+  #resultLayer.on{display:flex; animation:rlFade .5s ease both;}
+  #resultLayer .backdrop{position:absolute; inset:0; background:radial-gradient(circle at 50% 42%,var(--glow2),rgba(8,5,14,.92) 72%),rgba(6,3,12,.72);}
+  #resultLayer .rays{position:absolute; width:150vmax; height:150vmax; left:50%; top:42%; transform:translate(-50%,-50%);
+    background:repeating-conic-gradient(from 0deg,var(--ray) 0deg 6deg,transparent 6deg 18deg); opacity:.13; animation:rlspin 42s linear infinite; mix-blend-mode:screen;}
+  #resultLayer .parts{position:absolute; inset:0; overflow:hidden; pointer-events:none;}
+  #resultLayer .p{position:absolute; bottom:-20px; border-radius:50%; background:var(--part); filter:blur(.3px) drop-shadow(0 0 6px var(--part)); animation:rlrise linear infinite;}
+  #resultLayer .emblem{position:relative; width:min(38vh,340px); animation:emblemIn 1s cubic-bezier(.2,1.3,.35,1) both;}
+  #resultLayer .emblem img{width:100%; display:block; animation:emblemPulse 1.6s ease-in-out infinite alternate; animation-delay:1s;}
+  #resultLayer .rtitle{position:relative; margin-top:16px; font-size:clamp(38px,8vh,84px); font-weight:900; letter-spacing:.08em; color:var(--fg); text-shadow:0 0 18px var(--glow),0 4px 10px rgba(0,0,0,.6); animation:titleIn .7s cubic-bezier(.2,1,.3,1) both; animation-delay:.35s;}
+  #resultLayer .rreason{position:relative; margin-top:10px; font-size:clamp(13px,2.2vh,20px); color:#eadfce; opacity:.92; background:rgba(0,0,0,.35); padding:6px 16px; border-radius:20px; animation:titleIn .7s ease both; animation-delay:.55s;}
+  #resultLayer .rclose{position:absolute; top:20px; right:24px; width:40px; height:40px; border-radius:50%; border:1px solid rgba(255,255,255,.3); background:rgba(0,0,0,.4); color:#fff; font-size:20px; cursor:pointer;}
+  .THEME-good{--fg:#dceeff; --glow:#4a9bff; --glow2:rgba(40,90,180,.5); --ray:#8fc2ff; --part:#bcd8ff;}
+  .THEME-evil{--fg:#ffe3df; --glow:#ff3b30; --glow2:rgba(150,25,20,.55); --ray:#ff7a5a; --part:#ff8a3c;}
+  @keyframes rlFade{from{opacity:0}to{opacity:1}}
+  @keyframes rlspin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+  @keyframes emblemIn{0%{transform:translateY(24px) scale(.2) rotate(-12deg);opacity:0}55%{transform:translateY(0) scale(1.12) rotate(3deg);opacity:1}100%{transform:scale(1) rotate(0)}}
+  @keyframes emblemPulse{from{filter:drop-shadow(0 0 12px var(--glow))}to{filter:drop-shadow(0 0 32px var(--glow))}}
+  @keyframes titleIn{0%{transform:translateY(26px);opacity:0}100%{transform:translateY(0);opacity:1}}
+  @keyframes rlrise{0%{transform:translateY(0) translateX(0) scale(1);opacity:0}12%{opacity:1}100%{transform:translateY(-88vh) translateX(var(--dx)) scale(.35);opacity:0}}
   #hoverBox .hb-role{font-weight:800; color:#e9c46a; margin-bottom:3px;}
   #hoverBox .hb-info b{color:#ffe08a;}
   #hoverBox .hb-line{text-align:left; margin-top:4px; line-height:1.4;}
@@ -514,6 +535,9 @@
         </div>
         <button class="btn purple" onclick="dealRoles()">随机发牌</button>
         <button class="btn lpurple" onclick="resetRoles()">重置角色</button>
+      </div>
+      <div class="box bottom-bar" id="resultBar" style="display:none;gap:6px;">
+        <button class="btn gold" style="flex:1" onclick="stAnnounceResult()">🏆 公布结算</button>
       </div>
     </div>
 
@@ -1176,11 +1200,33 @@ function checkWin(){
 }
 function renderWin(){
   const wi=document.getElementById("winIcon"); const win=checkWin();
+  const _rb=document.getElementById('resultBar'); if(_rb) _rb.style.display=win?'flex':'none';
   if(win && tableCenter){ const stg=document.getElementById("stage");
     if(!wi.dataset.w || wi.dataset.w!==win.w){ wi.dataset.w=win.w; wi.innerHTML='<img src="assets/win-'+win.w+'.png" onerror="this.parentNode.style.display=\'none\'">'; }
     wi.style.left=tableCenter.x+'px'; wi.style.top=tableCenter.y+'px'; wi.style.width=Math.round(stg.clientWidth*0.26)+'px'; wi.style.display='block';
   } else { wi.style.display='none'; wi.dataset.w=''; }
 }
+/* ---------- 结算特效 ---------- */
+var RES={_seenTs:0, _dismissed:0};
+function showResult(w,reason){ const L=document.getElementById('resultLayer'); if(!L) return;
+  L.className='THEME-'+w+' on';
+  document.getElementById('rlEmblem').src='assets/win-'+w+'.png';
+  document.getElementById('rlTitle').textContent = w==='good'?'好人胜利':'邪恶胜利';
+  document.getElementById('rlReason').textContent = reason||'';
+  const parts=document.getElementById('rlParts'); if(parts){ parts.innerHTML='';
+    for(let i=0;i<34;i++){ const p=document.createElement('div'); p.className='p'; const s=4+Math.random()*10;
+      p.style.width=s+'px'; p.style.height=s+'px'; p.style.left=(Math.random()*100)+'%';
+      p.style.setProperty('--dx',((Math.random()*2-1)*120)+'px');
+      p.style.animationDuration=(4+Math.random()*5)+'s'; p.style.animationDelay=(Math.random()*5)+'s';
+      parts.appendChild(p); } }
+}
+function hideResult(){ const L=document.getElementById('resultLayer'); if(L) L.className=''; RES._dismissed=RES._seenTs; }
+window.hideResult=hideResult; window.showResult=showResult;
+window.applyResult=function(res){
+  if(!res || !res.w){ const L=document.getElementById('resultLayer'); if(L) L.className=''; RES._seenTs=0; RES._dismissed=0; return; }
+  if(res.ts===RES._dismissed) return;
+  if(res.ts!==RES._seenTs){ RES._seenTs=res.ts; showResult(res.w, res.r); }
+};
 /* ---------- 中央时钟 ---------- */
 var CLK={dayStart:null, nom:null, offset:0, _tick:null, _loadTs:Date.now(), _realBusy:false, _nomSeenTs:0, _outTimer:null, _busyTimer:null};
 var _clkEls=null;
@@ -1845,6 +1891,13 @@ load(); render();
 <div id="stBadge">🎲 说书人已登录 <button onclick="_logout()">退出</button></div>
 <div id="playerBadge">🖋 <span id="pbName">玩家</span> <button onclick="_gotoHall()">大厅</button> <button onclick="_logout()">退出</button></div>
 <div id="cfgModal"><div class="cbox"><h3><span>本局存档 · 角色配置</span><span class="cX" onclick="_cfgClose()">✕</span></h3><div id="cfgList"></div></div></div>
+<div id="resultLayer">
+  <div class="backdrop"></div><div class="rays"></div><div class="parts" id="rlParts"></div>
+  <button class="rclose" onclick="hideResult()" title="收起">✕</button>
+  <div class="emblem"><img id="rlEmblem" alt=""></div>
+  <div class="rtitle" id="rlTitle"></div>
+  <div class="rreason" id="rlReason"></div>
+</div>
 
 <!-- 说书人登录门 -->
 <div class="gate" id="stGate">
@@ -1955,11 +2008,18 @@ load(); render();
   db.ref('.info/serverTimeOffset').on('value', s=>{ if(window.CLK) window.CLK.offset=s.val()||0; });
   function bindPub(){ if(pubBound){pubBound.off();pubBound=null;} if(!curGid){ pub=null;
       window.__pubHasGame=false; window.__pubCount=0; if(window.clockApplyState) window.clockApplyState(null);
+      if(window.applyResult) window.applyResult(null);
       if(mode!=='st') renderView(); return; }
     pubBound=db.ref('games/'+curGid+'/public'); pubBound.on('value',s=>{ pub=s.val(); ensureS();
       window.__pubHasGame=!!(pub&&pub.count); window.__pubCount=(pub&&pub.count)||0;
       if(window.clockApplyState) window.clockApplyState(pub&&pub.clock);
+      if(window.applyResult) window.applyResult(pub&&pub.result);
       if(mode!=='st') renderView(); }); }
+  /* 说书人：公布结算（只传胜负结果，不泄露角色） */
+  window.stAnnounceResult=function(){ if(role!=='st'){ toast('请先登录说书人'); return; } if(!curGid){ toast('先点开新局'); return; }
+    const win=(typeof checkWin==='function')?checkWin():null; if(!win){ toast('当前没有可公布的胜负'); return; }
+    db.ref('games/'+curGid+'/public/result').set({w:win.w, r:win.r, ts:firebase.database.ServerValue.TIMESTAMP})
+      .then(()=>toast('🏆 已公布结算')).catch(e=>toast('公布失败：'+(e.code||''))); };
   /* 说书人：广播提名给时钟（所有端同步指向） */
   window._clockBroadcastNom=function(nr,ne){ if(role!=='st'||!curGid) return;
     db.ref('games/'+curGid+'/public/clock/nom').set({nr:nr, ne:ne, ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); };
@@ -2063,7 +2123,7 @@ load(); render();
     let nm='本局'; try{ nm=await uiPrompt('给这局起个名字（玩家会看到）：','本局',{title:'开始新的一局'}); if(nm===null) return; }catch(e){}
     window.__botcGameName=nm||'本局'; const gid='t'+Date.now();
     const seats=[]; for(let i=0;i<N;i++){ const t=seatToken(i); seats.push({name:(t&&t.name)?t.name:'', dead:false, cause:''}); }
-    const g={ name:window.__botcGameName, count:N, day:night, seats:seats, locked:[...lockedRoles], dist:(customDist||DIST[N]||[0,0,0,0]), noms:[], clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null} };
+    const g={ name:window.__botcGameName, count:N, day:night, seats:seats, locked:[...lockedRoles], dist:(customDist||DIST[N]||[0,0,0,0]), noms:[], clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null}, result:null };
     try{ await db.ref('storytellerUid').set(me.uid); await db.ref('games/'+gid+'/public').set(g); await db.ref('currentGame').set(gid); toast('✅ 已开始新的一局'); }
     catch(e){ toast('开局失败：'+(e.code||e.message||'')); } };
   window.stSyncSeats=async function(){ if(role!=='st'){ toast('请先登录说书人'); return; } if(!curGid){ toast('先点开新局'); return; }
