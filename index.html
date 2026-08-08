@@ -871,6 +871,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v1.7.0', d:'2026-08-08', items:['开新局时自动清理旧牌局（云端只保留当前一局，旧笔记一并清除，避免长期累积）']},
   {v:'v1.6.9', d:'2026-08-08', items:['设置里只显示最近一次更新','修复说书人角标不显示 ID','去掉说书人角标前的骰子图标']},
   {v:'v1.6.8', d:'2026-08-08', items:['点刷新不再弹提示条，改为刷新图标转一圈']},
   {v:'v1.6.7', d:'2026-08-08', items:['说书人改为用 ID+密码登录，角标显示“说书人{ID}已登录”','修复：底栏“第X夜/共X人”按钮过大导致换行（恢复尺寸上限）']},
@@ -2473,7 +2474,13 @@ load(); render();
     window.__botcGameName=nm||'本局'; const gid='t'+Date.now();
     const seats=[]; for(let i=0;i<N;i++){ const t=seatToken(i); seats.push({name:(t&&t.name)?t.name:'', dead:false, cause:''}); }
     const g={ name:window.__botcGameName, count:N, day:night, seats:seats, locked:[...lockedRoles], dist:(customDist||DIST[N]||[0,0,0,0]), noms:[], clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null}, result:null, vote:null };
-    try{ await db.ref('storytellerUid').set(me.uid); await db.ref('games/'+gid+'/public').set(g); await db.ref('currentGame').set(gid); toast('✅ 已开始新的一局'); }
+    try{ await db.ref('storytellerUid').set(me.uid); await db.ref('games/'+gid+'/public').set(g); await db.ref('currentGame').set(gid); toast('✅ 已开始新的一局');
+      /* 清理：删掉除当前局外的所有旧牌局（含旧笔记），云端只留当前一局，避免累积 */
+      try{ const snap=await db.ref('games').once('value'); const all=snap.val()||{};
+        const dels=Object.keys(all).filter(k=>k!==gid).map(k=>db.ref('games/'+k).remove().catch(()=>{}));
+        if(dels.length) await Promise.all(dels);
+      }catch(e){}
+    }
     catch(e){ toast('开局失败：'+(e.code||e.message||'')); } };
   window.stSyncSeats=async function(){ if(role!=='st'){ toast('请先登录说书人'); return; } if(!curGid){ toast('先点开新局'); return; }
     const p=buildPublic(); try{ await db.ref('games/'+curGid+'/public').update({seats:p.seats,count:p.count,roleset:p.roleset,dist:p.dist,day:p.day}); toast('↻ 座位/名单已同步'); }
