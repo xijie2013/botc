@@ -232,19 +232,6 @@
   .resbadge.good{background:rgba(74,155,255,.18); border:1px solid #4a9bff; color:#153f7a;}
   .resbadge.evil{background:rgba(200,60,50,.16); border:1px solid #d9463a; color:#8f1f17;}
   .resbadge b{color:inherit;} .resbadge .rb-r{color:inherit; opacity:.95;}
-  /* 玩家笔记 · 座位备注弹框 + 悬停提示 */
-  #pnotePop{position:absolute; z-index:70; transform:translate(-50%,-112%); width:180px; display:none;
-    background:rgba(255,252,244,.99); border:1px solid rgba(122,83,32,.55); border-radius:10px; padding:8px; box-shadow:0 8px 22px rgba(0,0,0,.4);}
-  #pnotePop.on{display:block;}
-  #pnotePop .pn-h{font-size:12px; font-weight:800; color:#6b4a1e; margin-bottom:5px;}
-  #pnotePop textarea{width:100%; box-sizing:border-box; resize:none; border:1px solid rgba(122,83,32,.4); border-radius:6px; padding:5px; font-family:inherit; font-size:12px; color:#3a2a12; background:#fffdf7;}
-  #pnotePop textarea:focus{outline:none; border-color:var(--gold);}
-  #pnotePop .pn-f{display:flex; justify-content:flex-end; margin-top:6px;}
-  #pnotePop .pn-save{border:none; border-radius:6px; background:#6b4a1e; color:#f3e6c4; padding:3px 14px; cursor:pointer; font-size:12px;}
-  #pnotePop .pn-save:hover{background:#8a5f28;}
-  #pnoteTip{position:absolute; z-index:66; transform:translate(-50%,-100%); max-width:200px; display:none; white-space:pre-wrap; text-align:left;
-    background:rgba(28,18,42,.94); color:#fff6df; border:1px solid rgba(233,196,106,.5); border-radius:8px; padding:5px 9px; font-size:12px; line-height:1.35; pointer-events:none;}
-  #pnoteTip.on{display:block;}
   @keyframes rlFade{from{opacity:0}to{opacity:1}}
   @keyframes rlspin{to{transform:translate(-50%,-50%) rotate(360deg)}}
   @keyframes emblemIn{0%{transform:translateY(24px) scale(.2) rotate(-12deg);opacity:0}55%{transform:translateY(0) scale(1.12) rotate(3deg);opacity:1}100%{transform:scale(1) rotate(0)}}
@@ -2088,8 +2075,8 @@ load(); render();
         bhtml+='<div class="shieldbadge" title="'+k+'" style="width:'+bd+'px;height:'+bd+'px;left:'+(bx-bd/2)+'px;top:'+(by-bd/2)+'px;filter:drop-shadow(0 0 2px '+m2[3]+') drop-shadow(0 0 4px '+m2[3]+');"><img src="'+m2[1]+'"></div>'; });
       if(bhtml) s.insertAdjacentHTML('beforeend', bhtml);
       if(mode==='notes'){ s.style.cursor='pointer'; const sx=zoneLeft+x, sy=zoneTop+y, sd=seatD;
-        s.addEventListener('click',e=>{ e.stopPropagation(); seatTap(i,sx,sy); });
-        s.addEventListener('mouseenter',()=>showSeatNote(i,sx,sy,sd));
+        s.addEventListener('click',e=>{ e.stopPropagation(); seatTap(i,sx,sy,sd); });
+        s.addEventListener('mouseenter',()=>showSeatNote(i));
         s.addEventListener('mouseleave',hideSeatNote); }
       zone.appendChild(s);
     }
@@ -2141,38 +2128,53 @@ load(); render();
     return h;
   }
   window._nbPick=function(type,val){ if(sel&&sel.type===type&&sel.val===val) sel=null; else sel={type,val}; renderNotes(); drawSeats(); };
-  let _pnoteSeat=-1;
-  function seatTap(i, sx, sy){
+  let _pnoteSeat=-1, _noteSaveT=null;
+  function seatTap(i, sx, sy, sd){
     if(sel){ ensureS(); const s=S.seats[i];
       if(sel.type==='role') s.role=(s.role===sel.val?'':sel.val);
       else { const k=s.status.indexOf(sel.val); if(k<0) s.status.push(sel.val); else s.status.splice(k,1); }
-      sel=null; if(_pnoteSeat>=0) closePnote(false); saveNotes(); renderNotes(); drawSeats(); return; }
-    if(_pnoteSeat===i){ closePnote(true); return; }        // 再次点击同一座位 → 关闭
-    openPnote(i, sx, sy);
+      sel=null; closePnote(); saveNotes(); renderNotes(); drawSeats(); return; }
+    if(_pnoteSeat===i){ closePnote(); return; }             // 再次点击同一座位 → 关闭
+    openPnote(i, sx, sy, sd);
   }
-  function openPnote(i, sx, sy){ ensureS(); if(_pnoteSeat>=0) closePnote(true);
-    let pop=document.getElementById('pnotePop');
-    if(!pop){ pop=document.createElement('div'); pop.id='pnotePop';
-      pop.innerHTML='<div class="pn-h"></div><textarea rows="3" placeholder="写点备注…"></textarea><div class="pn-f"><button class="pn-save">完成</button></div>';
-      document.getElementById('stage').appendChild(pop);
-      pop.addEventListener('click',e=>e.stopPropagation());
-      pop.querySelector('.pn-save').addEventListener('click',()=>closePnote(true));
-      document.addEventListener('click',()=>{ if(_pnoteSeat>=0) closePnote(true); });
+  /* 备注弹框：复用魔典 .bubble（贴座位旁、带尾巴、深色金边、内含 textarea） */
+  function openPnote(i, sx, sy, sd){ ensureS();
+    const layer=document.getElementById('bubbleLayer'); if(!layer) return; layer.innerHTML=''; _pnoteSeat=i; hideSeatNote();
+    const stage=document.getElementById('stage'); const SW=stage.clientWidth, SH=stage.clientHeight;
+    const cx=SW*0.71, cy=SH*0.525, BW=Math.round(Math.min(SW*0.24,230)), g=14;
+    const b=document.createElement('div'); b.style.width=BW+'px';
+    const dx=sx-cx, dy=sy-cy; let cls;
+    if(Math.abs(dx)>=Math.abs(dy)){
+      if(dx<0){ cls='br'; b.style.left=(sx+sd/2+g)+'px'; b.style.top=sy+'px'; b.style.transform='translateY(-50%)'; }
+      else    { cls='bl'; b.style.left=(sx-sd/2-g)+'px'; b.style.top=sy+'px'; b.style.transform='translate(-100%,-50%)'; }
+    } else {
+      if(dy<0){ cls='bb'; b.style.top=(sy+sd/2+g)+'px'; b.style.left=sx+'px'; b.style.transform='translateX(-50%)'; }
+      else    { cls='bt'; b.style.top=(sy-sd/2-g)+'px'; b.style.left=sx+'px'; b.style.transform='translate(-50%,-100%)'; }
     }
-    pop.querySelector('.pn-h').textContent='座位 '+(i+1)+' · '+pname(i);
-    const ta=pop.querySelector('textarea'); ta.value=(S.seats[i]&&S.seats[i].note)||'';
-    pop.style.left=sx+'px'; pop.style.top=sy+'px'; pop.classList.add('on'); _pnoteSeat=i; hideSeatNote();
+    b.className='bubble '+cls;
+    b.innerHTML='<textarea placeholder="在此记录你自己的备注…"></textarea>';
+    const ta=b.querySelector('textarea'); ta.value=(S.seats[i]&&S.seats[i].note)||'';
+    ta.addEventListener('input',()=>{ ensureS(); S.seats[i].note=ta.value; clearTimeout(_noteSaveT); _noteSaveT=setTimeout(saveNotes,400); });
+    ['click','mousedown','dblclick'].forEach(ev=>ta.addEventListener(ev,e=>e.stopPropagation()));
+    layer.appendChild(b);
     setTimeout(()=>{ try{ta.focus();}catch(e){} },30);
   }
-  function closePnote(save){ const pop=document.getElementById('pnotePop'); if(!pop) return;
-    const i=_pnoteSeat; _pnoteSeat=-1; pop.classList.remove('on');
-    if(save && i>=0){ ensureS(); const ta=pop.querySelector('textarea'); S.seats[i].note=ta.value.trim(); saveNotes(); renderNotes(); drawSeats(); }
+  function closePnote(){ const layer=document.getElementById('bubbleLayer'); if(layer) layer.innerHTML='';
+    if(_pnoteSeat>=0){ _pnoteSeat=-1; clearTimeout(_noteSaveT); saveNotes(); if(mode==='notes') renderNotes(); } }
+  /* 悬停框：复用魔典 #hoverBox，出现在座位圈正中央，显示身份猜测/状态/备注 */
+  function showSeatNote(i){ if(_pnoteSeat===i) return; ensureS(); const st=S.seats[i]||{};
+    const note=st.note||'', rid=st.role, marks=(st.status||[]);
+    if(!note && !rid && !marks.length){ hideSeatNote(); return; }
+    let html='<div class="hb-role">'+(i+1)+' · '+(E(pname(i))||'')+'</div>';
+    if(rid&&RMAP[rid]) html+='<div class="hb-ab"><span style="color:'+TEAMC[RMAP[rid].team]+'">【'+TEAMLABEL[RMAP[rid].team]+'】</span> '+RMAP[rid].name+'</div>';
+    if(marks.length){ const mk=marks.map(k=>(BADGE[k]?BADGE[k].t:k)).join('、'); html+='<div class="hb-ab" style="color:#e9c46a">'+mk+'</div>'; }
+    if(note) html+='<div class="hb-sep"></div><div class="hb-line" style="text-align:left">'+E(note)+'</div>';
+    const box=document.getElementById('hoverBox'); if(!box) return; box.innerHTML=html;
+    const stage=document.getElementById('stage'); const SW=stage.clientWidth, SH=stage.clientHeight;
+    box.style.left=(SW*0.71)+'px'; box.style.top=(SH*0.525)+'px'; box.style.transform='translate(-50%,-50%)';
+    box.style.width=Math.round(Math.min(SW*0.22,260))+'px'; box.classList.add('on');
   }
-  function ensurePnoteTip(){ let t=document.getElementById('pnoteTip'); if(!t){ t=document.createElement('div'); t.id='pnoteTip'; document.getElementById('stage').appendChild(t); } return t; }
-  function showSeatNote(i, sx, sy, sd){ if(_pnoteSeat===i) return; const note=(S&&S.seats&&S.seats[i]&&S.seats[i].note)||''; const t=ensurePnoteTip();
-    if(!note){ t.classList.remove('on'); return; }
-    t.textContent=note; t.style.left=sx+'px'; t.style.top=(sy-(sd||40)/2-4)+'px'; t.classList.add('on'); }
-  function hideSeatNote(){ const t=document.getElementById('pnoteTip'); if(t) t.classList.remove('on'); }
+  function hideSeatNote(){ const b=document.getElementById('hoverBox'); if(b) b.classList.remove('on'); }
   function ensureS(){ const n=(pub&&pub.count)||0; if(!S) S={seats:[],v:1}; if(!S.seats) S.seats=[]; for(let i=0;i<n;i++){ if(!S.seats[i]) S.seats[i]={role:'',status:[],note:''}; if(!S.seats[i].status) S.seats[i].status=[]; } }
   function saveNotes(){ if(notesRef&&S) notesRef.set(S).catch(e=>toast('保存失败：'+(e.code||''))); }
 
