@@ -1097,11 +1097,10 @@ function pingUI(roleId){
     const pOpt=sel=>{ let o='<option value="">玩家</option>'; for(let i=0;i<N;i++){ o+='<option value="'+i+'"'+(sel===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+'</option>'; } return o; };
     h+='<div class="impkill">选2人：<select onchange="pingSet(\''+roleId+'\',\'a\',this.value)">'+pOpt(rec.a)+'</select>'
       +'<select onchange="pingSet(\''+roleId+'\',\'b\',this.value)">'+pOpt(rec.b)+'</select></div>';
-    const ov=gameOverviewSet();
     let rOpt='<option value="">角色</option>';
     if(roleId==="librarian") rOpt+='<option value="__none"'+(rec.role==="__none"?' selected':'')+'>（无外来者）</option>';
-    ROLES.filter(r=>r.team===team && ov.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(rec.role===r.id?' selected':'')+'>'+r.name+'</option>'; });
-    h+='<div class="impkill warn">中毒·自定信息（限本局速览角色）：<select onchange="pingSet(\''+roleId+'\',\'role\',this.value)">'+rOpt+'</select></div>';
+    ROLES.filter(r=>r.team===team && !lockedRoles.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(rec.role===r.id?' selected':'')+'>'+r.name+'</option>'; });
+    h+='<div class="impkill warn">中毒·自定信息：<select onchange="pingSet(\''+roleId+'\',\'role\',this.value)">'+rOpt+'</select></div>';
   } else {                                          // 健康：第一个只列该阵营，第二个列其余任意人
     let o1='<option value="">'+teamName+'</option>';
     teamSeats(team).forEach(i=>{ o1+='<option value="'+i+'"'+(rec.a===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+'</option>'; });
@@ -1414,7 +1413,7 @@ function renderGrim(){
     h+='<div class="rrow" style="border:none;font-size:.9em;color:'+(total===N?'#2e7d32':'#b0402e')+'">阵营合计 '+total+'/'+N
       +(customDist?' <span class="regbtn" onclick="resetDist()">恢复默认</span>':'')+'</div>';
     h+='<div style="display:flex;gap:6px;margin-top:6px;align-items:stretch">'
-      +'<button class="btn lpurple" style="flex:1;'+(ready?'':'opacity:.4;cursor:not-allowed;')+'" '+(ready?'onclick="stNewGame()"':'disabled title="发满牌后可点"')+'>新的一局</button>'
+      +'<button class="btn purple" style="flex:1;'+(ready?'':'opacity:.4;cursor:not-allowed;')+'" '+(ready?'onclick="stNewGame()"':'disabled title="发满牌后可点"')+'>新的一局</button>'
       +'<button class="btn purple" style="flex:0 0 auto;padding:7px 9px" onclick="stSaveConfig()">保存本局</button>'
       +'<button class="btn lpurple" style="flex:0 0 auto;padding:7px 9px" onclick="stViewConfigs()">查看存档</button>'
       +'</div>';
@@ -1547,7 +1546,7 @@ function renderGrim(){
       if(night>=2 && s.id==="imp") h+=impKillUI(); });
     const _dawnReady = steps.length>0 && steps.every(s=> nightChecks[night+":"+s.id]);
     h+='<div style="margin-top:14px">'
-      +'<button class="btn purple" style="width:100%;font-weight:800;'+(_dawnReady?'':'opacity:.4;cursor:not-allowed;filter:grayscale(.85);')+'" '+(_dawnReady?'onclick="stDawn()"':'disabled')+'>🌅 天亮了</button>'
+      +'<button class="btn purple" style="width:100%;font-weight:800;'+(_dawnReady?'':'opacity:.4;cursor:not-allowed;filter:grayscale(.85);')+'" '+(_dawnReady?'onclick="stDawn()"':'disabled')+'>结束本夜</button>'
       +(_dawnReady?'':'<div style="text-align:center;font-size:11px;color:#8a7250;margin-top:5px">完成本夜所有流程后可点亮</div>')
       +'</div>';
   }
@@ -1963,7 +1962,7 @@ load(); render();
     const p=buildPublic(); try{ await db.ref('games/'+curGid+'/public').update({seats:p.seats,noms:p.noms,day:p.day,count:p.count}); toast('📣 已公布第 '+p.day+' 天'); }
     catch(e){ toast('公布失败：'+(e.code||'')); } };
   window.stDawn=async function(){ if(role!=='st'){ toast('请先登录说书人'); return; } if(!curGid){ toast('先点开新局'); return; }
-    const p=buildPublic(); try{ await db.ref('games/'+curGid+'/public').update({seats:p.seats,noms:p.noms,day:p.day,count:p.count}); toast('🌅 天亮了 · 已更新死亡信息'); }
+    const p=buildPublic(); try{ await db.ref('games/'+curGid+'/public').update({seats:p.seats,noms:p.noms,day:p.day,count:p.count}); toast('结束本夜 · 已更新死亡信息'); }
     catch(e){ toast('更新失败：'+(e.code||'')); } };
 
   /* ---------- 名单实时自动同步（说书人改动→自动推送公开名单，不含死亡/提名） ---------- */
