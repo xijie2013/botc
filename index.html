@@ -74,7 +74,8 @@
     padding:0; transition:transform .12s, box-shadow .12s, background .12s;}
   .fsbtn:hover{background:rgba(58,45,78,.85); transform:translateY(-1px); box-shadow:0 0 10px rgba(233,196,106,.4);}
   .fsbtn:active{transform:scale(.94);}
-  #refreshBtn.spin{animation:refreshSpin .6s ease;}
+  #refreshBtn .ric{display:inline-block;}
+  #refreshBtn.spin .ric{animation:refreshSpin .6s ease;}
   @keyframes refreshSpin{from{transform:rotate(0);} to{transform:rotate(360deg);}}
   /* 设置面板 */
   #setModal{position:fixed; inset:0; z-index:210; display:none; align-items:center; justify-content:center; background:rgba(10,6,16,.64); padding:16px; overflow-y:auto;}
@@ -596,7 +597,7 @@
     <button class="view-toggle" id="viewToggle" onclick="onBookClick()" title="进入说书人魔典">📖</button>
     <div id="toolBar">
       <button class="fsbtn" id="fsBtn" onclick="toggleFull()" title="网页全屏">⛶</button>
-      <button class="fsbtn" id="refreshBtn" onclick="window._softRefresh?window._softRefresh():location.reload()" title="刷新（重新同步，不退出全屏）">⟳</button>
+      <button class="fsbtn" id="refreshBtn" onclick="window._softRefresh?window._softRefresh():location.reload()" title="刷新（重新同步，不退出全屏）"><span class="ric">⟳</span></button>
       <button class="fsbtn" id="setBtn" onclick="openSettings()" title="设置">⚙</button>
       <div id="stBadge">🎲 说书人<span id="stName"></span>已登录 <button onclick="_logout()">退出</button></div>
       <div id="playerBadge">🖋 玩家<span id="pbName"></span>已登录 <button onclick="_logout()">退出</button></div>
