@@ -867,6 +867,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v1.6.4', d:'2026-08-08', items:['修复：玩家笔记状态标记（中毒等）图标被拉伸变形，改为保持原比例']},
   {v:'v1.6.3', d:'2026-08-08', items:['修复：玩家笔记/大厅误用魔典暗背景，改回始终用酒馆大厅背景']},
   {v:'v1.6.2', d:'2026-08-08', items:['手机端“标准”字号/按钮改为与电脑完全同比例（整页按舞台等比缩小，不再有最小字号导致的偏大/错位）']},
   {v:'v1.6.1', d:'2026-08-08', items:['刷新改为重新同步，不再退出全屏','字号档位改为整体缩放（文字+框一起）：标准=电脑大小、大=2倍、超大=4倍']},
@@ -2359,7 +2360,7 @@ load(); render();
     if(nbTab==='mark') c.innerHTML=_rb+markTabHTML(); else if(nbTab==='nom') c.innerHTML=_rb+nomLogHTML(); else c.innerHTML=_rb+refHTML();
   }
   function markTabHTML(){ let h='<div class="nb-sec">状态标记 · 点标记再点座位</div><div>';
-    h+=STAT_ORDER.map(k=>{ const b=BADGE[k], on=sel&&sel.type==='stat'&&sel.val===k; const ic=MARK[k]?'<img src="'+MARK[k][1]+'" style="width:17px;height:17px;vertical-align:middle;margin-right:2px">':b.g; return '<span class="nbtok '+(on?'on':'')+'" onclick="_nbPick(\''+'stat'+'\',\''+k+'\')">'+ic+b.t+'</span>'; }).join('')+'</div>';
+    h+=STAT_ORDER.map(k=>{ const b=BADGE[k], on=sel&&sel.type==='stat'&&sel.val===k; const ic=MARK[k]?'<img src="'+MARK[k][1]+'" style="width:17px;height:17px;object-fit:contain;vertical-align:middle;margin-right:2px">':b.g; return '<span class="nbtok '+(on?'on':'')+'" onclick="_nbPick(\''+'stat'+'\',\''+k+'\')">'+ic+b.t+'</span>'; }).join('')+'</div>';
     h+='<div class="nb-sec">在场角色 · 点角色再点座位记录猜测</div><div>';
     const locked=new Set(pub.locked||[]); const rs=ROLES.filter(r=>!locked.has(r.id)).map(r=>r.id), used={}; (S.seats||[]).forEach(s=>{ if(s&&s.role) used[s.role]=true; });
     h+=rs.map(id=>{ const r=RMAP[id]; if(!r) return ''; const on=sel&&sel.type==='role'&&sel.val===id;
