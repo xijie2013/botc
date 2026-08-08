@@ -1182,7 +1182,7 @@ function renderWin(){
 /* ---------- 中央时钟 ---------- */
 var CLK={dayStart:null, nom:null, offset:0, _nomShownTs:0, _tick:null, _nomT:null};
 var _clkEls=null;
-var CLK_PIVOT={hour:{px:0.474,py:0.809,ar:97/519}, minute:{px:0.490,py:0.808,ar:100/683}};
+var CLK_PIVOT={hour:{px:0.4943,py:0.8004,ar:0.16860}, minute:{px:0.4886,py:0.7911,ar:0.13037}};
 var CLK_HOLD=7000, CLK_DAY_MS=20*60*1000;
 function clockServerNow(){ return Date.now()+(CLK.offset||0); }
 function clockGeo(){ const st=document.getElementById('stage'); if(!st) return null;
