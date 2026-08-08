@@ -1270,8 +1270,9 @@ function clockBuild(geo,layer){ layer.innerHTML='';
   return { face, shHour, shMin, hHour, hMin };
 }
 function clockUpdate(snap){ if(!_clkEls) return; const a=dayAngles(clockServerNow()-clockAnchor());
-  clkSetHand(_clkEls.shHour, a.hour, {dur:snap?0:1});     /* 影子始终显示时间 */
-  clkSetHand(_clkEls.shMin, a.minute, {dur:snap?0:1});
+  if(!CLK._dawnBusy){                                     /* 天亮时影子随指针一起转，其余时刻显示时间 */
+    clkSetHand(_clkEls.shHour, a.hour, {dur:snap?0:1});
+    clkSetHand(_clkEls.shMin, a.minute, {dur:snap?0:1}); }
   if(!CLK._realBusy){                                     /* 空闲时真针也跟随时间 */
     _clkEls.hHour.classList.remove('blue','red'); _clkEls.hMin.classList.remove('blue','red');
     clkSetHand(_clkEls.hHour, a.hour, {dur:snap?0:1});
@@ -1310,11 +1311,13 @@ function renderClock(){ const geo=clockGeo(); const layer=document.getElementByI
   clockUpdate(true); ensureClockTick();
 }
 window.renderClock=renderClock;
-function startDawnSpin(){ if(!_clkEls) return; CLK._realBusy=true;   /* 天亮：两针转几圈缓慢对齐到正上方(不变色) */
+function startDawnSpin(){ if(!_clkEls) return; CLK._realBusy=true; CLK._dawnBusy=true;   /* 天亮：真针+影子一起转几圈缓慢对齐到正上方(不变色) */
   _clkEls.hHour.classList.remove('blue','red'); _clkEls.hMin.classList.remove('blue','red');
   clkSpin(_clkEls.hHour, 0, CLK_TURN_H, CLK_SPIN_H);
   clkSpin(_clkEls.hMin, 0, CLK_TURN_M, CLK_SPIN_M);
-  clearTimeout(CLK._busyTimer); CLK._busyTimer=setTimeout(()=>{ CLK._realBusy=false; }, CLK_SPIN_M+60); }
+  clkSpin(_clkEls.shHour, 0, CLK_TURN_H, CLK_SPIN_H);   /* 影子同步旋转（作为投影一起转） */
+  clkSpin(_clkEls.shMin, 0, CLK_TURN_M, CLK_SPIN_M);
+  clearTimeout(CLK._busyTimer); CLK._busyTimer=setTimeout(()=>{ CLK._realBusy=false; CLK._dawnBusy=false; }, CLK_SPIN_M+60); }
 window.clockApplyState=function(c){ c=c||{};
   const prevDay=CLK.dayStart; CLK.dayStart=c.dayStart||null;
   const nom = c.nom||null;
@@ -1325,7 +1328,7 @@ window.clockApplyState=function(c){ c=c||{};
     if(el < CLK_HOLD){ if(el<600) startRoulette(nom); else snapNomination(nom); }
   } else {
     CLK.nom=nom;
-    if(dayChanged){ CLK._realBusy=true; renderClock(); startDawnSpin(); }
+    if(dayChanged){ CLK._realBusy=true; CLK._dawnBusy=true; renderClock(); startDawnSpin(); }
     else renderClock();
   }
 };
