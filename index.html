@@ -867,6 +867,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v1.6.3', d:'2026-08-08', items:['修复：玩家笔记/大厅误用魔典暗背景，改回始终用酒馆大厅背景']},
   {v:'v1.6.2', d:'2026-08-08', items:['手机端“标准”字号/按钮改为与电脑完全同比例（整页按舞台等比缩小，不再有最小字号导致的偏大/错位）']},
   {v:'v1.6.1', d:'2026-08-08', items:['刷新改为重新同步，不再退出全屏','字号档位改为整体缩放（文字+框一起）：标准=电脑大小、大=2倍、超大=4倍']},
   {v:'v1.6.0', d:'2026-08-08', items:['新增左上角刷新按钮与设置面板（版本 / 更新内容 / 字号）','手机横屏适配：弹窗自动缩小、投票浮条改细条、笔记字号加大']},
@@ -2122,6 +2123,7 @@ load(); render();
     window.BOTC_VIEWER = (m!=='st');
     if(m==='st'){ try{ if(typeof render==='function') render(); }catch(e){} }
     else { const vt=document.getElementById('viewToggle'); if(vt) vt.innerHTML='<img src="assets/book-closed.png" alt="魔典">';
+      const stg=document.getElementById('stage'); if(stg) stg.classList.remove('grim');   // 访客(大厅/玩家)始终用酒馆背景，绝不用魔典暗背景
       const bt=document.getElementById('bannerTitle'); if(bt) bt.textContent=(m==='notes'?'玩家笔记':'暗流涌动');
       renderView(); }
   }
