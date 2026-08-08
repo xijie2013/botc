@@ -1983,23 +1983,33 @@ load(); render();
   function _cfgLoadAll(){ try{ return JSON.parse(localStorage.getItem('botc_configs')||'[]'); }catch(e){ return []; } }
   function _cfgSaveAll(a){ try{ localStorage.setItem('botc_configs', JSON.stringify(a)); }catch(e){} }
   window.stSaveConfig=async function(){ if(role!=='st'){ toast('请先登录说书人'); return; }
+    const roles=[]; for(let i=0;i<N;i++){ const m=meta[i]; if(m&&m.role) roles.push({r:m.role, d:!!m.isDrunk}); }
+    if(!roles.length){ toast('还没有分配角色，先发牌或拖入角色'); return; }
     const dft='配置'+(new Date().getMonth()+1)+'-'+new Date().getDate();
-    let nm=dft; try{ nm=await uiPrompt('给这套阵营/角色配置起个名字：',dft,{title:'保存本局'}); if(nm===null) return; }catch(e){}
-    const cfg={ name:nm||dft, N:N, dist:(customDist||DIST[N]||[0,0,0,0]).slice(), locked:[...lockedRoles], ts:Date.now() };
+    let nm=dft; try{ nm=await uiPrompt('给这套角色配置起个名字：',dft,{title:'保存本局'}); if(nm===null) return; }catch(e){}
+    const cfg={ name:nm||dft, roles:roles, dist:(customDist||DIST[N]||[0,0,0,0]).slice(), ts:Date.now() };
     const a=_cfgLoadAll(); a.unshift(cfg); _cfgSaveAll(a); toast('已保存：'+cfg.name);
   };
   window.stViewConfigs=function(){ if(role!=='st'){ toast('请先登录说书人'); return; } renderCfgList(); document.getElementById('cfgModal').classList.add('on'); };
   window._cfgClose=function(){ document.getElementById('cfgModal').classList.remove('on'); };
   function renderCfgList(){ const a=_cfgLoadAll(), el=document.getElementById('cfgList');
-    if(!a.length){ el.innerHTML='<div class="empty">还没有存档。<br>在角色名单里点"保存本局"即可保存当前的阵营数量与启用/禁用角色。</div>'; return; }
-    el.innerHTML=a.map((c,i)=>{ const d=c.dist||[0,0,0,0], lk=(c.locked||[]).length;
-      return '<div class="cfgitem"><div class="info"><div class="nm">'+E(c.name)+'</div><div class="sub">'+c.N+'人 · 镇'+d[0]+'/外'+d[1]+'/爪'+d[2]+'/魔'+d[3]+(lk?' · 禁用 '+lk+' 个角色':'')+'</div></div>'
+    if(!a.length){ el.innerHTML='<div class="empty">还没有存档。<br>发好牌后在角色名单里点"保存本局"，即可存下这套角色。</div>'; return; }
+    el.innerHTML=a.map((c,i)=>{ let sub;
+      if(c.roles){ sub=(c.roles.length)+'人 · '+c.roles.map(x=>{ const r=RMAP[x.r]; return r?(r.name+(x.d?'(酒鬼)':'')):x.r; }).join('、'); }
+      else { const d=c.dist||[0,0,0,0]; sub=(c.N||'')+'人 · 镇'+d[0]+'/外'+d[1]+'/爪'+d[2]+'/魔'+d[3]; }
+      return '<div class="cfgitem"><div class="info"><div class="nm">'+E(c.name)+'</div><div class="sub">'+E(sub)+'</div></div>'
         +'<button class="load" onclick="_cfgLoad('+i+')">载入</button><button onclick="_cfgDel('+i+')">删除</button></div>'; }).join('');
   }
   window._cfgLoad=function(i){ const a=_cfgLoadAll(), c=a[i]; if(!c) return;
-    N=Math.max(5,Math.min(15,c.N||N)); if(typeof tokens!=='undefined') tokens.forEach(t=>{ if(t.seat!==null&&t.seat>=N) t.seat=null; });
-    if(typeof ensureMeta==='function') ensureMeta();
-    customDist=c.dist?c.dist.slice():null; lockedRoles=new Set(c.locked||[]);
+    if(c.roles){ const rs=c.roles; N=Math.max(5,Math.min(15,rs.length));
+      if(typeof tokens!=='undefined') tokens.forEach(t=>{ if(t.seat!==null&&t.seat>=N) t.seat=null; });
+      if(typeof ensureMeta==='function') ensureMeta();
+      for(let k=0;k<N;k++){ if(meta[k]){ meta[k].role=rs[k].r; meta[k].isDrunk=!!rs[k].d; } }
+      customDist=c.dist?c.dist.slice():null;
+    } else {   // 兼容旧存档（只有阵营数量）
+      N=Math.max(5,Math.min(15,c.N||N)); if(typeof ensureMeta==='function') ensureMeta();
+      customDist=c.dist?c.dist.slice():null; if(c.locked) lockedRoles=new Set(c.locked);
+    }
     try{ save(); }catch(e){} try{ render(); }catch(e){} _cfgClose(); toast('已载入：'+c.name);
   };
   window._cfgDel=async function(i){ let ok=true; try{ ok=await uiConfirm('删除这个存档？'); }catch(e){} if(!ok) return; const a=_cfgLoadAll(); a.splice(i,1); _cfgSaveAll(a); renderCfgList(); };
