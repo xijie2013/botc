@@ -90,13 +90,11 @@
   #setModal .cl-item{margin-bottom:9px;}
   #setModal .cl-v{font-weight:800; color:#ffd76b;} #setModal .cl-d{color:#8f82ab; font-size:11px; margin-left:6px;}
   #setModal .set-log ul{margin:3px 0 0; padding-left:18px;} #setModal .set-log li{margin:1px 0;}
-  /* 字号档位（影响笔记/大厅等可读文本） */
-  body.fs-2 #nbContent, body.fs-2 #nbContent .nb-note, body.fs-2 #nbContent .nb-sec, body.fs-2 #nbContent .nb-nom, body.fs-2 #nbContent .nb-nomhead,
-  body.fs-2 #nbContent .nb-vsub, body.fs-2 #nbContent .nb-role, body.fs-2 #nbContent .nbtok,
-  body.fs-2 #hallNames .nameitem, body.fs-2 #hallLog, body.fs-2 #hallLog .nb-note, body.fs-2 #hallLog .nb-nom, body.fs-2 #hallLog .nb-nomhead, body.fs-2 #hallLog .nb-vsub{font-size:14.5px !important;}
-  body.fs-3 #nbContent, body.fs-3 #nbContent .nb-note, body.fs-3 #nbContent .nb-sec, body.fs-3 #nbContent .nb-nom, body.fs-3 #nbContent .nb-nomhead,
-  body.fs-3 #nbContent .nb-vsub, body.fs-3 #nbContent .nb-role, body.fs-3 #nbContent .nbtok,
-  body.fs-3 #hallNames .nameitem, body.fs-3 #hallLog, body.fs-3 #hallLog .nb-note, body.fs-3 #hallLog .nb-nom, body.fs-3 #hallLog .nb-nomhead, body.fs-3 #hallLog .nb-vsub{font-size:17px !important;}
+  /* 字号档位：整体缩放笔记/大厅内容（文字+其中的框一起放大），内容超出面板时可滚动
+     标准=1（电脑大小）· 大=2倍 · 超大=4倍 */
+  #nbContent, #hallNames, #hallLog{ zoom:var(--uiz,1); }
+  body.fs-2{ --uiz:2; }
+  body.fs-3{ --uiz:4; }
 
   .banner-title{
     position:absolute; left:6.5%; top:13%; width:27%; height:7.5%;
@@ -559,9 +557,6 @@
     #voteBar .vb-wait{font-size:12px;}
     #voteBar .vb-btns{gap:6px; flex:0 0 auto;}
     #voteBar button{padding:6px 12px; font-size:12px; max-width:none; flex:0 0 auto;}
-    /* 笔记内容字大一点，便于手机阅读 */
-    #notesPanel .nbcontent{font-size:12px;}
-    .nbtabs button{font-size:12px;}
     /* 顶部角标略缩，避免拥挤 */
     #playerBadge, #stBadge{font-size:11px; padding:3px 9px;}
   }
@@ -595,7 +590,7 @@
     <button class="view-toggle" id="viewToggle" onclick="onBookClick()" title="进入说书人魔典">📖</button>
     <div id="toolBar">
       <button class="fsbtn" id="fsBtn" onclick="toggleFull()" title="网页全屏">⛶</button>
-      <button class="fsbtn" id="refreshBtn" onclick="location.reload()" title="刷新">⟳</button>
+      <button class="fsbtn" id="refreshBtn" onclick="window._softRefresh?window._softRefresh():location.reload()" title="刷新（重新同步，不退出全屏）">⟳</button>
       <button class="fsbtn" id="setBtn" onclick="openSettings()" title="设置">⚙</button>
     </div>
     <div class="banner-title" id="bannerTitle">暗流涌动</div>
@@ -869,6 +864,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v1.6.1', d:'2026-08-08', items:['刷新改为重新同步，不再退出全屏','字号档位改为整体缩放（文字+框一起）：标准=电脑大小、大=2倍、超大=4倍']},
   {v:'v1.6.0', d:'2026-08-08', items:['新增左上角刷新按钮与设置面板（版本 / 更新内容 / 字号）','手机横屏适配：弹窗自动缩小、投票浮条改细条、笔记字号加大']},
   {v:'v1.5.0', d:'2026-08-08', items:['玩家 ID 支持中文（按登录名匹配座位）','提名公开举手投票：实时同步、指针转动、座位显示举手/✕、鬼票标记','手机竖屏时提示转横屏']},
   {v:'v1.4.0', d:'2026-08-08', items:['玩家笔记标题改为「玩家笔记」','玩家笔记座位备注框 / 悬停框复用魔典样式与定位']},
@@ -2048,9 +2044,9 @@ load(); render();
   <div class="fs-seg" id="fsSeg">
     <button class="s1" data-fs="1" onclick="setFontScale(1)">标准</button>
     <button class="s2" data-fs="2" onclick="setFontScale(2)">大</button>
-    <button class="s3" data-fs="3" onclick="setFontScale(3)">特大</button>
+    <button class="s3" data-fs="3" onclick="setFontScale(3)">超大</button>
   </div>
-  <div class="set-hint">座位圈与时钟为等比布局，字号主要放大左侧笔记/名单文字。</div>
+  <div class="set-hint">标准＝电脑大小；大＝2倍；超大＝4倍。会连同笔记/大厅里的框一起放大（内容超出面板时可上下滑动）。座位圈与时钟为等比布局不随此缩放。</div>
   <div class="set-sec">更新内容</div>
   <div class="set-log" id="setLog"></div>
 </div></div>
@@ -2171,6 +2167,14 @@ load(); render();
   function enterSt(){ document.getElementById('stBadge').classList.add('on'); db.ref('storytellerUid').transaction(c=>c||me.uid).catch(()=>{}); bindStPlayers(); setMode('st'); }
   function enterPlayer(){ document.getElementById('stBadge').classList.remove('on'); document.getElementById('pbName').textContent=(me.displayName||'玩家'); bindNotes(); setMode('notes'); }
   function bindNotes(){ if(notesRef){ notesRef.off(); notesRef=null; } if(role==='player'&&me&&curGid){ notesRef=db.ref('games/'+curGid+'/players/'+me.uid); notesRef.on('value',s=>{ S=s.val(); ensureS(); if(mode==='notes') renderView(); }); } }
+
+  /* ---------- 软刷新：重新同步 + 重绘，不重载页面（保留全屏） ---------- */
+  window._softRefresh=function(){
+    try{ if(curGid){ bindPub(); if(role==='player') bindNotes(); if(role==='st') bindStPlayers(); } }catch(e){}
+    try{ if(mode==='st'){ if(typeof render==='function') render(); } else renderView(); }catch(e){}
+    try{ if(window.renderClock) renderClock(); }catch(e){}
+    try{ toast('↻ 已重新同步'); }catch(e){}
+  };
 
   /* ---------- 当前牌局 / 公开数据订阅 ---------- */
   db.ref('currentGame').on('value', s=>{ const gid=s.val(); if(gid===curGid) return; curGid=gid; bindPub(); if(role==='player') bindNotes(); if(role==='st') bindStPlayers(); });
