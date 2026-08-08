@@ -968,9 +968,9 @@ function undertakerUI(){
   const ut=meta.findIndex(m=>m&&m.role==="undertaker"); if(ut<0||isDeadSeat(ut)) return "";
   const ex=executions[night-1]; if(ex===undefined || ex<0) return "";
   if(healthy(ut)) return "";                          // 健康：信息行已显示，自动记录
-  const ov=gameOverviewSet(); let rOpt='<option value="">告知的角色</option>';
-  ROLES.filter(r=>ov.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(undertakerPicks[night]===r.id?' selected':'')+'>'+r.name+'</option>'; });
-  let h='<div class="impkill warn">中毒·告知的假身份（限本局速览）：<select onchange="undertakerSet(this.value)">'+rOpt+'</select></div>';
+  let rOpt='<option value="">告知的角色</option>';
+  ROLES.filter(r=>!lockedRoles.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(undertakerPicks[night]===r.id?' selected':'')+'>'+r.name+'</option>'; });
+  let h='<div class="impkill warn">中毒·告知的假身份：<select onchange="undertakerSet(this.value)">'+rOpt+'</select></div>';
   const r=undertakerResult(); if(r) h+='<div class="impkill '+(r.truth?'done':'warn')+'">'+r.text+'</div>';
   return h;
 }
@@ -994,9 +994,9 @@ function ravenUI(){
   for(let i=0;i<N;i++){ if(i===rk) continue; opts+='<option value="'+i+'"'+(rec.t===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+'</option>'; }
   let h='<div class="impkill warn">守鸦人已死·查看：<select onchange="ravenSet(\'t\',this.value)">'+opts+'</select></div>';
   if(sick){
-    const ov=gameOverviewSet(); let rOpt='<option value="">告知的角色</option>';
-    ROLES.filter(r=>ov.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(rec.role===r.id?' selected':'')+'>'+r.name+'</option>'; });
-    h+='<div class="impkill warn">中毒·告知的假身份（限本局速览）：<select onchange="ravenSet(\'role\',this.value)">'+rOpt+'</select></div>';
+    let rOpt='<option value="">告知的角色</option>';
+    ROLES.filter(r=>!lockedRoles.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(rec.role===r.id?' selected':'')+'>'+r.name+'</option>'; });
+    h+='<div class="impkill warn">中毒·告知的假身份：<select onchange="ravenSet(\'role\',this.value)">'+rOpt+'</select></div>';
   }
   const r=ravenResult(); if(r) h+='<div class="impkill '+(r.truth?'done':'warn')+'">'+r.text+'</div>';
   return h;
