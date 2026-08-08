@@ -436,6 +436,20 @@
   body.mode-notes #playerBadge{display:inline-flex;}
   #playerBadge button{background:rgba(233,196,106,.15); border:1px solid rgba(233,196,106,.4); border-radius:10px; color:#e9c46a; cursor:pointer; font-size:11px; padding:2px 8px;}
   #playerBadge button:hover{background:rgba(233,196,106,.3);}
+  /* 本局存档弹窗 */
+  #cfgModal{position:fixed; inset:0; z-index:150; display:none; align-items:center; justify-content:center; background:rgba(10,6,16,.62);}
+  #cfgModal.on{display:flex;}
+  #cfgModal .cbox{width:min(92vw,420px); max-height:80vh; overflow:auto; background:linear-gradient(180deg,#2b2038,#20172a);
+    border:2px solid #b9a0d6; border-radius:14px; padding:18px; color:#efe6d2; box-shadow:0 14px 44px rgba(0,0,0,.6);}
+  #cfgModal h3{margin:0 0 12px; color:#c3aede; font-size:16px; display:flex; justify-content:space-between; align-items:center;}
+  #cfgModal .cX{cursor:pointer; color:#9a8fb3; font-weight:700;}
+  .cfgitem{border:1px solid #3a2d4e; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; align-items:center; gap:8px;}
+  .cfgitem .info{flex:1; min-width:0;}
+  .cfgitem .nm{font-weight:700; color:#e9c46a;}
+  .cfgitem .sub{font-size:12px; color:#b3a6c8; margin-top:2px;}
+  .cfgitem button{border:1px solid #4a3a63; background:#241a34; color:#c8bcdd; border-radius:8px; padding:5px 10px; cursor:pointer; font-size:12px; white-space:nowrap;}
+  .cfgitem button.load{background:#b9a0d6; color:#2e1a47; border-color:#b9a0d6; font-weight:700;}
+  #cfgModal .empty{color:#9a8fb3; font-size:13px; text-align:center; padding:20px; line-height:1.6;}
 </style>
 </head>
 <body>
@@ -1402,8 +1416,11 @@ function renderGrim(){
     });
     h+='<div class="rrow" style="border:none;font-size:.9em;color:'+(total===N?'#2e7d32':'#b0402e')+'">阵营合计 '+total+'/'+N
       +(customDist?' <span class="regbtn" onclick="resetDist()">恢复默认</span>':'')+'</div>';
-    h+='<button class="btn purple" style="width:100%;margin-top:4px;'+(ready?'':'opacity:.4;cursor:not-allowed;')+'" '
-      +(ready?'onclick="stNewGame()"':'disabled title="发满牌后可点"')+'>新的一局</button>';
+    h+='<div style="display:flex;gap:6px;margin-top:6px;align-items:stretch">'
+      +'<button class="btn lpurple" style="flex:1;'+(ready?'':'opacity:.4;cursor:not-allowed;')+'" '+(ready?'onclick="stNewGame()"':'disabled title="发满牌后可点"')+'>新的一局</button>'
+      +'<button class="btn purple" style="flex:0 0 auto;padding:7px 9px" onclick="stSaveConfig()">保存本局</button>'
+      +'<button class="btn lpurple" style="flex:0 0 auto;padding:7px 9px" onclick="stViewConfigs()">查看存档</button>'
+      +'</div>';
     c.innerHTML=h;
     c.querySelectorAll('.rchip').forEach(el=>{
       el.addEventListener('dragstart',e=>e.dataTransfer.setData("text","role:"+el.dataset.role));
@@ -1731,6 +1748,7 @@ load(); render();
 <div id="fbToast"></div>
 <div id="stBadge">🎲 说书人已登录 <button onclick="_logout()">退出</button></div>
 <div id="playerBadge">🖋 <span id="pbName">玩家</span> <button onclick="_gotoHall()">大厅</button> <button onclick="_logout()">退出</button></div>
+<div id="cfgModal"><div class="cbox"><h3><span>本局存档 · 角色配置</span><span class="cX" onclick="_cfgClose()">✕</span></h3><div id="cfgList"></div></div></div>
 
 <!-- 说书人登录门 -->
 <div class="gate" id="stGate">
@@ -1960,6 +1978,31 @@ load(); render();
     }catch(e){}
   }, 500); }
   if(typeof window.save==='function'){ const _origSave=window.save; window.save=function(){ const r=_origSave.apply(this,arguments); try{ autoSyncPublic(); }catch(e){} return r; }; }
+
+  /* ---------- 本局角色配置存档（说书人本机） ---------- */
+  function _cfgLoadAll(){ try{ return JSON.parse(localStorage.getItem('botc_configs')||'[]'); }catch(e){ return []; } }
+  function _cfgSaveAll(a){ try{ localStorage.setItem('botc_configs', JSON.stringify(a)); }catch(e){} }
+  window.stSaveConfig=async function(){ if(role!=='st'){ toast('请先登录说书人'); return; }
+    const dft='配置'+(new Date().getMonth()+1)+'-'+new Date().getDate();
+    let nm=dft; try{ nm=await uiPrompt('给这套阵营/角色配置起个名字：',dft,{title:'保存本局'}); if(nm===null) return; }catch(e){}
+    const cfg={ name:nm||dft, N:N, dist:(customDist||DIST[N]||[0,0,0,0]).slice(), locked:[...lockedRoles], ts:Date.now() };
+    const a=_cfgLoadAll(); a.unshift(cfg); _cfgSaveAll(a); toast('已保存：'+cfg.name);
+  };
+  window.stViewConfigs=function(){ if(role!=='st'){ toast('请先登录说书人'); return; } renderCfgList(); document.getElementById('cfgModal').classList.add('on'); };
+  window._cfgClose=function(){ document.getElementById('cfgModal').classList.remove('on'); };
+  function renderCfgList(){ const a=_cfgLoadAll(), el=document.getElementById('cfgList');
+    if(!a.length){ el.innerHTML='<div class="empty">还没有存档。<br>在角色名单里点"保存本局"即可保存当前的阵营数量与启用/禁用角色。</div>'; return; }
+    el.innerHTML=a.map((c,i)=>{ const d=c.dist||[0,0,0,0], lk=(c.locked||[]).length;
+      return '<div class="cfgitem"><div class="info"><div class="nm">'+E(c.name)+'</div><div class="sub">'+c.N+'人 · 镇'+d[0]+'/外'+d[1]+'/爪'+d[2]+'/魔'+d[3]+(lk?' · 禁用 '+lk+' 个角色':'')+'</div></div>'
+        +'<button class="load" onclick="_cfgLoad('+i+')">载入</button><button onclick="_cfgDel('+i+')">删除</button></div>'; }).join('');
+  }
+  window._cfgLoad=function(i){ const a=_cfgLoadAll(), c=a[i]; if(!c) return;
+    N=Math.max(5,Math.min(15,c.N||N)); if(typeof tokens!=='undefined') tokens.forEach(t=>{ if(t.seat!==null&&t.seat>=N) t.seat=null; });
+    if(typeof ensureMeta==='function') ensureMeta();
+    customDist=c.dist?c.dist.slice():null; lockedRoles=new Set(c.locked||[]);
+    try{ save(); }catch(e){} try{ render(); }catch(e){} _cfgClose(); toast('已载入：'+c.name);
+  };
+  window._cfgDel=async function(i){ let ok=true; try{ ok=await uiConfirm('删除这个存档？'); }catch(e){} if(!ok) return; const a=_cfgLoadAll(); a.splice(i,1); _cfgSaveAll(a); renderCfgList(); };
 
   window.addEventListener('resize',()=>{ if(mode!=='st') drawSeats(); });
 })();
