@@ -140,6 +140,8 @@
     border:1px dashed rgba(122,83,32,.45); background:rgba(255,250,235,.4); color:#6b4a1e; cursor:pointer; user-select:none; white-space:nowrap;}
   .ptag:hover{background:#6b4a1e; color:#f3e6c4;}
   .ptag.active{opacity:.4; cursor:default;}
+  .ptag.reg{border-style:solid; border-color:rgba(46,157,79,.6);}
+  .ptag .regdot{color:#2e9d4f; font-size:.75em; vertical-align:middle;}
   .ptag.active:hover{background:rgba(255,250,235,.4); color:#6b4a1e;}
   .ptag .del{margin-left:4px; color:#a5744a;} .ptag .del:hover{color:#b0402e;}
 
@@ -871,6 +873,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v1.8.0', d:'2026-08-08', items:['只有在客人名册里的 ID 才能登录/注册','过往客人名册标出已注册账号，删除=停用其登录并清空笔记','（需在 Firebase 部署新版安全规则后生效）']},
   {v:'v1.7.0', d:'2026-08-08', items:['开新局时自动清理旧牌局（云端只保留当前一局，旧笔记一并清除，避免长期累积）']},
   {v:'v1.6.9', d:'2026-08-08', items:['设置里只显示最近一次更新','修复说书人角标不显示 ID','去掉说书人角标前的骰子图标']},
   {v:'v1.6.8', d:'2026-08-08', items:['点刷新不再弹提示条，改为刷新图标转一圈']},
@@ -907,7 +910,7 @@ function addGuest(){
 }
 function reAdd(name){ if(tokens.some(t=>t.name===name)) return; tokens.push({id:++uid,name,seat:null,dead:false}); render(); }
 function removeToken(id){ tokens=tokens.filter(t=>t.id!==id); if(selected===id) selected=null; render(); }
-function forgetGuest(name){ guests=guests.filter(g=>g!==name); tokens=tokens.filter(t=>t.name!==name); render(); }
+function forgetGuest(name){ guests=guests.filter(g=>g!==name); tokens=tokens.filter(t=>t.name!==name); try{ if(window._stDelAccount) window._stDelAccount(name); }catch(e){} render(); }
 function setCount(d){ N=Math.max(5,Math.min(15,N+d)); customDist=null; tokens.forEach(t=>{if(t.seat!==null&&t.seat>=N)t.seat=null;}); ensureMeta(); render(); }
 async function shuffle(){ if(!await uiConfirm("确定随机排座？将打乱当前所有座位安排。")) return; const order=tokens.slice();
   for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
@@ -1668,9 +1671,12 @@ function renderLedger(){
   if(guests.length===0){ past.innerHTML='<span class="empty-hint">（还没有客人）</span>'; }
   guests.forEach(name=>{
     const active=tokens.some(t=>t.name===name);
-    const el=document.createElement("span"); el.className="ptag"+(active?" active":"");
-    el.innerHTML=esc(name)+' <span class="del" title="从名单删除">✕</span>';
-    el.addEventListener("click",e=>{ if(e.target.classList.contains("del")){e.stopPropagation();forgetGuest(name);return;} reAdd(name); });
+    const reg=!!(window._isRegistered&&window._isRegistered(name));
+    const el=document.createElement("span"); el.className="ptag"+(active?" active":"")+(reg?" reg":"");
+    el.innerHTML=(reg?'<span class="regdot" title="已注册账号">●</span> ':'')+esc(name)+' <span class="del" title="'+(reg?'删除账号（停用+清空笔记）':'从名单删除')+'">✕</span>';
+    el.addEventListener("click",async e=>{ if(e.target.classList.contains("del")){ e.stopPropagation();
+        if(reg){ let ok=true; try{ ok=await uiConfirm('删除账号「'+name+'」？该玩家将无法再登录，其本局笔记也会被清空。'); }catch(e){} if(!ok) return; }
+        forgetGuest(name); return; } reAdd(name); });
     past.appendChild(el);
   });
 }
@@ -2179,9 +2185,12 @@ load(); render();
   window._pLogin=async function(){ const id=document.getElementById('pId').value.trim().toLowerCase(), pw=document.getElementById('pPw').value, err=document.getElementById('pErr');
     if(!id||!pw){ err.textContent='请输入 ID 和密码'; return; } if(pw.length<6){ err.textContent='密码至少 6 位'; return; }
     if(!/^[\p{L}\p{N}_]+$/u.test(id)){ err.textContent='ID 只能用中文/字母/数字/下划线（不能有空格）'; return; }
+    err.textContent='核对名单…';
+    const allowed=await window._checkRoster(id);
+    if(!allowed){ err.textContent='你不在本局客人名册里，请让说书人先把你加进去'; return; }
     const email=idToLocal(id)+PLAYER_DOM; err.textContent='登录中…'; try{ localStorage.setItem('botc_pid',id); }catch(e){}
     await _setPersist(!!document.getElementById('pRemember').checked);
-    const done=()=>{ show('pGate',false); try{ if(document.getElementById('pRemember').checked) localStorage.setItem('botc_ppw',pw); else localStorage.removeItem('botc_ppw'); }catch(e){} document.getElementById('pPw').value=''; };
+    const done=()=>{ show('pGate',false); try{ if(document.getElementById('pRemember').checked) localStorage.setItem('botc_ppw',pw); else localStorage.removeItem('botc_ppw'); }catch(e){} document.getElementById('pPw').value=''; try{ window._recordAccount(id); }catch(e){} };
     try{ await auth.signInWithEmailAndPassword(email,pw); done(); }
     catch(e){ if((e.code||'').match(/user-not-found|invalid-credential/)){
         try{ await auth.createUserWithEmailAndPassword(email,pw); await auth.currentUser.updateProfile({displayName:id}); toast('已创建你的笔记本'); done(); }
@@ -2197,7 +2206,7 @@ load(); render();
     else { role='player'; enterPlayer(); }
   }));
   function _storedId(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
-  function enterSt(){ document.getElementById('stBadge').classList.add('on'); document.body.classList.remove('pl'); document.getElementById('stName').textContent=(me&&me.displayName)||_storedId('botc_stid'); db.ref('storytellerUid').transaction(c=>c||me.uid).catch(()=>{}); bindStPlayers(); setMode('st'); }
+  function enterSt(){ document.getElementById('stBadge').classList.add('on'); document.body.classList.remove('pl'); document.getElementById('stName').textContent=(me&&me.displayName)||_storedId('botc_stid'); db.ref('storytellerUid').transaction(c=>c||me.uid).catch(()=>{}); bindStPlayers(); bindStAccounts(); setMode('st'); }
   function enterPlayer(){ document.getElementById('stBadge').classList.remove('on'); document.body.classList.add('pl'); document.getElementById('pbName').textContent=((me&&me.displayName)||_storedId('botc_pid')||'玩家'); bindNotes(); setMode('notes'); }
   function bindNotes(){ if(notesRef){ notesRef.off(); notesRef=null; } if(role==='player'&&me&&curGid){ notesRef=db.ref('games/'+curGid+'/players/'+me.uid); notesRef.on('value',s=>{ S=s.val(); ensureS(); if(mode==='notes') renderView(); }); } }
 
@@ -2242,6 +2251,20 @@ load(); render();
   /* ========== 提名·公开举手投票 ========== */
   const VOTE_ARM_MS=4200;   // 指针转动期间先不让举手；转完再开放
   function norm(s){ return (s||'').toString().trim().toLowerCase(); }
+  function rkey(s){ return norm(s).replace(/[.#$\[\]\/]/g,'_'); }   // Firebase 安全的名单键
+  /* ---------- 客人名册白名单 / 已注册账号 ---------- */
+  window._checkRoster=async function(id){ try{ const s=await db.ref('roster').once('value'); if(!s.exists()) return true; return s.child(rkey(id)).exists(); }catch(e){ return true; } };
+  window._recordAccount=function(id){ try{ db.ref('accounts/'+rkey(id)).set({name:id, uid:(auth.currentUser&&auth.currentUser.uid)||'', ts:firebase.database.ServerValue.TIMESTAMP}); }catch(e){} };
+  window._isRegistered=function(name){ const a=window.__accounts||{}; return !!a[rkey(name)]; };
+  window._stDelAccount=function(name){ if(role!=='st') return; const k=rkey(name);
+    try{ const acc=(window.__accounts||{})[k];
+      db.ref('accounts/'+k).remove().catch(()=>{});
+      db.ref('roster/'+k).remove().catch(()=>{});
+      if(acc&&acc.uid&&curGid) db.ref('games/'+curGid+'/players/'+acc.uid).remove().catch(()=>{});
+    }catch(e){} };
+  let stAccountsRef=null;
+  function bindStAccounts(){ if(stAccountsRef){stAccountsRef.off();stAccountsRef=null;} window.__accounts={};
+    if(role==='st'){ stAccountsRef=db.ref('accounts'); stAccountsRef.on('value',s=>{ window.__accounts=s.val()||{}; if(mode==='st'&&typeof render==='function'){ try{ render(); }catch(e){} } }); } }
   function findSeatByName(nm){ nm=norm(nm); if(!nm||!pub||!pub.seats) return -1;
     for(let i=0;i<pub.seats.length;i++){ if(pub.seats[i]&&norm(pub.seats[i].name)===nm) return i; } return -1; }
   function myVoteSeat(){ if(role!=='player'||!me) return -1; return findSeatByName(me.displayName||''); }
@@ -2495,7 +2518,10 @@ load(); render();
 
   /* ---------- 名单实时自动同步（说书人改动→自动推送公开名单，不含死亡/提名） ---------- */
   let _syncT=null;
-  function autoSyncPublic(){ if(role!=='st'||!curGid||!me) return; clearTimeout(_syncT); _syncT=setTimeout(()=>{
+  function autoSyncPublic(){ if(role!=='st'||!me) return; clearTimeout(_syncT); _syncT=setTimeout(()=>{
+    /* 发布客人名册白名单（谁能登录）——与是否已开局无关 */
+    try{ const r={}; (typeof guests!=='undefined'?guests:[]).forEach(n=>{ const k=rkey(n); if(k) r[k]=n; }); db.ref('roster').set(r).catch(()=>{}); }catch(e){}
+    if(!curGid) return;
     try{ const base='games/'+curGid+'/public/'; const updates={};
       for(let i=0;i<N;i++){ const t=seatToken(i); updates[base+'seats/'+i+'/name']=(t&&t.name)?t.name:''; }
       updates[base+'count']=N;   // 仅实时同步座位名单/人数；本局角色只在"开始新的一局"时同步
