@@ -1388,9 +1388,6 @@ function renderGrim(){
     const total=cd[0]+cd[1]+cd[2]+cd[3];
     let assigned=0; for(let i=0;i<N;i++){ const m=meta[i]; if(m&&m.role) assigned++; }
     const ready = assigned===N;
-    // 顶部：开始新的一局（发满牌才可点，点击后同步本局角色给玩家）
-    h+='<button class="btn purple" style="width:100%;margin-bottom:8px;'+(ready?'':'opacity:.4;cursor:not-allowed;')+'" '
-      +(ready?'onclick="stNewGame()"':'disabled title="发满牌后可点"')+'>新的一局</button>';
     ORDER.forEach((team,idx)=>{
       h+='<div class="gsec" style="color:'+TEAMC[team]+';display:flex;align-items:center;justify-content:space-between;margin-top:6px">'
         +'<span>'+TEAMLABEL[team]+'</span>'
@@ -1405,6 +1402,8 @@ function renderGrim(){
     });
     h+='<div class="rrow" style="border:none;font-size:.9em;color:'+(total===N?'#2e7d32':'#b0402e')+'">阵营合计 '+total+'/'+N
       +(customDist?' <span class="regbtn" onclick="resetDist()">恢复默认</span>':'')+'</div>';
+    h+='<button class="btn purple" style="width:100%;margin-top:4px;'+(ready?'':'opacity:.4;cursor:not-allowed;')+'" '
+      +(ready?'onclick="stNewGame()"':'disabled title="发满牌后可点"')+'>新的一局</button>';
     c.innerHTML=h;
     c.querySelectorAll('.rchip').forEach(el=>{
       el.addEventListener('dragstart',e=>e.dataTransfer.setData("text","role:"+el.dataset.role));
@@ -1908,7 +1907,7 @@ load(); render();
     return h;
   }
   function refHTML(){ const locked=new Set(pub.locked||[]); const d=pub.dist||DIST[pub.count]||[0,0,0,0];
-    let h='<div class="nb-role"><b>本局 · 第'+(pub.day||1)+'天</b><br>'+pub.count+'人 · 镇民'+d[0]+' 外来者'+d[1]+' 爪牙'+d[2]+' 恶魔'+d[3]+'</div>';
+    let h='<div class="nb-role"><b>本局配置</b><br>'+pub.count+'人 · 镇民'+d[0]+' 外来者'+d[1]+' 爪牙'+d[2]+' 恶魔'+d[3]+'</div>';
     h+='<div class="nb-sec">剧本角色（灰色为本局未启用）</div>';
     ORDER.forEach(t=>{ const list=ROLES.filter(r=>r.team===t); if(!list.length) return;
       h+='<div style="font-weight:800;color:'+TEAMC[t]+';margin:8px 0 3px">'+TEAMLABEL[t]+'</div>';
