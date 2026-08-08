@@ -62,13 +62,41 @@
   /* 魔典界面（书页打开）按钮放大 20% */
   .stage.grim .view-toggle{width:clamp(60px,6.62vw,103px); height:clamp(60px,6.62vw,103px);}
   .view-toggle img{width:100%; height:100%; object-fit:contain; display:block;}
-  /* 网页全屏按钮 */
-  .fsbtn{position:fixed; top:12px; left:12px; z-index:60; width:clamp(30px,2.6vw,40px); height:clamp(30px,2.6vw,40px);
+  /* 左上角工具栏：全屏 / 刷新 / 设置 */
+  #toolBar{position:fixed; top:12px; left:12px; z-index:60; display:flex; gap:8px;}
+  .fsbtn{width:clamp(30px,2.6vw,40px); height:clamp(30px,2.6vw,40px);
     border-radius:9px; border:1px solid rgba(233,196,106,.55); background:rgba(24,16,36,.62); color:#e9c46a;
     font-size:clamp(15px,1.5vw,20px); line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center;
-    transition:transform .12s, box-shadow .12s, background .12s;}
+    padding:0; transition:transform .12s, box-shadow .12s, background .12s;}
   .fsbtn:hover{background:rgba(58,45,78,.85); transform:translateY(-1px); box-shadow:0 0 10px rgba(233,196,106,.4);}
   .fsbtn:active{transform:scale(.94);}
+  /* 设置面板 */
+  #setModal{position:fixed; inset:0; z-index:210; display:none; align-items:center; justify-content:center; background:rgba(10,6,16,.64); padding:16px; overflow-y:auto;}
+  #setModal.on{display:flex;}
+  #setModal .setbox{width:min(92vw,430px); max-height:calc(100dvh - 28px); overflow-y:auto; background:linear-gradient(180deg,#2b2038,#20172a);
+    border:2px solid #e9c46a; border-radius:14px; padding:18px 20px 18px; color:#e9dcc4; box-shadow:0 14px 44px rgba(0,0,0,.6), inset 0 0 34px rgba(233,196,106,.06);}
+  #setModal h3{margin:0 0 12px; color:#e9c46a; font-size:17px; letter-spacing:2px; display:flex; justify-content:space-between; align-items:center;}
+  #setModal .cX{cursor:pointer; color:#9a8fb3; font-weight:700;}
+  #setModal .set-ver{font-size:13px; color:#c9b6e6; margin-bottom:4px;}
+  #setModal .set-ver b{color:#ffe9b8; font-size:15px; letter-spacing:1px;}
+  #setModal .set-sec{font-weight:800; color:#c3aede; margin:14px 0 7px; font-size:13.5px; border-top:1px solid rgba(233,196,106,.16); padding-top:12px;}
+  #setModal .fs-seg{display:flex; gap:8px;}
+  #setModal .fs-seg button{flex:1; padding:9px 0; border-radius:10px; border:1px solid rgba(233,196,106,.4); background:rgba(255,252,244,.08);
+    color:#e9dcc4; font-weight:700; cursor:pointer;}
+  #setModal .fs-seg button.on{background:#e9c46a; color:#1a1226; border-color:#e9c46a;}
+  #setModal .fs-seg button.s1{font-size:13px;} #setModal .fs-seg button.s2{font-size:15px;} #setModal .fs-seg button.s3{font-size:17px;}
+  #setModal .set-hint{font-size:11.5px; color:#8f82ab; margin-top:6px; line-height:1.5;}
+  #setModal .set-log{font-size:12.5px; line-height:1.55; color:#d8cee8;}
+  #setModal .cl-item{margin-bottom:9px;}
+  #setModal .cl-v{font-weight:800; color:#ffd76b;} #setModal .cl-d{color:#8f82ab; font-size:11px; margin-left:6px;}
+  #setModal .set-log ul{margin:3px 0 0; padding-left:18px;} #setModal .set-log li{margin:1px 0;}
+  /* 字号档位（影响笔记/大厅等可读文本） */
+  body.fs-2 #nbContent, body.fs-2 #nbContent .nb-note, body.fs-2 #nbContent .nb-sec, body.fs-2 #nbContent .nb-nom, body.fs-2 #nbContent .nb-nomhead,
+  body.fs-2 #nbContent .nb-vsub, body.fs-2 #nbContent .nb-role, body.fs-2 #nbContent .nbtok,
+  body.fs-2 #hallNames .nameitem, body.fs-2 #hallLog, body.fs-2 #hallLog .nb-note, body.fs-2 #hallLog .nb-nom, body.fs-2 #hallLog .nb-nomhead, body.fs-2 #hallLog .nb-vsub{font-size:14.5px !important;}
+  body.fs-3 #nbContent, body.fs-3 #nbContent .nb-note, body.fs-3 #nbContent .nb-sec, body.fs-3 #nbContent .nb-nom, body.fs-3 #nbContent .nb-nomhead,
+  body.fs-3 #nbContent .nb-vsub, body.fs-3 #nbContent .nb-role, body.fs-3 #nbContent .nbtok,
+  body.fs-3 #hallNames .nameitem, body.fs-3 #hallLog, body.fs-3 #hallLog .nb-note, body.fs-3 #hallLog .nb-nom, body.fs-3 #hallLog .nb-nomhead, body.fs-3 #hallLog .nb-vsub{font-size:17px !important;}
 
   .banner-title{
     position:absolute; left:6.5%; top:13%; width:27%; height:7.5%;
@@ -565,7 +593,11 @@
   <div class="stage" id="stage">
     <div class="darklayer"></div>
     <button class="view-toggle" id="viewToggle" onclick="onBookClick()" title="进入说书人魔典">📖</button>
-    <button class="fsbtn" id="fsBtn" onclick="toggleFull()" title="网页全屏">⛶</button>
+    <div id="toolBar">
+      <button class="fsbtn" id="fsBtn" onclick="toggleFull()" title="网页全屏">⛶</button>
+      <button class="fsbtn" id="refreshBtn" onclick="location.reload()" title="刷新">⟳</button>
+      <button class="fsbtn" id="setBtn" onclick="openSettings()" title="设置">⚙</button>
+    </div>
     <div class="banner-title" id="bannerTitle">暗流涌动</div>
     <div class="inkhotspot" onclick="openPlayerGate()">
       <span class="spark" style="--dx:40px;--dy:150px;--dur:5.5s;--dl:0s"></span>
@@ -834,6 +866,25 @@ function toggleFull(){
 }
 document.addEventListener('fullscreenchange',()=>{ const b=document.getElementById('fsBtn');
   if(b){ b.textContent = document.fullscreenElement ? '🗗' : '⛶'; b.title = document.fullscreenElement ? '退出全屏' : '网页全屏'; } });
+
+/* ---------- 版本 / 更新内容 / 设置 ---------- */
+const CHANGELOG=[
+  {v:'v1.6.0', d:'2026-08-08', items:['新增左上角刷新按钮与设置面板（版本 / 更新内容 / 字号）','手机横屏适配：弹窗自动缩小、投票浮条改细条、笔记字号加大']},
+  {v:'v1.5.0', d:'2026-08-08', items:['玩家 ID 支持中文（按登录名匹配座位）','提名公开举手投票：实时同步、指针转动、座位显示举手/✕、鬼票标记','手机竖屏时提示转横屏']},
+  {v:'v1.4.0', d:'2026-08-08', items:['玩家笔记标题改为「玩家笔记」','玩家笔记座位备注框 / 悬停框复用魔典样式与定位']},
+  {v:'v1.3.0', d:'2026-08-07', items:['中央时钟走时动画、提名指针转动','结算特效自动弹出并同步到大厅 / 笔记']},
+];
+const APP_VERSION=CHANGELOG[0].v;
+function _fsCur(){ let n=1; try{ n=parseInt(localStorage.getItem('botc_fs')||'1',10); }catch(e){} return (n===2||n===3)?n:1; }
+function applyFontScale(n){ document.body.classList.remove('fs-1','fs-2','fs-3'); document.body.classList.add('fs-'+n); }
+function _fsSync(){ const n=_fsCur(); const seg=document.getElementById('fsSeg'); if(seg){ seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', parseInt(b.dataset.fs,10)===n)); } }
+window.setFontScale=function(n){ try{ localStorage.setItem('botc_fs',n); }catch(e){} applyFontScale(n); _fsSync(); };
+window.openSettings=function(){ document.getElementById('setVer').textContent=APP_VERSION;
+  const log=document.getElementById('setLog');
+  log.innerHTML=CHANGELOG.map(c=>'<div class="cl-item"><span class="cl-v">'+c.v+'</span><span class="cl-d">'+c.d+'</span><ul>'+c.items.map(i=>'<li>'+i+'</li>').join('')+'</ul></div>').join('');
+  _fsSync(); document.getElementById('setModal').classList.add('on'); };
+window.closeSettings=function(){ document.getElementById('setModal').classList.remove('on'); };
+try{ applyFontScale(_fsCur()); }catch(e){}
 
 /* ---------- seat-view guest ops ---------- */
 function addGuest(){
@@ -1990,6 +2041,19 @@ load(); render();
 <div id="voteBar"></div>
 <div id="rotateGate"><div class="phone"></div><div class="rg-t">请把手机横过来</div><div class="rg-s">血染钟楼在横屏下体验更好 🔄</div></div>
 <div id="cfgModal"><div class="cbox"><h3><span>本局存档 · 角色配置</span><span class="cX" onclick="_cfgClose()">✕</span></h3><div id="cfgList"></div></div></div>
+<div id="setModal" onclick="if(event.target.id==='setModal')closeSettings()"><div class="setbox">
+  <h3><span>⚙ 设置</span><span class="cX" onclick="closeSettings()">✕</span></h3>
+  <div class="set-ver">当前版本 <b id="setVer">—</b></div>
+  <div class="set-sec">字号（笔记 / 大厅文字）</div>
+  <div class="fs-seg" id="fsSeg">
+    <button class="s1" data-fs="1" onclick="setFontScale(1)">标准</button>
+    <button class="s2" data-fs="2" onclick="setFontScale(2)">大</button>
+    <button class="s3" data-fs="3" onclick="setFontScale(3)">特大</button>
+  </div>
+  <div class="set-hint">座位圈与时钟为等比布局，字号主要放大左侧笔记/名单文字。</div>
+  <div class="set-sec">更新内容</div>
+  <div class="set-log" id="setLog"></div>
+</div></div>
 <div id="resultLayer">
   <div class="backdrop"></div><div class="rays"></div><div class="parts" id="rlParts"></div>
   <button class="rclose" onclick="hideResult()" title="收起">✕</button>
