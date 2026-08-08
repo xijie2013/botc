@@ -225,6 +225,12 @@
   #resultLayer .rclose{position:absolute; top:20px; right:24px; width:40px; height:40px; border-radius:50%; border:1px solid rgba(255,255,255,.3); background:rgba(0,0,0,.4); color:#fff; font-size:20px; cursor:pointer;}
   .THEME-good{--fg:#dceeff; --glow:#4a9bff; --glow2:rgba(40,90,180,.5); --ray:#8fc2ff; --part:#bcd8ff;}
   .THEME-evil{--fg:#ffe3df; --glow:#ff3b30; --glow2:rgba(150,25,20,.55); --ray:#ff7a5a; --part:#ff8a3c;}
+  /* 大厅/笔记 里的结算图标 */
+  .resbadge{display:flex; align-items:center; gap:10px; margin:2px 0 10px; padding:8px 12px; border-radius:10px;}
+  .resbadge img{width:46px; height:46px; object-fit:contain; flex:0 0 auto; filter:drop-shadow(0 0 6px currentColor);}
+  .resbadge b{font-size:15px;} .resbadge .rb-r{font-size:11px; opacity:.85; margin-top:2px; font-weight:400;}
+  .resbadge.good{background:rgba(40,90,180,.18); border:1px solid #4a9bff; color:#bcd8ff;}
+  .resbadge.evil{background:rgba(150,25,20,.2); border:1px solid #ff5a5a; color:#ffc9c4;}
   @keyframes rlFade{from{opacity:0}to{opacity:1}}
   @keyframes rlspin{to{transform:translate(-50%,-50%) rotate(360deg)}}
   @keyframes emblemIn{0%{transform:translateY(24px) scale(.2) rotate(-12deg);opacity:0}55%{transform:translateY(0) scale(1.12) rotate(3deg);opacity:1}100%{transform:scale(1) rotate(0)}}
@@ -535,9 +541,6 @@
         </div>
         <button class="btn purple" onclick="dealRoles()">随机发牌</button>
         <button class="btn lpurple" onclick="resetRoles()">重置角色</button>
-      </div>
-      <div class="box bottom-bar" id="resultBar" style="display:none;gap:6px;">
-        <button class="btn gold" style="flex:1" onclick="stAnnounceResult()">🏆 公布结算</button>
       </div>
     </div>
 
@@ -1200,7 +1203,7 @@ function checkWin(){
 }
 function renderWin(){
   const wi=document.getElementById("winIcon"); const win=checkWin();
-  const _rb=document.getElementById('resultBar'); if(_rb) _rb.style.display=win?'flex':'none';
+  if(window._autoResult) window._autoResult(win);   // 满足胜负自动公布，无需按钮
   if(win && tableCenter){ const stg=document.getElementById("stage");
     if(!wi.dataset.w || wi.dataset.w!==win.w){ wi.dataset.w=win.w; wi.innerHTML='<img src="assets/win-'+win.w+'.png" onerror="this.parentNode.style.display=\'none\'">'; }
     wi.style.left=tableCenter.x+'px'; wi.style.top=tableCenter.y+'px'; wi.style.width=Math.round(stg.clientWidth*0.26)+'px'; wi.style.display='block';
@@ -1307,14 +1310,24 @@ function renderClock(){ const geo=clockGeo(); const layer=document.getElementByI
   clockUpdate(true); ensureClockTick();
 }
 window.renderClock=renderClock;
+function startDawnSpin(){ if(!_clkEls) return; CLK._realBusy=true;   /* 天亮：两针转几圈缓慢对齐到正上方(不变色) */
+  _clkEls.hHour.classList.remove('blue','red'); _clkEls.hMin.classList.remove('blue','red');
+  clkSpin(_clkEls.hHour, 0, CLK_TURN_H, CLK_SPIN_H);
+  clkSpin(_clkEls.hMin, 0, CLK_TURN_M, CLK_SPIN_M);
+  clearTimeout(CLK._busyTimer); CLK._busyTimer=setTimeout(()=>{ CLK._realBusy=false; }, CLK_SPIN_M+60); }
 window.clockApplyState=function(c){ c=c||{};
-  CLK.dayStart = c.dayStart||null;
+  const prevDay=CLK.dayStart; CLK.dayStart=c.dayStart||null;
   const nom = c.nom||null;
+  const dayChanged = CLK.dayStart && CLK.dayStart!==prevDay;
   if(nom && nom.ts!==CLK._nomSeenTs){
     CLK._nomSeenTs=nom.ts; CLK.nom=nom; renderClock();
     const el=clockServerNow()-nom.ts;
     if(el < CLK_HOLD){ if(el<600) startRoulette(nom); else snapNomination(nom); }
-  } else { renderClock(); }
+  } else {
+    CLK.nom=nom;
+    if(dayChanged){ CLK._realBusy=true; renderClock(); startDawnSpin(); }
+    else renderClock();
+  }
 };
 /* ---------- 白天：提名 / 投票 / 处决 ---------- */
 function dayThreshold(){ return Math.ceil(countAlive()/2); }
@@ -2006,7 +2019,7 @@ load(); render();
   /* ---------- 当前牌局 / 公开数据订阅 ---------- */
   db.ref('currentGame').on('value', s=>{ const gid=s.val(); if(gid===curGid) return; curGid=gid; bindPub(); if(role==='player') bindNotes(); });
   db.ref('.info/serverTimeOffset').on('value', s=>{ if(window.CLK) window.CLK.offset=s.val()||0; });
-  function bindPub(){ if(pubBound){pubBound.off();pubBound=null;} if(!curGid){ pub=null;
+  function bindPub(){ _lastResultSig=null; if(pubBound){pubBound.off();pubBound=null;} if(!curGid){ pub=null;
       window.__pubHasGame=false; window.__pubCount=0; if(window.clockApplyState) window.clockApplyState(null);
       if(window.applyResult) window.applyResult(null);
       if(mode!=='st') renderView(); return; }
@@ -2015,11 +2028,17 @@ load(); render();
       if(window.clockApplyState) window.clockApplyState(pub&&pub.clock);
       if(window.applyResult) window.applyResult(pub&&pub.result);
       if(mode!=='st') renderView(); }); }
-  /* 说书人：公布结算（只传胜负结果，不泄露角色） */
-  window.stAnnounceResult=function(){ if(role!=='st'){ toast('请先登录说书人'); return; } if(!curGid){ toast('先点开新局'); return; }
-    const win=(typeof checkWin==='function')?checkWin():null; if(!win){ toast('当前没有可公布的胜负'); return; }
-    db.ref('games/'+curGid+'/public/result').set({w:win.w, r:win.r, ts:firebase.database.ServerValue.TIMESTAMP})
-      .then(()=>toast('🏆 已公布结算')).catch(e=>toast('公布失败：'+(e.code||''))); };
+  /* 说书人：满足胜负时自动公布（只传结果，不泄露角色；去重避免重复写） */
+  let _lastResultSig=null;
+  window._autoResult=function(win){ if(role!=='st'||!curGid) return;
+    const sig=win?(win.w+'|'+win.r):'';
+    if(sig===_lastResultSig) return; _lastResultSig=sig;
+    const ref=db.ref('games/'+curGid+'/public/result');
+    if(win) ref.set({w:win.w, r:win.r, ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{});
+    else ref.set(null).catch(()=>{}); };
+  function resultBadgeHTML(){ if(!pub||!pub.result||!pub.result.w) return '';
+    const w=pub.result.w, t=w==='good'?'好人胜利':'邪恶胜利';
+    return '<div class="resbadge '+w+'"><img src="assets/win-'+w+'.png"><div><b>'+t+'</b><div class="rb-r">'+E(pub.result.r||'')+'</div></div></div>'; }
   /* 说书人：广播提名给时钟（所有端同步指向） */
   window._clockBroadcastNom=function(nr,ne){ if(role!=='st'||!curGid) return;
     db.ref('games/'+curGid+'/public/clock/nom').set({nr:nr, ne:ne, ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); };
@@ -2059,7 +2078,7 @@ load(); render();
     document.getElementById('hallTitle').textContent = pub?('客人名单 · '+(pub.name||'本局')+' · 第'+(pub.day||1)+'天'):'客人名单';
     if(!pub||!pub.count){ nl.innerHTML='<div style="color:#9a7c4a;font-size:12px;padding:6px">🕯️ 说书人还没开局</div>'; if(lg) lg.innerHTML=''; return; }
     const seats=pub.seats||[];
-    nl.innerHTML=seats.map((s,i)=>'<div class="nameitem'+(s.dead?' dead':'')+'"><span class="no">'+(i+1)+'</span>'+(E(s.name)||'—')+(s.dead&&CAUSE[s.cause]?'<span class="cz">'+CAUSE[s.cause].g+'</span>':'')+'</div>').join('');
+    nl.innerHTML=resultBadgeHTML()+seats.map((s,i)=>'<div class="nameitem'+(s.dead?' dead':'')+'"><span class="no">'+(i+1)+'</span>'+(E(s.name)||'—')+(s.dead&&CAUSE[s.cause]?'<span class="cz">'+CAUSE[s.cause].g+'</span>':'')+'</div>').join('');
     if(lg) lg.innerHTML=nomLogHTML();
   }
   function nomLogHTML(){ const noms=(pub&&pub.noms)||[], days={}; noms.forEach(n=>{(days[n.day]=days[n.day]||[]).push(n);});
@@ -2075,7 +2094,8 @@ load(); render();
   function renderNotes(){ const c=document.getElementById('nbContent'); if(!c) return;
     if(!pub||!pub.count){ c.innerHTML='<div style="padding:8px;color:#9a7c4a;font-size:12px">🕯️ 说书人还没开局</div>'; return; }
     ensureS();
-    if(nbTab==='mark') c.innerHTML=markTabHTML(); else if(nbTab==='nom') c.innerHTML=nomLogHTML(); else c.innerHTML=refHTML();
+    const _rb=resultBadgeHTML();
+    if(nbTab==='mark') c.innerHTML=_rb+markTabHTML(); else if(nbTab==='nom') c.innerHTML=_rb+nomLogHTML(); else c.innerHTML=_rb+refHTML();
   }
   function markTabHTML(){ let h='<div class="nb-sec">状态标记 · 点标记再点座位</div><div>';
     h+=STAT_ORDER.map(k=>{ const b=BADGE[k], on=sel&&sel.type==='stat'&&sel.val===k; const ic=MARK[k]?'<img src="'+MARK[k][1]+'" style="width:17px;height:17px;vertical-align:middle;margin-right:2px">':b.g; return '<span class="nbtok '+(on?'on':'')+'" onclick="_nbPick(\''+'stat'+'\',\''+k+'\')">'+ic+b.t+'</span>'; }).join('')+'</div>';
