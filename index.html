@@ -74,6 +74,8 @@
     padding:0; transition:transform .12s, box-shadow .12s, background .12s;}
   .fsbtn:hover{background:rgba(58,45,78,.85); transform:translateY(-1px); box-shadow:0 0 10px rgba(233,196,106,.4);}
   .fsbtn:active{transform:scale(.94);}
+  #refreshBtn.spin{animation:refreshSpin .6s ease;}
+  @keyframes refreshSpin{from{transform:rotate(0);} to{transform:rotate(360deg);}}
   /* 设置面板 */
   #setModal{position:fixed; inset:0; z-index:210; display:none; align-items:center; justify-content:center; background:rgba(10,6,16,.64); padding:16px; overflow-y:auto;}
   #setModal.on{display:flex;}
@@ -868,6 +870,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v1.6.8', d:'2026-08-08', items:['点刷新不再弹提示条，改为刷新图标转一圈']},
   {v:'v1.6.7', d:'2026-08-08', items:['说书人改为用 ID+密码登录，角标显示“说书人{ID}已登录”','修复：底栏“第X夜/共X人”按钮过大导致换行（恢复尺寸上限）']},
   {v:'v1.6.6', d:'2026-08-08', items:['大厅只显示客人名单（去掉公布记录）','说书人/玩家登录信息统一样式：“…已登录”+退出','玩家登录角标去掉大厅按钮（改用点墨水瓶回大厅）']},
   {v:'v1.6.5', d:'2026-08-08', items:['登录信息移到左上角设置按钮右侧','玩家笔记页再点墨水瓶可返回大厅','勾选“记住我”后（含说书人）下次自动登录、免密码']},
@@ -2199,7 +2202,7 @@ load(); render();
     try{ if(curGid){ bindPub(); if(role==='player') bindNotes(); if(role==='st') bindStPlayers(); } }catch(e){}
     try{ if(mode==='st'){ if(typeof render==='function') render(); } else renderView(); }catch(e){}
     try{ if(window.renderClock) renderClock(); }catch(e){}
-    try{ toast('↻ 已重新同步'); }catch(e){}
+    try{ const rb=document.getElementById('refreshBtn'); if(rb){ rb.classList.remove('spin'); void rb.offsetWidth; rb.classList.add('spin'); setTimeout(()=>rb.classList.remove('spin'),650); } }catch(e){}
   };
 
   /* ---------- 当前牌局 / 公开数据订阅 ---------- */
