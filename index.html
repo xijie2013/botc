@@ -205,9 +205,11 @@
   #clockFace{position:absolute; transform:translate(-50%,-50%);}
   #clockFace img{width:100%; height:100%; display:block; filter:drop-shadow(0 5px 12px rgba(0,0,0,.5));}
   .chand{position:absolute;}
-  .chand img{width:100%; height:100%; display:block; filter:drop-shadow(0 2px 3px rgba(0,0,0,.55));}
+  .chand img{width:100%; height:100%; display:block; transition:filter 1.1s ease;}
   .chand.blue img{filter:grayscale(1) brightness(1.15) sepia(1) hue-rotate(175deg) saturate(4.5) drop-shadow(0 0 7px #3b7dff) drop-shadow(0 0 14px #3b7dff);}
   .chand.red img{filter:grayscale(1) brightness(1.1) sepia(1) hue-rotate(-30deg) saturate(6) drop-shadow(0 0 7px #ff3b3b) drop-shadow(0 0 14px #ff3b3b);}
+  .cshadow{position:absolute;}
+  .cshadow img{width:100%; height:100%; display:block; filter:brightness(0) opacity(.34) blur(1.4px);}
   #hoverBox .hb-role{font-weight:800; color:#e9c46a; margin-bottom:3px;}
   #hoverBox .hb-info b{color:#ffe08a;}
   #hoverBox .hb-line{text-align:left; margin-top:4px; line-height:1.4;}
@@ -1180,10 +1182,10 @@ function renderWin(){
   } else { wi.style.display='none'; wi.dataset.w=''; }
 }
 /* ---------- 中央时钟 ---------- */
-var CLK={dayStart:null, nom:null, offset:0, _nomShownTs:0, _tick:null, _nomT:null, _loadTs:Date.now(), _wasNom:false};
+var CLK={dayStart:null, nom:null, offset:0, _tick:null, _loadTs:Date.now(), _realBusy:false, _nomSeenTs:0, _outTimer:null, _busyTimer:null};
 var _clkEls=null;
 var CLK_PIVOT={hour:{px:0.4943,py:0.8078,ar:0.16893}, minute:{px:0.5000,py:0.7867,ar:0.13037}};
-var CLK_HOLD=7000, CLK_DAY_MS=20*60*1000;
+var CLK_HOLD=9000, CLK_DAY_MS=20*60*1000, CLK_SPIN_MS=2600, CLK_SPINS=3;
 function clockServerNow(){ return Date.now()+(CLK.offset||0); }
 function clockGeo(){ const st=document.getElementById('stage'); if(!st) return null;
   const SW=st.clientWidth, SH=st.clientHeight; if(!SW||!SH) return null;
@@ -1193,46 +1195,59 @@ function clockAnchor(){ return CLK.dayStart || CLK._loadTs; }
 function dayAngles(elapsed){ const rev=Math.max(0,elapsed)/CLK_DAY_MS;   /* 分针 1 圈/20分钟，从12点起 */
   return { hour:(rev*30)%360, minute:(rev*360)%360 }; }
 function clkSetHand(el,absDeg,opt){ opt=opt||{}; const cur=el._deg||0; let t=absDeg;
-  while(t<cur) t+=360; if(opt.spin) t+=360; const dur=opt.dur==null?1:opt.dur;
+  while(t<cur) t+=360; const dur=opt.dur==null?1:opt.dur;
   if(dur<=0){ el.style.transition='none'; el.style.transform='rotate('+t+'deg)'; void el.offsetWidth; }
-  else { el.style.transition='transform '+dur+'s '+(opt.spin?'cubic-bezier(.2,.9,.25,1)':'linear'); el.style.transform='rotate('+t+'deg)'; }
+  else { el.style.transition='transform '+dur+'s linear'; el.style.transform='rotate('+t+'deg)'; }
   el._deg=t; }
+function clkSpin(el,absDeg,spins,ms){ let t=absDeg; const cur=el._deg||0; while(t<=cur) t+=360; t+=spins*360;
+  el.style.transition='transform '+ms+'ms cubic-bezier(.12,.72,.16,1)'; /* 快转→缓停，转盘感 */
+  el.style.transform='rotate('+t+'deg)'; el._deg=t; }
 function clockBuild(geo,layer){ layer.innerHTML='';
   const dialD=geo.R*0.72;
   const face=document.createElement('div'); face.id='clockFace';
   face.style.left=geo.cx+'px'; face.style.top=geo.cy+'px'; face.style.width=dialD+'px'; face.style.height=dialD+'px';
   face.innerHTML='<img src="assets/clock-face.png" onerror="this.parentNode.style.display=\'none\'">'; layer.appendChild(face);
-  const mk=(kind,pointerLen)=>{ const p=CLK_PIVOT[kind], Hd=pointerLen/p.py, Wd=Hd*p.ar;
-    const el=document.createElement('div'); el.className='chand '+kind;
+  const dx=geo.R*0.02, dy=geo.R*0.03;
+  const mk=(kind,pointerLen,shadow)=>{ const p=CLK_PIVOT[kind], Hd=pointerLen/p.py, Wd=Hd*p.ar;
+    const el=document.createElement('div'); el.className=(shadow?'cshadow ':'chand ')+kind;
     el.style.width=Wd+'px'; el.style.height=Hd+'px';
-    el.style.left=(geo.cx-p.px*Wd)+'px'; el.style.top=(geo.cy-p.py*Hd)+'px';
+    el.style.left=(geo.cx-p.px*Wd+(shadow?dx:0))+'px'; el.style.top=(geo.cy-p.py*Hd+(shadow?dy:0))+'px';
     el.style.transformOrigin=(p.px*100)+'% '+(p.py*100)+'%';
     el.innerHTML='<img src="assets/clock-hand-'+kind+'.png">'; layer.appendChild(el); return el; };
-  return { face, hHour:mk('hour',geo.R*0.58), hMin:mk('minute',geo.R*0.86) };
+  /* 顺序：表盘 → 影子(分,时) → 真针分 → 真针时（时针在最上层） */
+  const shMin=mk('minute',geo.R*0.86,true), shHour=mk('hour',geo.R*0.58,true);
+  const hMin=mk('minute',geo.R*0.86,false), hHour=mk('hour',geo.R*0.58,false);
+  return { face, shHour, shMin, hHour, hMin };
 }
-function clockUpdate(snap){ if(!_clkEls) return; const now=clockServerNow();
-  const nomActive = CLK.nom && (now - CLK.nom.ts) < CLK_HOLD;
-  if(nomActive){ const N2=clockSeatCount()||1; CLK._wasNom=true;
-    _clkEls.hHour.classList.add('blue'); _clkEls.hHour.classList.remove('red');
-    _clkEls.hMin.classList.add('red'); _clkEls.hMin.classList.remove('blue');
-    clkSetHand(_clkEls.hHour, CLK.nom.nr*360/N2, {dur:0});
-    clkSetHand(_clkEls.hMin, CLK.nom.ne*360/N2, {dur:0});
-    CLK._nomShownTs=CLK.nom.ts; return; }
-  const wasNom=CLK._wasNom; CLK._wasNom=false;
-  _clkEls.hHour.classList.remove('blue','red'); _clkEls.hMin.classList.remove('blue','red');
-  const a = dayAngles(now-clockAnchor());
-  const d = (snap||wasNom)?0:1;
-  clkSetHand(_clkEls.hHour, a.hour, {dur:d});
-  clkSetHand(_clkEls.hMin, a.minute, {dur:d});
+function clockUpdate(snap){ if(!_clkEls) return; const a=dayAngles(clockServerNow()-clockAnchor());
+  clkSetHand(_clkEls.shHour, a.hour, {dur:snap?0:1});     /* 影子始终显示时间 */
+  clkSetHand(_clkEls.shMin, a.minute, {dur:snap?0:1});
+  if(!CLK._realBusy){                                     /* 空闲时真针也跟随时间 */
+    _clkEls.hHour.classList.remove('blue','red'); _clkEls.hMin.classList.remove('blue','red');
+    clkSetHand(_clkEls.hHour, a.hour, {dur:snap?0:1});
+    clkSetHand(_clkEls.hMin, a.minute, {dur:snap?0:1}); }
 }
-function triggerNomSpin(){ if(!_clkEls||!CLK.nom) return; const N2=clockSeatCount()||1;
+function scheduleRouletteOut(nom){ const delay=Math.max(0,(nom.ts+CLK_HOLD)-clockServerNow());
+  clearTimeout(CLK._outTimer); CLK._outTimer=setTimeout(endRoulette, delay); }
+function startRoulette(nom){ if(!_clkEls) return; const N2=clockSeatCount()||1; CLK._realBusy=true;
   _clkEls.hHour.classList.add('blue'); _clkEls.hHour.classList.remove('red');
   _clkEls.hMin.classList.add('red'); _clkEls.hMin.classList.remove('blue');
-  clkSetHand(_clkEls.hHour, CLK.nom.nr*360/N2, {spin:true,dur:1.1});
-  clkSetHand(_clkEls.hMin, CLK.nom.ne*360/N2, {spin:true,dur:1.1});
-  CLK._nomShownTs=CLK.nom.ts;
-  clearTimeout(CLK._nomT); CLK._nomT=setTimeout(()=>clockUpdate(false), CLK_HOLD+80);
-}
+  clkSpin(_clkEls.hHour, nom.nr*360/N2, CLK_SPINS, CLK_SPIN_MS);
+  clkSpin(_clkEls.hMin, nom.ne*360/N2, CLK_SPINS, CLK_SPIN_MS);
+  scheduleRouletteOut(nom); }
+function snapNomination(nom){ if(!_clkEls) return; const N2=clockSeatCount()||1; CLK._realBusy=true;
+  _clkEls.hHour.classList.add('blue'); _clkEls.hHour.classList.remove('red');
+  _clkEls.hMin.classList.add('red'); _clkEls.hMin.classList.remove('blue');
+  clkSetHand(_clkEls.hHour, nom.nr*360/N2, {dur:0});
+  clkSetHand(_clkEls.hMin, nom.ne*360/N2, {dur:0});
+  scheduleRouletteOut(nom); }
+function endRoulette(){ if(!_clkEls){ CLK._realBusy=false; CLK.nom=null; return; }
+  const a=dayAngles(clockServerNow()-clockAnchor());
+  _clkEls.hHour.classList.remove('blue','red'); _clkEls.hMin.classList.remove('blue','red');
+  clkSpin(_clkEls.hHour, a.hour, CLK_SPINS, CLK_SPIN_MS);
+  clkSpin(_clkEls.hMin, a.minute, CLK_SPINS, CLK_SPIN_MS);
+  CLK.nom=null;
+  clearTimeout(CLK._busyTimer); CLK._busyTimer=setTimeout(()=>{ CLK._realBusy=false; }, CLK_SPIN_MS+60); }
 function ensureClockTick(){ if(CLK._tick) return; CLK._tick=setInterval(()=>clockUpdate(false),1000); }
 function renderClock(){ const geo=clockGeo(); const layer=document.getElementById('clockLayer'); if(!layer) return;
   const show = !!geo && ( !window.BOTC_VIEWER || window.__pubHasGame );
@@ -1240,17 +1255,19 @@ function renderClock(){ const geo=clockGeo(); const layer=document.getElementByI
     if(CLK._tick){clearInterval(CLK._tick);CLK._tick=null;} return; }
   layer.style.display='';
   const key=Math.round(geo.cx)+'_'+Math.round(geo.cy)+'_'+Math.round(geo.R);
-  if(!_clkEls || layer.dataset.key!==key){ _clkEls=clockBuild(geo,layer); layer.dataset.key=key; }
+  if(!_clkEls || layer.dataset.key!==key){ _clkEls=clockBuild(geo,layer); layer.dataset.key=key;
+    if(CLK._realBusy && CLK.nom) snapNomination(CLK.nom); }
   clockUpdate(true); ensureClockTick();
 }
 window.renderClock=renderClock;
 window.clockApplyState=function(c){ c=c||{};
   CLK.dayStart = c.dayStart||null;
-  const newNom = c.nom||null;
-  const isNewNom = newNom && (!CLK.nom || newNom.ts!==CLK.nom.ts) && (clockServerNow()-newNom.ts < CLK_HOLD);
-  CLK.nom = newNom;
-  renderClock();
-  if(isNewNom) triggerNomSpin();
+  const nom = c.nom||null;
+  if(nom && nom.ts!==CLK._nomSeenTs){
+    CLK._nomSeenTs=nom.ts; CLK.nom=nom; renderClock();
+    const el=clockServerNow()-nom.ts;
+    if(el < CLK_HOLD){ if(el<600) startRoulette(nom); else snapNomination(nom); }
+  } else { renderClock(); }
 };
 /* ---------- 白天：提名 / 投票 / 处决 ---------- */
 function dayThreshold(){ return Math.ceil(countAlive()/2); }
