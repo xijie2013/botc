@@ -201,7 +201,7 @@
     filter:drop-shadow(0 6px 22px rgba(0,0,0,.6));}
   #winIcon img{width:100%; display:block;}
   /* ---- 中央时钟 ---- */
-  #clockLayer{position:absolute; inset:0; pointer-events:none;}
+  #clockLayer{position:absolute; inset:0; pointer-events:none; z-index:3;}
   #clockFace{position:absolute; transform:translate(-50%,-50%);}
   #clockFace img{width:100%; height:100%; display:block; filter:drop-shadow(0 5px 12px rgba(0,0,0,.5));}
   .chand{position:absolute;}
@@ -1180,7 +1180,7 @@ function renderWin(){
   } else { wi.style.display='none'; wi.dataset.w=''; }
 }
 /* ---------- 中央时钟 ---------- */
-var CLK={dayStart:null, nom:null, offset:0, _nomShownTs:0, _tick:null, _nomT:null};
+var CLK={dayStart:null, nom:null, offset:0, _nomShownTs:0, _tick:null, _nomT:null, _loadTs:Date.now(), _wasNom:false};
 var _clkEls=null;
 var CLK_PIVOT={hour:{px:0.4943,py:0.8078,ar:0.16893}, minute:{px:0.5000,py:0.7867,ar:0.13037}};
 var CLK_HOLD=7000, CLK_DAY_MS=20*60*1000;
@@ -1189,8 +1189,9 @@ function clockGeo(){ const st=document.getElementById('stage'); if(!st) return n
   const SW=st.clientWidth, SH=st.clientHeight; if(!SW||!SH) return null;
   return {cx:SW*0.71, cy:SH*0.525, R:SH*0.34}; }
 function clockSeatCount(){ if(window.BOTC_VIEWER && window.__pubCount) return window.__pubCount; return (typeof N==='number'&&N)?N:8; }
-function dayAngles(elapsed){ const f=Math.max(0,Math.min(1,elapsed/CLK_DAY_MS)); const mins=480+f*120; /* 8:00→10:00 */
-  return { hour:(mins/60%12)*30, minute:(mins%60)*6 }; }
+function clockAnchor(){ return CLK.dayStart || CLK._loadTs; }
+function dayAngles(elapsed){ const rev=Math.max(0,elapsed)/CLK_DAY_MS;   /* 分针 1 圈/20分钟，从12点起 */
+  return { hour:(rev*30)%360, minute:(rev*360)%360 }; }
 function clkSetHand(el,absDeg,opt){ opt=opt||{}; const cur=el._deg||0; let t=absDeg;
   while(t<cur) t+=360; if(opt.spin) t+=360; const dur=opt.dur==null?1:opt.dur;
   if(dur<=0){ el.style.transition='none'; el.style.transform='rotate('+t+'deg)'; void el.offsetWidth; }
@@ -1211,16 +1212,18 @@ function clockBuild(geo,layer){ layer.innerHTML='';
 }
 function clockUpdate(snap){ if(!_clkEls) return; const now=clockServerNow();
   const nomActive = CLK.nom && (now - CLK.nom.ts) < CLK_HOLD;
-  if(nomActive){ const N2=clockSeatCount()||1;
+  if(nomActive){ const N2=clockSeatCount()||1; CLK._wasNom=true;
     _clkEls.hHour.classList.add('blue'); _clkEls.hHour.classList.remove('red');
     _clkEls.hMin.classList.add('red'); _clkEls.hMin.classList.remove('blue');
     clkSetHand(_clkEls.hHour, CLK.nom.nr*360/N2, {dur:0});
     clkSetHand(_clkEls.hMin, CLK.nom.ne*360/N2, {dur:0});
     CLK._nomShownTs=CLK.nom.ts; return; }
+  const wasNom=CLK._wasNom; CLK._wasNom=false;
   _clkEls.hHour.classList.remove('blue','red'); _clkEls.hMin.classList.remove('blue','red');
-  const a = CLK.dayStart ? dayAngles(now-CLK.dayStart) : {hour:240, minute:0};
-  clkSetHand(_clkEls.hHour, a.hour, {dur:snap?0:1});
-  clkSetHand(_clkEls.hMin, a.minute, {dur:snap?0:1});
+  const a = dayAngles(now-clockAnchor());
+  const d = (snap||wasNom)?0:1;
+  clkSetHand(_clkEls.hHour, a.hour, {dur:d});
+  clkSetHand(_clkEls.hMin, a.minute, {dur:d});
 }
 function triggerNomSpin(){ if(!_clkEls||!CLK.nom) return; const N2=clockSeatCount()||1;
   _clkEls.hHour.classList.add('blue'); _clkEls.hHour.classList.remove('red');
@@ -2042,7 +2045,7 @@ load(); render();
     let nm='本局'; try{ nm=await uiPrompt('给这局起个名字（玩家会看到）：','本局',{title:'开始新的一局'}); if(nm===null) return; }catch(e){}
     window.__botcGameName=nm||'本局'; const gid='t'+Date.now();
     const seats=[]; for(let i=0;i<N;i++){ const t=seatToken(i); seats.push({name:(t&&t.name)?t.name:'', dead:false, cause:''}); }
-    const g={ name:window.__botcGameName, count:N, day:night, seats:seats, locked:[...lockedRoles], dist:(customDist||DIST[N]||[0,0,0,0]), noms:[], clock:null };
+    const g={ name:window.__botcGameName, count:N, day:night, seats:seats, locked:[...lockedRoles], dist:(customDist||DIST[N]||[0,0,0,0]), noms:[], clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null} };
     try{ await db.ref('storytellerUid').set(me.uid); await db.ref('games/'+gid+'/public').set(g); await db.ref('currentGame').set(gid); toast('✅ 已开始新的一局'); }
     catch(e){ toast('开局失败：'+(e.code||e.message||'')); } };
   window.stSyncSeats=async function(){ if(role!=='st'){ toast('请先登录说书人'); return; } if(!curGid){ toast('先点开新局'); return; }
