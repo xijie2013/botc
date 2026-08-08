@@ -1185,8 +1185,8 @@ function renderWin(){
 var CLK={dayStart:null, nom:null, offset:0, _tick:null, _loadTs:Date.now(), _realBusy:false, _nomSeenTs:0, _outTimer:null, _busyTimer:null};
 var _clkEls=null;
 var CLK_PIVOT={hour:{px:0.4938,py:0.8345,ar:0.14038}, minute:{px:0.4969,py:0.7931,ar:0.12173}};
-var CLK_HOLD=12000, CLK_DAY_MS=20*60*1000;
-var CLK_SPIN_H=5500, CLK_TURN_H=2, CLK_SPIN_M=8000, CLK_TURN_M=3;   /* 时针慢·2圈·5.5s先落位；分针·3圈·8s后落位 */
+var CLK_HOLD=8000, CLK_DAY_MS=20*60*1000;
+var CLK_SPIN_H=2500, CLK_TURN_H=1, CLK_SPIN_M=4000, CLK_TURN_M=2;   /* 时针1圈2.5s先落位；分针2圈4s后落位 */
 function clockServerNow(){ return Date.now()+(CLK.offset||0); }
 function clockGeo(){ const st=document.getElementById('stage'); if(!st) return null;
   const SW=st.clientWidth, SH=st.clientHeight; if(!SW||!SH) return null;
