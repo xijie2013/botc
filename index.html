@@ -165,6 +165,7 @@
   .gtabs button{flex:1; padding:5px 2px; font-size:calc(.95 * var(--sw) / 100); font-weight:800;
     border:1px solid rgba(74,43,107,.4); background:rgba(240,235,250,.6); color:#43286b; border-radius:6px; cursor:pointer;}
   .gtabs button.on{background:#b9a0d6; color:#2e1a47;}
+  .grimoire.logview .gtabs, .grimoire.logview .bottom-bar{display:none;}   /* 墨水瓶进入日志：隐藏三标签与底栏 */
   .gcontent{flex:1; min-height:0; overflow:auto; padding-right:3px; font-size:calc(1 * var(--sw) / 100); color:#43286b;}
   .gcontent::-webkit-scrollbar{width:6px;} .gcontent::-webkit-scrollbar-thumb{background:rgba(74,43,107,.35); border-radius:3px;}
   .gsec{font-weight:800; color:#43286b; margin:7px 0 3px; letter-spacing:1px; font-size:calc(1.02 * var(--sw) / 100);}
@@ -520,17 +521,15 @@
     padding:9px 16px; border-radius:20px; font-size:13px; font-weight:700; box-shadow:0 4px 14px rgba(0,0,0,.4); display:none;}
   #fbToast.on{display:block;}
   #voteBar{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:120; display:none;
-    min-width:260px; max-width:min(92vw,460px); text-align:center; padding:11px 16px; border-radius:16px;
-    background:linear-gradient(180deg,rgba(52,32,66,.97),rgba(34,20,44,.97)); border:1.5px solid rgba(233,196,106,.6);
-    box-shadow:0 8px 26px rgba(0,0,0,.5); color:#f3e6c4; animation:vbIn .35s ease both;}
+    max-width:min(92vw,460px); text-align:center; color:#f3e6c4; animation:vbIn .35s ease both;}
   #voteBar.on{display:block;}
   @keyframes vbIn{from{opacity:0; transform:translate(-50%,14px);}to{opacity:1; transform:translate(-50%,0);}}
   #voteBar .vb-line{font-size:14px; font-weight:700; margin-bottom:8px; color:#ffe9b8;}
   #voteBar .vb-wait{font-size:13px; color:#c9b6e6; letter-spacing:1px;}
   #voteBar .vb-btns{display:flex; gap:10px; justify-content:center;}
-  #voteBar button{flex:1; min-width:150px; max-width:220px; padding:9px 22px; border-radius:12px; font-size:15px; font-weight:800; cursor:pointer;
-    border:1.5px solid rgba(233,196,106,.4); background:rgba(255,252,244,.14); color:#f3e6c4;}
-  #voteBar .vb-yes.act{background:rgba(28,16,38,.94); border-color:rgba(233,196,106,.6); color:#e9c46a;}   /* 举手后：加深，不变绿 */
+  #voteBar button{min-width:180px; max-width:300px; padding:13px 42px; border-radius:16px; font-size:16px; font-weight:800; cursor:pointer;
+    border:1.5px solid rgba(233,196,106,.6); background:linear-gradient(180deg,rgba(52,32,66,.97),rgba(34,20,44,.97)); color:#f3e6c4; box-shadow:0 8px 26px rgba(0,0,0,.5);}
+  #voteBar .vb-yes.act{background:linear-gradient(180deg,rgba(26,15,36,.98),rgba(14,8,22,.98)); border-color:rgba(233,196,106,.85); color:#e9c46a;}   /* 举手后：加深，不变绿 */
   #voteBar button[disabled]{opacity:.45; cursor:not-allowed; filter:grayscale(1);}
   #voteBar .vb-hint{font-size:12px; margin-bottom:7px; color:#e9c46a;}
   #voteBar .vb-hint .vb-ghost.used{color:#f0a89e;}
@@ -874,6 +873,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v1.9.5', d:'2026-08-09', items:['投票浮条改为单层按钮（去掉外框，只剩一个方框）','处决/猎人射杀：座位出局图标实时同步到大厅与玩家笔记','随机发牌/重置角色时一并回到第一夜','墨水瓶进入日志页时隐藏上方三标签与底部夜数/按钮']},
   {v:'v1.9.4', d:'2026-08-09', items:['投票浮条精简为单个按钮：举手↔放下（举手后按钮加深，不变绿）；鬼票在按钮后标“（鬼票）”','说书人魔典默认只保留 角色设置/夜晚/白天 三个标签','点击墨水瓶进入说书人日志页（再点返回上一标签），不再弹出玩家登录框']},
   {v:'v1.9.3', d:'2026-08-09', items:['修复：图书管理员“没有外来者”等自动结果未记入日志','投票浮条：指针转动时不再显示提示','投票浮条：指针停下后只保留“举手”按钮（去掉提名文字与座位号）']},
   {v:'v1.9.2', d:'2026-08-09', items:['修复：玩家举手未实时同步到其他玩家/说书人（数据库规则补齐说书人读取玩家节点权限）','日志严格按夜晚顺序排列；提名记录新增投票者名单（含鬼票标记）','对齐酒馆/魔典底栏：共X人与第X夜、两组按钮位置一致']},
@@ -939,7 +939,7 @@ async function dealRoles(){
   const base=customDist||DIST[N]; if(!base) return;
   if(base.reduce((a,b)=>a+b,0)!==N){ await uiAlert('各阵营数量合计与人数（'+N+'）不符，请调整后再发牌。'); return; }
   if(!await uiConfirm("确定随机发牌？将重新分配所有身份。")) return;
-  ensureMeta(); impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
+  ensureMeta(); night=1; impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
   Object.keys(nightChecks).forEach(k=>delete nightChecks[k]);   // 清空每夜勾选
   const pick=(team,k)=>{ const pool=ROLES.filter(r=>r.team===team&&!lockedRoles.has(r.id)).map(r=>r.id);
     for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
@@ -972,7 +972,7 @@ async function dealRoles(){
   render();
 }
 async function resetRoles(){ if(!await uiConfirm("重置所有身份、状态、备注、伪装？（保留名字与座位）")) return;
-  meta=Array.from({length:N},blankMeta); bluffs=["","",""]; impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
+  meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
   Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); overviewDecoys=[]; tokens.forEach(t=>t.dead=false); render(); }
 function setBluff(k,v){ bluffs[k]=v; refreshOverviewDecoys(); render(); }
 
@@ -1529,10 +1529,10 @@ function slayerFire(v){ if(v===""||slayerShot) return; const t=+v; const sl=meta
   const hit = healthy(sl) && !isDeadSeat(sl) && registersDemon(t);
   slayerShot={target:t, day:night, hit};
   if(hit){ killSeat(t,true); histSet(t,'death','被猎人射杀出局'); demonDied(t); }
-  render(); }
+  if(window._syncNoms) window._syncNoms(); if(window._syncSeats) window._syncSeats(); render(); }
 function slayerUndo(){ if(!slayerShot) return; const t=slayerShot.target;
   if(slayerShot.hit){ demonRevived(t); killSeat(t,false); histSet(t,'death',null); }
-  slayerShot=null; render(); }
+  slayerShot=null; if(window._syncNoms) window._syncNoms(); if(window._syncSeats) window._syncSeats(); render(); }
 function slayerUI(){
   const sl=meta.findIndex(m=>m&&m.role==="slayer"); if(sl<0) return "";
   let h='<div class="gsec">猎人（每局一次·白天）</div>';
@@ -1547,9 +1547,9 @@ function slayerUI(){
 }
 function doExecute(seat){ const day=night; const prev=executions[day];
   if(prev!=null && prev>=0){ demonRevived(prev); killSeat(prev,false); histSet(prev,'death',null); }   // 撤销上次处决
-  if(seat<0){ executions[day]=-1; if(window._syncNoms) window._syncNoms(); render(); return; }
+  if(seat<0){ executions[day]=-1; if(window._syncNoms) window._syncNoms(); if(window._syncSeats) window._syncSeats(); render(); return; }
   executions[day]=seat; killSeat(seat,true); histSet(seat,'death','第'+day+'天被处决出局');
-  demonDied(seat); if(window._syncNoms) window._syncNoms(); render(); }
+  demonDied(seat); if(window._syncNoms) window._syncNoms(); if(window._syncSeats) window._syncSeats(); render(); }
 function poisonUI(){
   const pz=poisonerSeat(); if(pz<0) return "";
   if(isDeadSeat(pz)) return '<div class="impkill done" style="color:#8a6a2a">投毒者已出局，未行动</div>';
@@ -1716,6 +1716,7 @@ function bluffSel(k){
 }
 function renderGrim(){
   ["list","night","day","log"].forEach(t=>{ const el=document.getElementById("gt-"+t); if(el) el.classList.toggle("on",gtab===t); });
+  const gm=document.querySelector('.grimoire'); if(gm) gm.classList.toggle('logview', gtab==='log');   // 日志页：隐藏标签栏与底栏，仅显示日志
   const c=document.getElementById("gcontent"); let h="";
   if(gtab==="list"){
     const cd=(customDist||DIST[N]||[0,0,0,0]).slice();
@@ -2334,6 +2335,9 @@ load(); render();
   /* 说书人：实时把提名列表推给所有端（不含死亡，避免夜杀泄露） */
   window._syncNoms=function(){ if(role!=='st'||!curGid) return;
     try{ const p=buildPublic(); db.ref('games/'+curGid+'/public/noms').set(p.noms).catch(()=>{}); }catch(e){} };
+  /* 说书人：把座位（含出局/死因图标）实时推给大厅与玩家笔记（处决/射杀等白天死亡即时可见） */
+  window._syncSeats=function(){ if(role!=='st'||!curGid) return;
+    try{ const p=buildPublic(); db.ref('games/'+curGid+'/public').update({seats:p.seats,count:p.count,day:p.day}).catch(()=>{}); }catch(e){} };
   /* 说书人订阅玩家举手（实时看谁举手） */
   window.__playerHands={};
   let stPlayersRef=null;
@@ -2516,7 +2520,7 @@ load(); render();
   function buildPublic(){ const seats=[];
     for(let i=0;i<N;i++){ const t=seatToken(i); let cause='';
       for(const dd in executions){ if(executions[dd]===i) cause='exec'; }
-      if(!cause && slayerShot && slayerShot.seat===i) cause='slay';
+      if(!cause && slayerShot && slayerShot.hit && slayerShot.target===i) cause='slay';
       const dead=!!(t&&t.dead); if(dead&&!cause) cause='claw';
       seats.push({ name:(t&&t.name)?t.name:'', dead:dead, cause:cause });
     }
