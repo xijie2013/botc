@@ -936,6 +936,7 @@ function load(){
     if(d.view) view=d.view; if(d.gtab) gtab=d.gtab;
     if(gtab==="first"||gtab==="other") gtab="night";   // 旧存档标签兼容
     if(gtab==="roles") gtab="list";                    // “设置”并入“角色设置”
+    if(gtab==="log") gtab="list";                      // 不从日志页恢复：每次进入魔典默认到魔典页
     if(typeof d.night==="number") night=Math.max(1,d.night);
     if(d.nightChecks&&typeof d.nightChecks==="object") Object.assign(nightChecks,d.nightChecks);
     if(d.impKills&&typeof d.impKills==="object") impKills=d.impKills;
@@ -991,6 +992,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.16.0', d:'2026-08-10', items:['同一时间只允许一个说书人在线：已有说书人登录时，其他人尝试登录会看到「说书人XX已登录」并被登出，需等在线说书人退出后才能登录（关闭页面/断线会自动释放）','说书人日志页标题从「说书人魔典」改为「说书人日志」；每次打开魔典都默认进入「说书人魔典」页，不再停留在日志页']},
   {v:'v2.15.0', d:'2026-08-10', items:['同一 ID 的玩家账号与说书人账号共用一个密码：登录/创建任一角色时，后台自动把另一角色账号也用同一密码建好；重置密码时两个账号同步更新','账号创建限制：只有在客人名单里的 ID 才能创建新账号（玩家与说书人都适用）；已有账号不受影响，仍可正常登录']},
   {v:'v2.14.0', d:'2026-08-10', items:['说书人整局存档改为跨设备云同步：每次操作自动上传到云端（按账号），任意设备登录说书人都会自动加载最新的一局（以最近编辑时间为准，覆盖旧的本地存档）；不再只存在创建它的那台设备']},
   {v:'v2.13.0', d:'2026-08-10', items:['概览「本局配置」各阵营人数改用阵营配色（镇民蓝/外来者金/爪牙橙/恶魔红），标题深紫','积分榜前三名改用新皇冠素材 crown-1/2/3','开场动画淡入淡出加长：刷新从黑场淡入，点击后先完全黑场再淡入新背景（与切换登录状态一致）','玩家笔记紫色字体加深为「说书人魔典」同款深紫（#43286b）','积分榜「总分」改用「暗流涌动」同款深金色，不再用黑色']},
@@ -1878,7 +1880,8 @@ function impKillUI(){
 
 /* ---------- view ---------- */
 function setView(){ view=(view==="seat"?"grim":"seat");
-  if(view==="grim"){ ensureMeta(); try{ if(window._histReset) _histReset(); }catch(e){} try{ if(window._sfx) _sfx('grimoire'); }catch(e){} }   // 打开魔典：翻书声（并退出旧局记录）
+  if(view==="grim"){ ensureMeta(); if(gtab==="log") gtab=(window.__prevGtab&&window.__prevGtab!=="log")?window.__prevGtab:"list";   // 每次打开魔典默认进「说书人魔典」页，不进日志页
+    try{ if(window._histReset) _histReset(); }catch(e){} try{ if(window._sfx) _sfx('grimoire'); }catch(e){} }   // 打开魔典：翻书声（并退出旧局记录）
   else { try{ if(window._sfx) _sfx('grimoire-close'); }catch(e){} }   // 合上魔典：合书声
   render(); }
 function setGtab(t){ gtab=t; render(); }
@@ -1894,7 +1897,7 @@ function onStepCheck(sid,on){ nightChecks[night+":"+sid]=on; if(sid[0]==="_") re
 function applyView(){
   const stage=document.getElementById("stage");
   stage.classList.toggle("grim", view==="grim");
-  document.getElementById("bannerTitle").textContent = view==="grim" ? "说书人魔典" : "暗流涌动";
+  document.getElementById("bannerTitle").textContent = view==="grim" ? (gtab==="log" ? "说书人日志" : "说书人魔典") : "暗流涌动";
   const vt=document.getElementById("viewToggle");
   vt.innerHTML = '<img src="assets/'+(view==="grim"?"book-open.png":"book-closed.png")+'" alt="">';
   vt.title = view==="grim" ? "返回座位图（合上魔典）" : "打开说书人魔典";
@@ -2496,7 +2499,9 @@ load(); render();
         catch(e2){ err.textContent=(e2.code||'').includes('email-already-in-use')?'密码不对':authErr(e2); }
       } else err.textContent=authErr(e); } };
 
-  window._logout=function(){ try{ localStorage.removeItem('botc_ppw'); localStorage.removeItem('botc_stpw'); localStorage.removeItem('botc_lastrole'); localStorage.setItem('botc_remember',''); }catch(e){} auth.signOut(); };
+  window._logout=function(){ const finish=()=>{ try{ localStorage.removeItem('botc_ppw'); localStorage.removeItem('botc_stpw'); localStorage.removeItem('botc_lastrole'); localStorage.setItem('botc_remember',''); }catch(e){} try{ auth.signOut(); }catch(e){} };
+    try{ const u=auth.currentUser; if(u && (u.email||'').endsWith(ST_DOM)){ db.ref('storytellerUid').transaction(cur=>{ const cu=(cur&&typeof cur==='object')?cur.uid:cur; return cu===u.uid?null:undefined; }).then(finish).catch(finish); return; } }catch(e){}   // 说书人退出：释放占用
+    finish(); };
 
   /* 重置我的密码：仅能重置“当前已登录的账号”的密码（Firebase 需登录态；忘记密码无法在客户端重置） */
   window._openResetPw=function(){ const f=document.getElementById('rpForm'); if(!f) return;
@@ -2546,13 +2551,21 @@ load(); render();
       const willAuto = !_autoTried && _remembered() && !!(_storedId('botc_pid')||_storedId('botc_stid'));
       _stateTransition(()=>{ role='anon'; document.getElementById('stBadge').classList.remove('on'); document.body.classList.remove('pl'); if(notesRef){notesRef.off();notesRef=null;} S=null; setMode('hall'); }, willAuto);
       if(willAuto) setTimeout(()=>{ if(!me) _fadeReveal(); }, 4000);   // 自动登录失败兜底：4s 后仍未登录则显示大厅
+      if(window.__stBlockedMsg){ const m=window.__stBlockedMsg; window.__stBlockedMsg=''; setTimeout(()=>{ try{ if(typeof toast==='function') toast(m); }catch(e){} const se=document.getElementById('stErr'); if(se) se.textContent=m; }, 600); }   // 说书人已被占用：提示
       if(!_autoTried){ _autoTried=true; _autoLogin(); }   // 首次未登录时才尝试记住的自动登录
       return; }
     _autoTried=true;
     _stateTransition(()=>{ if((user.email||'').endsWith(ST_DOM)){ role='st'; enterSt(); } else { role='player'; enterPlayer(); } });
   }));
   function _storedId(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
-  function enterSt(){ document.getElementById('stBadge').classList.add('on'); document.body.classList.remove('pl'); document.getElementById('stName').textContent=(me&&me.displayName)||_storedId('botc_stid'); db.ref('storytellerUid').transaction(c=>c||me.uid).catch(()=>{}); bindStPlayers(); bindStAccounts(); setMode('st'); try{ if(window._stCloudLoad) _stCloudLoad(); }catch(e){} }
+  function _enterStUI(){ document.getElementById('stBadge').classList.add('on'); document.body.classList.remove('pl'); document.getElementById('stName').textContent=(me&&me.displayName)||_storedId('botc_stid'); bindStPlayers(); bindStAccounts(); setMode('st'); try{ if(window._stCloudLoad) _stCloudLoad(); }catch(e){} }
+  function enterSt(){    /* 同一时间只允许一个说书人：抢占 storytellerUid，失败则提示并登出 */
+    db.ref('storytellerUid').transaction(cur=>{ const cu=(cur&&typeof cur==='object')?cur.uid:cur; if(cu && cu!==me.uid) return; return {uid:me.uid, name:(me&&me.displayName)||'', ts:firebase.database.ServerValue.TIMESTAMP}; })
+      .then(res=>{ const val=res.snapshot.val(); const vu=(val&&typeof val==='object')?val.uid:val;
+        if(!res.committed || vu!==me.uid){ window.__stBlockedMsg=(val&&typeof val==='object'&&val.name)?('说书人「'+val.name+'」已登录，请等 TA 退出登录后再登录'):'已有其他说书人在线，请等 TA 退出登录后再登录'; try{ auth.signOut(); }catch(e){} return; }
+        try{ db.ref('storytellerUid').onDisconnect().remove(); }catch(e){}   // 断线/关闭页面自动释放，避免锁死
+        _enterStUI(); })
+      .catch(()=>{ _enterStUI(); }); }   // 出错兜底：仍进入，避免误锁
   /* ===== 说书人整局存档：跨设备云同步（本地 localStorage ↔ stState/{uid}，以 ts 取新） ===== */
   let _stPushT=null;
   window._stCloudPush=function(){ if(role!=='st'||!me||!me.uid) return;
@@ -3059,7 +3072,7 @@ load(); render();
     const gid='t'+Date.now();
     const seats=[]; for(let i=0;i<N;i++){ const t=seatToken(i); seats.push({name:(t&&t.name)?t.name:'', dead:false, cause:''}); }
     const g={ name:window.__botcGameName, count:N, day:night, seats:seats, locked:[...lockedRoles], dist:(customDist||DIST[N]||[0,0,0,0]), noms:[], clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null}, result:null, vote:null };
-    try{ await db.ref('storytellerUid').set(me.uid); await db.ref('games/'+gid+'/public').set(g);
+    try{ await db.ref('storytellerUid').set({uid:me.uid, name:(me&&me.displayName)||'', ts:firebase.database.ServerValue.TIMESTAMP}); try{ db.ref('storytellerUid').onDisconnect().remove(); }catch(e){} await db.ref('games/'+gid+'/public').set(g);
       /* 私密下发每位已登录玩家本局的角色（仅本人与说书人可读；酒鬼下发其自以为的镇民牌） */
       try{ const accSnap=await db.ref('accounts').once('value'); const accs=accSnap.val()||{}; const ru={};
         for(let i=0;i<N;i++){ const t=seatToken(i); const nm=(t&&t.name)?t.name:''; if(!nm) continue; const rid=(meta[i]&&meta[i].role)||''; if(!rid) continue; const acc=accs[rkey(nm)]; if(acc&&acc.uid) ru['games/'+gid+'/players/'+acc.uid+'/role']=rid; }
