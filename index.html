@@ -875,6 +875,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v1.9.3', d:'2026-08-09', items:['修复：图书管理员“没有外来者”等自动结果未记入日志','投票浮条：指针转动时不再显示提示','投票浮条：指针停下后只保留“举手”按钮（去掉提名文字与座位号）']},
   {v:'v1.9.2', d:'2026-08-09', items:['修复：玩家举手未实时同步到其他玩家/说书人（数据库规则补齐说书人读取玩家节点权限）','日志严格按夜晚顺序排列；提名记录新增投票者名单（含鬼票标记）','对齐酒馆/魔典底栏：共X人与第X夜、两组按钮位置一致']},
   {v:'v1.9.1', d:'2026-08-09', items:['“设置”与“角色名单”合并为“角色设置”（设置内容移到阵营合计下方）','删除“伪装介绍”','修复：第二次及以后的提名，指针指向后又立刻弹回原位']},
   {v:'v1.9.0', d:'2026-08-09', items:['提名举手改为实时公开（大厅/笔记/魔典同步显示✋，取消X）','指针在投票期间一直锁定提名者/被提名者，说书人“停止计票”后才恢复','鬼票提示，鬼票用完则举手置灰','修复：开新局仍残留上局提名与座位举手图标']},
@@ -1034,7 +1035,11 @@ function histSet(seat,tag,text){
 const PICKERS=new Set(["fortuneteller","washerwoman","librarian","investigator","ravenkeeper","undertaker","chef","empath"]);
 function recordStep(roleId,on){
   const idx=meta.findIndex(m=>m&&m.role===roleId); if(idx<0) return;
-  if(PICKERS.has(roleId)) return;   // 这些角色由各自的选择器记录实际结果
+  if(roleId==="washerwoman"||roleId==="librarian"||roleId==="investigator"){
+    const r=on?pingResult(roleId):null;   // 勾选时把当前答案记入日志（含“没有外来者/爪牙”这类无需选人的自动结果）
+    histSet(idx,'info', r?r.text:null); return;
+  }
+  if(PICKERS.has(roleId)) return;   // 其余选择器角色由各自的选择器记录实际结果
   histSet(idx,'info', on?computeNightInfo(roleId):null);
 }
 function recordSpecial(sid,on){
@@ -2305,19 +2310,18 @@ load(); render();
     if(role!=='player'||!v||!v.open){ bar.classList.remove('on'); return; }
     const seat=myVoteSeat();
     if(seat<0){ bar.classList.remove('on'); return; }
-    bar.classList.add('on');
-    const line='「'+E(pname(v.by))+'」提名了「'+E(pname(v.to))+'」';
-    if(!voteArmed()){
-      bar.innerHTML='<div class="vb-line">'+line+'</div><div class="vb-wait">⏳ 指针转动中…</div>';
+    if(!voteArmed()){                 /* 指针转动期间：不显示任何浮条内容 */
+      bar.classList.remove('on');
       const now=Date.now()+((window.CLK&&CLK.offset)||0);
       _voteArmT=setTimeout(updateVoteBar, Math.max(300,VOTE_ARM_MS-(now-(v.ts||0))+80)); return;
     }
+    bar.classList.add('on');
     const on=myHandOn(), dead=!!(pub.seats&&pub.seats[seat]&&pub.seats[seat].dead), used=dead&&ghostUsedPub(seat);
     let hint=''; if(dead) hint = used ? '<span class="vb-ghost used">🚫 鬼票已用完</span>' : '<span class="vb-ghost">👻 你已出局，这是鬼票（每局一次）</span>';
     let btn;
     if(used) btn='<button class="vb-yes" disabled>✋ 举手</button>';
     else btn='<button class="vb-yes'+(on?' act':'')+'" onclick="_raiseHand('+(on?'false':'true')+')">✋ '+(on?'已举手（点击放下）':'举手')+'</button>';
-    bar.innerHTML='<div class="vb-line">'+line+'　你是 '+(seat+1)+' 号</div>'+(hint?'<div class="vb-hint">'+hint+'</div>':'')
+    bar.innerHTML=(hint?'<div class="vb-hint">'+hint+'</div>':'')
       +'<div class="vb-btns">'+btn+'</div>'; }
 
   /* 说书人：开启一轮举手 */
