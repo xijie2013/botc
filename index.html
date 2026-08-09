@@ -293,11 +293,11 @@
   .night-ctl button:hover{background:#b9a0d6;}
   .night-ctl b{color:#7a1f8f; font-size:1.2em;}
   /* 魔典底栏：夜数(第一页)放大，发牌/重置按钮变窄 */
-  .grimoire .bottom-bar .night-ctl{flex:1; gap:12px; font-size:min(20px, calc(1.45 * var(--sw) / 100));}
+  .grimoire .bottom-bar .night-ctl{flex:1; margin:0; gap:12px; font-size:min(20px, calc(1.45 * var(--sw) / 100));}
   .grimoire .bottom-bar .night-ctl button{width:min(40px, calc(3 * var(--sw) / 100)); height:min(40px, calc(3 * var(--sw) / 100)); font-size:min(22px, calc(1.6 * var(--sw) / 100));}
   .grimoire .bottom-bar .night-ctl b{font-size:1.3em;}
   .grimoire .bottom-bar .btn{flex:0 0 auto; padding:7px 9px; font-size:min(12px, calc(.9 * var(--sw) / 100));}
-  .ledger .bottom-bar{margin-bottom:2.5px;}
+  .ledger .bottom-bar, .grimoire .bottom-bar{margin-bottom:2.5px;}
   /* 酒馆底栏：人数放大，随机排座/清空座位变窄 */
   .ledger .bottom-bar .count{flex:1; justify-content:center; gap:12px; font-size:min(20px, calc(1.45 * var(--sw) / 100)); color:#6b4a1e; font-weight:800;}
   .ledger .bottom-bar .count button{width:min(40px, calc(3 * var(--sw) / 100)); height:min(40px, calc(3 * var(--sw) / 100)); font-size:min(22px, calc(1.6 * var(--sw) / 100));}
@@ -875,6 +875,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v1.9.2', d:'2026-08-09', items:['修复：玩家举手未实时同步到其他玩家/说书人（数据库规则补齐说书人读取玩家节点权限）','日志严格按夜晚顺序排列；提名记录新增投票者名单（含鬼票标记）','对齐酒馆/魔典底栏：共X人与第X夜、两组按钮位置一致']},
   {v:'v1.9.1', d:'2026-08-09', items:['“设置”与“角色名单”合并为“角色设置”（设置内容移到阵营合计下方）','删除“伪装介绍”','修复：第二次及以后的提名，指针指向后又立刻弹回原位']},
   {v:'v1.9.0', d:'2026-08-09', items:['提名举手改为实时公开（大厅/笔记/魔典同步显示✋，取消X）','指针在投票期间一直锁定提名者/被提名者，说书人“停止计票”后才恢复','鬼票提示，鬼票用完则举手置灰','修复：开新局仍残留上局提名与座位举手图标']},
   {v:'v1.8.0', d:'2026-08-08', items:['只有在客人名册里的 ID 才能登录/注册','过往客人名册标出已注册账号，删除=停用其登录并清空笔记','（需在 Firebase 部署新版安全规则后生效）']},
@@ -1774,13 +1775,13 @@ function renderGrim(){
     for(let n=1;n<=maxN;n++){
       h+='<div class="gsec" style="color:#43286b">🌙 第 '+n+' 夜</div>'; let any=false;
       const order=NIGHT[n===1?"first":"other"];
-      const oidx=i=>{ const m=meta[i]; let k=order.findIndex(s=>s.id===m.role);
-        if(k<0){ let e=m.hist[n]; if(typeof e==="string") e={info:e}; const team=m.role?RMAP[m.role].team:null;
-          if(e.evil) k=order.findIndex(s=>s.id===(team==="dem"?"_demon":"_minion")); }
-        return k<0?999:k; };
-      const seatsN=[]; meta.forEach((m,i)=>{ if(!m.hist||!m.hist[n]) return; let e=m.hist[n]; if(typeof e==="string") e={info:e}; if(TAGO.some(t=>e[t])) seatsN.push(i); });
-      seatsN.sort((a,b)=> (oidx(a)-oidx(b)) || (a-b));
-      seatsN.forEach(i=>{ const m=meta[i]; let e=m.hist[n]; if(typeof e==="string") e={info:e};
+      const keyFor=(i,e)=>{ const m=meta[i]; const rk=order.findIndex(s=>s.id===m.role); if(rk>=0) return rk;
+        const team=m.role?RMAP[m.role].team:null;
+        if(e.evil){ const k=order.findIndex(s=>s.id===(team==="dem"?"_demon":"_minion")); if(k>=0) return k; }
+        return 500+i; };   /* 有夜间行动的角色按夜间顺序在前；夜杀出局等被动条目排其后（按座位号） */
+      const seatsN=[]; meta.forEach((m,i)=>{ if(!m.hist||!m.hist[n]) return; let e=m.hist[n]; if(typeof e==="string") e={info:e}; if(TAGO.some(t=>e[t])) seatsN.push({i,e}); });
+      seatsN.sort((A,B)=> (keyFor(A.i,A.e)-keyFor(B.i,B.e)) || (A.i-B.i));
+      seatsN.forEach(({i,e})=>{ const m=meta[i];
         const parts=[]; TAGO.forEach(t=>{ if(e[t]) parts.push(e[t]); }); any=true;
         const r=m.role?RMAP[m.role]:null;
         const roleHtml=r?' <b style="color:'+(m.isDrunk?TEAMC.out:TEAMC[r.team])+'">'+r.name+(m.isDrunk?'-酒鬼':'')+'</b>':'';
@@ -1791,7 +1792,11 @@ function renderGrim(){
       const noms=nominations[n], ex=executions[n], slDay=slayerShot&&slayerShot.day===n;
       if((noms&&noms.length) || ex!==undefined || slDay){
         h+='<div class="gsec" style="color:#8a5f28">☀ 第 '+n+' 天</div>';
-        if(noms) noms.forEach(nom=>{ h+='<div class="rrow">'+nameAt(nom.nominator)+' 提名 '+nameAt(nom.nominee)+' · '+nom.voters.length+' 票</div>'; });
+        if(noms) noms.forEach(nom=>{ const vs=(nom.voters||[]).slice().sort((a,b)=>a-b); const gv=nom.ghostVoters||[];
+          const vlist=vs.map(s=>nameAt(s)+(gv.includes(s)?'（鬼票）':'')).join('、');
+          h+='<div class="rrow">'+nameAt(nom.nominator)+' 提名 '+nameAt(nom.nominee)+' · '+(nom.voters?nom.voters.length:0)+' 票'
+            +(vs.length?'<br><span style="opacity:.75;font-size:.9em">投票：'+vlist+'</span>':'<br><span style="opacity:.55;font-size:.9em">无人投票</span>')
+            +'</div>'; });
         if(slDay){ const sl=meta.findIndex(m=>m&&m.role==="slayer"); h+='<div class="rrow">猎人 '+(sl>=0?nameAt(sl):'')+' 射向 '+nameAt(slayerShot.target)+' → '+(slayerShot.hit?'命中，恶魔死':'未命中')+'</div>'; }
         if(ex!==undefined) h+='<div class="rrow" style="color:#b0402e">'+(ex<0?'今日无人处决':'处决 '+nameAt(ex)+(meta[ex]&&meta[ex].role?'（'+RMAP[meta[ex].role].name+(meta[ex].isDrunk?'-酒鬼':'')+'）':''))+'</div>';
       }
