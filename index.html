@@ -663,21 +663,34 @@
   .hgame .rtf{color:#2f6db0;} .hgame .rout{color:#9a6b12;} .hgame .rmin{color:#c06a2e;} .hgame .rdem{color:#b0402e;}
   /* 统计 / 积分榜：阵营配色（标题与整列一致） */
   .htbl .c-tf{color:#2f6db0;} .htbl .c-out{color:#b8860b;} .htbl .c-min{color:#c06a2e;} .htbl .c-dem{color:#b0402e;} .htbl .c-st{color:#7a3f9d;}
-  .htbl .c-good{color:#2f6db0;} .htbl .c-evil{color:#b0402e;} .htbl .c-total{color:#1c150e;}
-  .htbl .crown{vertical-align:-2px; margin-left:4px;}
-  /* 预加载动画 intro-loop：每次刷新出现，点击进入并解锁声音 */
-  #introLayer{position:fixed; inset:0; z-index:9999; background:#0a0713; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:opacity .8s ease;}
+  .htbl .c-good{color:#2f6db0;} .htbl .c-evil{color:#b0402e;} .htbl .c-total{color:#5a3d16;}
+  .htbl .crown{height:1.5em; width:auto; vertical-align:-0.45em; margin-left:5px;}
+  /* 预加载动画 intro-loop：刷新时从黑场淡入；点击后先完全黑场、再淡入新背景（与切换登录状态一致） */
+  #introLayer{position:fixed; inset:0; z-index:9999; background:#000; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:opacity 1.6s ease;}
   #introLayer.hide{opacity:0; pointer-events:none;}
-  #introLayer video{position:absolute; inset:0; width:100%; height:100%; object-fit:cover;}
-  #introLayer .intro-hint{position:absolute; bottom:8%; left:0; right:0; text-align:center; color:#e9d8b0; font-size:clamp(14px,2.4vw,22px); letter-spacing:.18em; text-shadow:0 2px 14px rgba(0,0,0,.85); animation:introPulse 1.9s ease-in-out infinite; z-index:2; pointer-events:none;}
+  #introLayer video{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity 1s ease;}
+  #introLayer.vin video{opacity:1;}
+  #introLayer.dim video{opacity:0; transition:opacity .7s ease;}
+  #introLayer .intro-hint{position:absolute; bottom:8%; left:0; right:0; text-align:center; color:#e9d8b0; font-size:clamp(14px,2.4vw,22px); letter-spacing:.18em; text-shadow:0 2px 14px rgba(0,0,0,.85); animation:introPulse 1.9s ease-in-out infinite; z-index:2; pointer-events:none; transition:opacity .5s ease;}
+  #introLayer.dim .intro-hint{opacity:0; animation:none;}
   @keyframes introPulse{0%,100%{opacity:.45} 50%{opacity:1}}
 </style>
 </head>
 <body>
-  <div id="introLayer" onclick="this.classList.add('hide'); setTimeout(()=>{this.style.display='none'; var v=document.getElementById('introVid'); if(v){try{v.pause();}catch(e){}}},850);">
+  <div id="introLayer" onclick="_introEnter()">
     <video id="introVid" src="assets/intro-loop.mp4" autoplay muted loop playsinline></video>
     <div class="intro-hint">点击任意位置进入</div>
   </div>
+  <script>
+    function _introEnter(){ var il=document.getElementById('introLayer'); if(!il||il._e) return; il._e=1;
+      il.classList.add('dim');                                   /* 画面先完全黑下来 */
+      setTimeout(function(){ il.classList.add('hide');           /* 再把黑场淡出、露出新背景 */
+        setTimeout(function(){ il.style.display='none'; var v=document.getElementById('introVid'); if(v){try{v.pause();}catch(e){}} }, 1650);
+      }, 750); }
+    (function(){ var il=document.getElementById('introLayer'); if(!il) return;
+      requestAnimationFrame(function(){ il.classList.add('vin'); });   /* 开场从黑场淡入 */
+      var v=document.getElementById('introVid'); if(v){ v.muted=true; var p=v.play&&v.play(); if(p&&p.catch) p.catch(function(){}); } })();
+  </script>
   <div id="fadeLayer"></div>
   <div class="stage" id="stage">
     <div class="darklayer"></div>
@@ -977,6 +990,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.13.0', d:'2026-08-10', items:['概览「本局配置」各阵营人数改用阵营配色（镇民蓝/外来者金/爪牙橙/恶魔红），标题深紫','积分榜前三名改用新皇冠素材 crown-1/2/3','开场动画淡入淡出加长：刷新从黑场淡入，点击后先完全黑场再淡入新背景（与切换登录状态一致）','玩家笔记紫色字体加深为「说书人魔典」同款深紫（#43286b）','积分榜「总分」改用「暗流涌动」同款深金色，不再用黑色']},
   {v:'v2.12.0', d:'2026-08-10', items:['新增预加载动画：每次刷新先播放 intro-loop 开场循环，点击任意位置进入主画面（顺带缓冲加载并解锁声音）','提名tab「举手」去掉手掌表情、改为深紫色「举手：」','概览tab「本局配置」改深紫色；角色技能描述改为黑色','旧局记录·对局列表可删除某一局（说书人，二次确认），删除后不计入统计/积分','积分榜：首栏改称「玩家」；前三名皇冠移到玩家名之后']},
   {v:'v2.11.0', d:'2026-08-10', items:['旧局记录·统计/积分榜阵营配色：镇民蓝、外来者黄、爪牙橙、恶魔红、说书人紫（标题与整列一致）','统计·说书人栏改为「局数（紫）」＋第二行「好人胜率（蓝）/恶魔胜率（红）」','积分榜：好人分蓝、恶魔分红、说书人分紫、总分黑；前三名加皇冠（冠军金冠红钻、亚军银冠蓝钻、季军银冠）']},
   {v:'v2.10.3', d:'2026-08-10', items:['修复：旧局记录会被下一局覆盖——改为每局一条唯一记录（不再按 gid 覆盖，重新发牌/开新局都各记一条）']},
@@ -2670,10 +2684,7 @@ load(); render();
       h+='<tr><td class="l">'+E(nm)+'</td><td>'+cell(p.tf,'c-tf')+'</td><td>'+cell(p.out,'c-out')+'</td><td>'+cell(p.min,'c-min')+'</td><td>'+cell(p.dem,'c-dem')+'</td><td>'+st+'</td></tr>'; });
     h+='</tbody></table><div style="font-size:calc(.72*var(--sw)/100);color:#8a6b3a;margin-top:4px">阵营格式：胜/局 · 胜率 ｜ 说书人：局数 · 好人胜率/恶魔胜率</div>';
     return h; }
-  function _crown(rank){ const c={1:{k:'#e3b924',g:'#d63b2f'},2:{k:'#c8cdd3',g:'#2f6db0'},3:{k:'#c8cdd3',g:null}}[rank]; if(!c) return '';
-    const gem=c.g?'<rect x="10.2" y="10.6" width="3.6" height="3.6" transform="rotate(45 12 12.4)" fill="'+c.g+'" stroke="rgba(0,0,0,.28)" stroke-width=".5"/>':'';
-    return '<svg class="crown" viewBox="0 0 24 20" width="1.05em" height="1.05em" aria-hidden="true">'
-      +'<path d="M2 16 L4.5 7 L8.5 11.5 L12 4.5 L15.5 11.5 L19.5 7 L22 16 Z" fill="'+c.k+'" stroke="rgba(90,60,10,.55)" stroke-width="1" stroke-linejoin="round"/>'+gem+'</svg>'; }
+  function _crown(rank){ if(rank<1||rank>3) return ''; return '<img class="crown" src="assets/crown-'+rank+'.png" alt="">'; }
   function _histScoreHTML(games){ if(!games.length) return '<div style="padding:8px;color:#8a6b3a;font-size:12px">还没有对局记录。</div>';
     const P=_aggregate(games); const rows=Object.keys(P).map(nm=>{ const p=P[nm]; const good=p.tf.w+p.out.w, evil=2*(p.min.w+p.dem.w), st=p.stN; return {nm, good, evil, st, total:good+evil+st}; });
     rows.sort((a,b)=>b.total-a.total || b.evil-a.evil);
@@ -2893,7 +2904,7 @@ load(); render();
         h+='<div class="nb-nom"><div class="nb-nomhead">'+E(pname(n.by))+' <span class="arw">提名 ▸</span> '+E(pname(n.to))+' · <b>'+voters.length+' 票</b>'+(n.exec?' · <span class="nb-exec">处决</span>':'')+'</div>';
         if(n.tallied){
           const raised=voters.map(s=>E(pname(s))+(ghost.indexOf(s)>=0?'<span class="ghostv">鬼票</span>':'')).join('、')||'—';
-          h+='<div class="nb-vsub"><span class="vlab up" style="color:#6a3f9d">举手：</span> '+raised+'</div>';
+          h+='<div class="nb-vsub"><span class="vlab up" style="color:#43286b">举手：</span> '+raised+'</div>';
         } else {
           h+='<div class="nb-vsub dim">🕯️ 投票进行中…</div>';
         }
@@ -2926,7 +2937,7 @@ load(); render();
     return h;
   }
   function refHTML(){ const locked=new Set(pub.locked||[]); const d=pub.dist||DIST[pub.count]||[0,0,0,0];
-    let h='<div class="nb-role" style="color:#6a3f9d"><b>本局配置</b><br>'+pub.count+'人 · 镇民'+d[0]+' 外来者'+d[1]+' 爪牙'+d[2]+' 恶魔'+d[3]+'</div>';
+    let h='<div class="nb-role"><b style="color:#43286b">本局配置</b><br><span style="color:#43286b">'+pub.count+'人</span> · <span style="color:'+TEAMC.tf+'">镇民'+d[0]+'</span> <span style="color:'+TEAMC.out+'">外来者'+d[1]+'</span> <span style="color:'+TEAMC.min+'">爪牙'+d[2]+'</span> <span style="color:'+TEAMC.dem+'">恶魔'+d[3]+'</span></div>';
     h+='<div class="nb-sec">剧本角色（灰色为本局未启用）</div>';
     ORDER.forEach(t=>{ const list=ROLES.filter(r=>r.team===t); if(!list.length) return;
       h+='<div style="font-weight:800;color:'+TEAMC[t]+';margin:8px 0 3px">'+TEAMLABEL[t]+'</div>';
