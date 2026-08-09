@@ -923,7 +923,8 @@ const NIGHT={
 function blankMeta(){return {role:null,poison:false,drunk:false,dead:false,note:"",info:"",hist:{},isDrunk:false};}
 function ensureMeta(){ while(meta.length<N) meta.push(blankMeta()); meta.length=N; }
 
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,impKills,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,sickAns,redHerring,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist})); }catch(e){} }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,impKills,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,sickAns,redHerring,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist,ts:Date.now()})); }catch(e){}
+  try{ if(window._stCloudPush) window._stCloudPush(); }catch(e){} }   // 说书人存档云同步（防抖上传）
 function load(){
   try{ const d=JSON.parse(localStorage.getItem(KEY)||"{}");
     if(Array.isArray(d.guests)) guests=d.guests;
@@ -990,6 +991,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.14.0', d:'2026-08-10', items:['说书人整局存档改为跨设备云同步：每次操作自动上传到云端（按账号），任意设备登录说书人都会自动加载最新的一局（以最近编辑时间为准，覆盖旧的本地存档）；不再只存在创建它的那台设备']},
   {v:'v2.13.0', d:'2026-08-10', items:['概览「本局配置」各阵营人数改用阵营配色（镇民蓝/外来者金/爪牙橙/恶魔红），标题深紫','积分榜前三名改用新皇冠素材 crown-1/2/3','开场动画淡入淡出加长：刷新从黑场淡入，点击后先完全黑场再淡入新背景（与切换登录状态一致）','玩家笔记紫色字体加深为「说书人魔典」同款深紫（#43286b）','积分榜「总分」改用「暗流涌动」同款深金色，不再用黑色']},
   {v:'v2.12.0', d:'2026-08-10', items:['新增预加载动画：每次刷新先播放 intro-loop 开场循环，点击任意位置进入主画面（顺带缓冲加载并解锁声音）','提名tab「举手」去掉手掌表情、改为深紫色「举手：」','概览tab「本局配置」改深紫色；角色技能描述改为黑色','旧局记录·对局列表可删除某一局（说书人，二次确认），删除后不计入统计/积分','积分榜：首栏改称「玩家」；前三名皇冠移到玩家名之后']},
   {v:'v2.11.0', d:'2026-08-10', items:['旧局记录·统计/积分榜阵营配色：镇民蓝、外来者黄、爪牙橙、恶魔红、说书人紫（标题与整列一致）','统计·说书人栏改为「局数（紫）」＋第二行「好人胜率（蓝）/恶魔胜率（红）」','积分榜：好人分蓝、恶魔分红、说书人分紫、总分黑；前三名加皇冠（冠军金冠红钻、亚军银冠蓝钻、季军银冠）']},
@@ -2533,7 +2535,25 @@ load(); render();
     _stateTransition(()=>{ if((user.email||'').endsWith(ST_DOM)){ role='st'; enterSt(); } else { role='player'; enterPlayer(); } });
   }));
   function _storedId(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
-  function enterSt(){ document.getElementById('stBadge').classList.add('on'); document.body.classList.remove('pl'); document.getElementById('stName').textContent=(me&&me.displayName)||_storedId('botc_stid'); db.ref('storytellerUid').transaction(c=>c||me.uid).catch(()=>{}); bindStPlayers(); bindStAccounts(); setMode('st'); }
+  function enterSt(){ document.getElementById('stBadge').classList.add('on'); document.body.classList.remove('pl'); document.getElementById('stName').textContent=(me&&me.displayName)||_storedId('botc_stid'); db.ref('storytellerUid').transaction(c=>c||me.uid).catch(()=>{}); bindStPlayers(); bindStAccounts(); setMode('st'); try{ if(window._stCloudLoad) _stCloudLoad(); }catch(e){} }
+  /* ===== 说书人整局存档：跨设备云同步（本地 localStorage ↔ stState/{uid}，以 ts 取新） ===== */
+  let _stPushT=null;
+  window._stCloudPush=function(){ if(role!=='st'||!me||!me.uid) return;
+    clearTimeout(_stPushT); _stPushT=setTimeout(()=>{ try{ const str=localStorage.getItem(KEY)||''; if(!str) return;
+      let ts=0; try{ ts=JSON.parse(str).ts||0; }catch(e){}
+      db.ref('stState/'+me.uid).set({data:str, ts:ts}).catch(()=>{}); }catch(e){} }, 1200); };
+  window._stCloudLoad=function(){ if(role!=='st'||!me||!me.uid) return;
+    db.ref('stState/'+me.uid).once('value').then(snap=>{ const c=snap.val();
+      let localTs=0; try{ localTs=JSON.parse(localStorage.getItem(KEY)||'{}').ts||0; }catch(e){}
+      if(c && c.data && (c.ts||0) > localTs){                       // 云端更新：覆盖本地并重载
+        localStorage.setItem(KEY, c.data);
+        try{ if(typeof load==='function') load(); }catch(e){}
+        try{ if(typeof render==='function') render(); }catch(e){}
+        try{ if(window._softRefresh) _softRefresh(); }catch(e){}
+      } else if(!c || !c.data || localTs>(c.ts||0)){                // 本地更新或云端无：上传本地
+        try{ if(window._stCloudPush) _stCloudPush(); }catch(e){}
+      }
+    }).catch(()=>{}); };
   function enterPlayer(){ document.getElementById('stBadge').classList.remove('on'); document.body.classList.add('pl'); document.getElementById('pbName').textContent=((me&&me.displayName)||_storedId('botc_pid')||'玩家'); _nbSeatPage=false; const _np=document.getElementById('notesPanel'); if(_np) _np.classList.remove('seatpage'); bindNotes(); setMode('notes'); }
   function bindNotes(){ if(notesRef){ notesRef.off(); notesRef=null; } if(role==='player'&&me&&curGid){ notesRef=db.ref('games/'+curGid+'/players/'+me.uid); notesRef.on('value',s=>{ S=s.val(); ensureS(); window.__myRole=(S&&S.role)||''; try{ updateRoleCard(curGid, window.__myRole); }catch(e){} if(mode==='notes') renderView(); }); } }
 
