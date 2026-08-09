@@ -920,7 +920,8 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
-  {v:'v2.7.0', d:'2026-08-09', items:['玩家登录后右上角不再显示魔典图标；开始新的一局后，会先展示你本局的角色牌，点击任意处后卡牌翻到背面归位到右上角','点击右上角卡背可像掀牌一样翻开查看本局角色（卡背素材待正式替换）','说书人开局时按座位名字自动把角色私密下发到对应玩家账号（仅本人与说书人可见，酒鬼显示其自以为的镇民牌）','新增22张角色卡图（已抠图）到 assets/roles']},
+  {v:'v2.7.1', d:'2026-08-09', items:['修复：角色牌点击后未归位到右上角（卡背归位/显示逻辑修正）','正式卡背素材上线（钟楼之眼，四周深蓝已抠成镂空）']},
+  {v:'v2.7.0', d:'2026-08-09', items:['玩家登录后右上角不再显示魔典图标；开始新的一局后，会先展示你本局的角色牌，点击任意处后卡牌翻到背面归位到右上角','点击右上角卡背可像掀牌一样翻开查看本局角色','说书人开局时按座位名字自动把角色私密下发到对应玩家账号（仅本人与说书人可见，酒鬼显示其自以为的镇民牌）','新增22张角色卡图（已抠图）到 assets/roles']},
   {v:'v2.6.4', d:'2026-08-09', items:['exec2 非恶魔处决截取时长调整为 5.5 秒']},
   {v:'v2.6.3', d:'2026-08-09', items:['exec2 非恶魔处决截取时长调整为 6.0 秒']},
   {v:'v2.6.2', d:'2026-08-09', items:['exec2 非恶魔处决截取时长调整为 6.5 秒']},
@@ -2432,7 +2433,7 @@ load(); render();
     const fi=document.getElementById('rcFrontImg'); if(fi && fi.getAttribute('src')!==roleImg(rid)) fi.src=roleImg(rid);
     let seen=''; try{ seen=localStorage.getItem('botc_roleseen_'+((me&&me.uid)||''))||''; }catch(e){}
     if(gid && seen!==gid){ try{ localStorage.setItem('botc_roleseen_'+((me&&me.uid)||''), gid); }catch(e){} _playRoleIntro(rid); }
-    else { if(cc&&!_rcState) cc.style.display=''; }
+    else { if(cc&&!_rcState) cc.style.display='block'; }
   }
   function _playRoleIntro(rid){ const {layer,card,cc,hint}=_rcEls(); if(!layer||!card) return;
     if(cc) cc.style.display='none';
@@ -2458,14 +2459,14 @@ load(); render();
   window._roleLayerClick=function(e){ if(_rcState==='anim') return; _returnToCorner(); };
   function _returnToCorner(){ const {layer,card,cc,hint}=_rcEls(); if(!layer||!card||!cc) return;
     _rcState='anim'; if(hint) hint.style.display='none';
-    cc.style.visibility='hidden'; cc.style.display='';
+    cc.style.visibility='hidden'; cc.style.display='block';
     const cr=card.getBoundingClientRect(), sr=cc.getBoundingClientRect();
     const dx=(sr.left+sr.width/2)-(cr.left+cr.width/2), dy=(sr.top+sr.height/2)-(cr.top+cr.height/2), sc=sr.width/cr.width;
     card.style.opacity='1'; card.style.transition='transform .65s cubic-bezier(.5,.05,.2,1)'; card.classList.add('flip');
     card.style.transform='translate('+dx+'px,'+dy+'px) scale('+sc+')';
     const done=(e)=>{ if(e&&e.target!==card) return; card.removeEventListener('transitionend',done); layer.classList.remove('on');
       card.style.transition='none'; card.style.transform=''; card.classList.remove('flip'); card.style.opacity='';
-      cc.style.visibility=''; cc.style.display=''; _rcState=''; };
+      cc.style.visibility=''; cc.style.display='block'; _rcState=''; };
     card.addEventListener('transitionend',done); setTimeout(()=>{ if(_rcState==='anim') done(); }, 850);
   }
   window._clearRoleCard=function(){ const {layer,card,cc}=_rcEls(); if(layer) layer.classList.remove('on'); if(cc) cc.style.display='none';
