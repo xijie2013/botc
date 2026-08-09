@@ -876,6 +876,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.0.0', d:'2026-08-09', items:['处决动画：非恶魔与恶魔均定格在最后一帧额外停留3秒再淡出']},
   {v:'v1.9.9', d:'2026-08-09', items:['非恶魔处决：定格在最后一帧额外停留2秒再淡出','exec1 截断点改为6.2秒（exec2/exec3 仍为7秒）']},
   {v:'v1.9.8', d:'2026-08-09', items:['处决动画加入淡入淡出，衔接更顺','非恶魔/红唇接任的截断点由6秒改为7秒']},
   {v:'v1.9.7', d:'2026-08-09', items:['新增处决动画：三段视频随机播放，全端同步（说书人/大厅/玩家笔记）','非恶魔或红唇女郎接任时只播前半段（到第7秒）；处决场上最后一个恶魔（好人胜利）才播完整变身视频，随后接胜利动画','视频带声音播放，若浏览器拦截自动有声播放则退回静音']},
@@ -1400,7 +1401,7 @@ function endExec(hold){ const v=document.getElementById('execVideo'); if(!v){ wi
   try{ v.pause(); }catch(e){}   // 定格在截断处/最后一帧，避免露出后半段
   v.onended=null; v.ontimeupdate=null;
   const fade=function(){ v.classList.remove('show'); clearTimeout(v._ft); v._ft=setTimeout(_finalizeExec, 600); };
-  if(hold){ clearTimeout(v._hold); v._hold=setTimeout(fade, 2000); }   // 非恶魔：定格最后一帧额外 2 秒再淡出
+  if(hold){ clearTimeout(v._hold); v._hold=setTimeout(fade, 3000); }   // 定格最后一帧额外 3 秒再淡出
   else fade();
 }
 window.__endExec=endExec;
@@ -1412,8 +1413,8 @@ function playExec(idx, full){ const v=document.getElementById('execVideo'); if(!
   try{ v.src=EXEC_VIDEOS[idx]; }catch(e){}
   v.style.display='block'; v.currentTime=0; v.muted=false;
   void v.offsetWidth; v.classList.add('show');   // 触发淡入
-  v.ontimeupdate=function(){ if(cut!==Infinity && v.currentTime>=cut) endExec(true); };   // 非恶魔：截断→定格2秒→淡出
-  v.onended=function(){ endExec(false); };                                                // 恶魔：播完→淡出→接胜利
+  v.ontimeupdate=function(){ if(cut!==Infinity && v.currentTime>=cut) endExec(true); };   // 非恶魔：截断→定格3秒→淡出
+  v.onended=function(){ endExec(true); };                                                 // 恶魔：播完→定格3秒→淡出→接胜利
   const p=v.play(); if(p&&p.catch) p.catch(()=>{ v.muted=true; const p2=v.play(); if(p2&&p2.catch) p2.catch(()=>endExec(false)); });   // 有声被拦→退回静音播放
 }
 window.playExec=playExec;
