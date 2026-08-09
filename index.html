@@ -604,7 +604,7 @@
       <button class="fsbtn" id="fsBtn" onclick="toggleFull()" title="网页全屏">⛶</button>
       <button class="fsbtn" id="refreshBtn" onclick="window._softRefresh?window._softRefresh():location.reload()" title="刷新（重新同步，不退出全屏）"><span class="ric">⟳</span></button>
       <button class="fsbtn" id="setBtn" onclick="openSettings()" title="设置">⚙</button>
-      <button class="fsbtn" id="muteBtn" onclick="toggleMute()" title="静音/取消静音">🔊</button>
+      <button class="fsbtn" id="muteBtn" onclick="toggleMute()" title="静音/取消静音"><svg viewBox="0 0 24 24" width="60%" height="60%" fill="currentColor" style="display:block"><path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="M15.5 8.5a4.5 4.5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
       <div id="stBadge">说书人<span id="stName"></span>已登录 <button onclick="_logout()">退出</button></div>
       <div id="playerBadge">🖋 玩家<span id="pbName"></span>已登录 <button onclick="_logout()">退出</button></div>
     </div>
@@ -877,6 +877,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.1.0', d:'2026-08-09', items:['静音按钮改为金色图标（与其它按钮统一）','新增猎人射杀恶魔动画（assets/slayer.mp4）：命中即播放（红唇女郎继任也播），若因此获胜则接胜利动画']},
   {v:'v2.0.3', d:'2026-08-09', items:['左上角设置右侧新增静音按钮：静音后处决视频等不再出声（设置本地记住）']},
   {v:'v2.0.2', d:'2026-08-09', items:['恶魔处决：去掉最后一帧定格3秒与变黑，仅保留淡入淡出，随后接胜利；非恶魔仍为定格并逐渐变黑']},
   {v:'v2.0.1', d:'2026-08-09', items:['处决动画：定格最后一帧后在3秒内逐渐变黑（非恶魔与恶魔均如此），恶魔全黑后再放胜利']},
@@ -1392,6 +1393,7 @@ window.applyResult=function(res){
 };
 /* ---------- 处决动画（三选一随机；非恶魔只播前半段，恶魔播完整→随后胜利动画） ---------- */
 const EXEC_VIDEOS=['assets/exec1.mp4','assets/exec2.mp4','assets/exec3.mp4'];
+const SLAYER_VIDEO='assets/slayer.mp4';   // 猎人成功射杀恶魔时播放（完整播放→淡出→若胜利则接胜利动画）
 /* 各视频「变身（变成恶魔）」开始的秒数：非恶魔被处决时播到此处即停。三个视频可不同，按需修改。 */
 const EXEC_CUT=[6.2, 7, 7];
 const EXEC_HOLD_MS=3000;   // 截断/结尾后：定格最后一帧并在这段时间内逐渐变黑
@@ -1412,12 +1414,13 @@ function endExec(mode){ const v=document.getElementById('execVideo'); if(!v){ wi
   else _finalizeExec();
 }
 window.__endExec=endExec;
-function playExec(idx, full){ const v=document.getElementById('execVideo'); if(!v){ return; }
+function playExec(idx, full, srcOverride){ const v=document.getElementById('execVideo'); if(!v){ return; }
   idx=(idx|0); if(idx<0||idx>=EXEC_VIDEOS.length) idx=0;
+  const src = srcOverride || EXEC_VIDEOS[idx];
   const cut = full ? Infinity : (EXEC_CUT[idx]||7);
   clearTimeout(v._hold); v._ending=false;
   window.__execPlaying=true;
-  try{ v.src=EXEC_VIDEOS[idx]; }catch(e){}
+  try{ v.src=src; }catch(e){}
   v.style.filter=''; v.style.transition='';   // 清除上一次的“变黑”，恢复初始
   v.style.display='block'; v.currentTime=0; v.muted=!!window.__muted;   // 全局静音时不出声
   void v.offsetWidth; v.classList.add('show');   // 触发淡入（透明度）
@@ -1430,17 +1433,20 @@ window.playExec=playExec;
 window._applyExec=function(e){ if(!e||!e.ts) return; if(e.ts===EXEC._seenTs) return; EXEC._seenTs=e.ts;
   const now=Date.now()+((window.CLK&&CLK.offset)||0);
   if(now - e.ts > 15000) return;   // 陈旧事件（刷新/重连）不重播
-  playExec(e.idx||0, !!e.full);
+  if(e.kind==='slayer') playExec(0, true, SLAYER_VIDEO);   // 猎人射杀恶魔：完整播放（结尾淡出）
+  else playExec(e.idx||0, !!e.full);
 };
-/* ---------- 全局静音（按钮在左上角设置右侧） ---------- */
+/* ---------- 全局静音（按钮在左上角设置右侧，金色图标与其它按钮一致） ---------- */
+const _MUTE_ON='<svg viewBox="0 0 24 24" width="60%" height="60%" fill="currentColor" style="display:block"><path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="M15.5 8.5a4.5 4.5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+const _MUTE_OFF='<svg viewBox="0 0 24 24" width="60%" height="60%" fill="currentColor" style="display:block"><path d="M3 9v6h4l5 5V4L7 9H3z"/><line x1="15" y1="9.5" x2="21" y2="15.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="21" y1="9.5" x2="15" y2="15.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 window.__muted=false;
 window.toggleMute=function(){ window.__muted=!window.__muted;
   try{ localStorage.setItem('botc_muted', window.__muted?'1':''); }catch(e){}
-  const el=document.getElementById('muteBtn'); if(el) el.textContent=window.__muted?'🔇':'🔊';
+  const el=document.getElementById('muteBtn'); if(el) el.innerHTML=window.__muted?_MUTE_OFF:_MUTE_ON;
   const v=document.getElementById('execVideo'); if(v) v.muted=!!window.__muted;   // 立即应用到正在播放的视频
 };
 (function(){ try{ window.__muted = localStorage.getItem('botc_muted')==='1'; }catch(e){}
-  const el=document.getElementById('muteBtn'); if(el) el.textContent=window.__muted?'🔇':'🔊'; })();
+  const el=document.getElementById('muteBtn'); if(el) el.innerHTML=window.__muted?_MUTE_OFF:_MUTE_ON; })();
 /* ---------- 中央时钟 ---------- */
 var CLK={dayStart:null, nom:null, offset:0, _tick:null, _loadTs:Date.now(), _realBusy:false, _nomSeenTs:0, _outTimer:null, _busyTimer:null, _nomLock:false};
 var _clkEls=null;
@@ -1592,7 +1598,9 @@ function slayerFire(v){ if(v===""||slayerShot) return; const t=+v; const sl=meta
   const hit = healthy(sl) && !isDeadSeat(sl) && registersDemon(t);
   slayerShot={target:t, day:night, hit};
   if(hit){ killSeat(t,true); histSet(t,'death','被猎人射杀出局'); demonDied(t); }
-  if(window._syncNoms) window._syncNoms(); if(window._syncSeats) window._syncSeats(); render(); }
+  if(window._syncNoms) window._syncNoms(); if(window._syncSeats) window._syncSeats();
+  if(hit && window._pubSlayer) window._pubSlayer();   // 猎人成功射杀恶魔→播放动画（红唇继任也播）
+  render(); }
 function slayerUndo(){ if(!slayerShot) return; const t=slayerShot.target;
   if(slayerShot.hit){ demonRevived(t); killSeat(t,false); histSet(t,'death',null); }
   slayerShot=null; if(window._syncNoms) window._syncNoms(); if(window._syncSeats) window._syncSeats(); render(); }
@@ -2413,6 +2421,9 @@ load(); render();
   /* 说书人：发布处决动画事件（idx=随机视频序号，full=是否恶魔→播完整），所有端同步播放 */
   window._pubExec=function(idx,full){ if(role!=='st'||!curGid) return;
     db.ref('games/'+curGid+'/public/exec').set({idx:idx|0, full:!!full, ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); };
+  /* 说书人：发布“猎人射杀恶魔”动画事件（成功命中时，即便红唇女郎继任也播放） */
+  window._pubSlayer=function(){ if(role!=='st'||!curGid) return;
+    db.ref('games/'+curGid+'/public/exec').set({kind:'slayer', full:true, ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); };
   /* 说书人订阅玩家举手（实时看谁举手） */
   window.__playerHands={};
   let stPlayersRef=null;
