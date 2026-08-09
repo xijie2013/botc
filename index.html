@@ -957,6 +957,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.10.1', d:'2026-08-10', items:['补充音效：合上魔典的合书声；进入日志/旧局记录/座位备注的写字沙沙声、返回主界面的收笔声；打开/合上角色卡牌的音效；未登录点墨水瓶/魔典登录也有对应音效']},
   {v:'v2.10.0', d:'2026-08-10', items:['玩家点墨水瓶不再回大厅，改为进入/退出「我的座位备注」独立页；标记页不再重复显示座位备注','说书人在大厅（座位）视图点墨水瓶进入「旧局记录」（对局列表/统计/积分榜）；魔典视图点墨水瓶仍进入当前局日志','分出胜负时自动把本局存档（座位、各玩家真实身份、胜负、说书人）到永久记录；统计各阵营次数与胜率、说书人场次与好/邪胜率；积分榜：好人胜+1、恶魔胜+2、说书人+1','更新全部音频文件（重新调整相对音量）']},
   {v:'v2.9.0', d:'2026-08-09', items:['说书人重置角色时清空玩家手中的角色卡（卡片淡出，开新局再下发重现）','打开/收起卡背、发牌入场时的背景变暗改为淡入淡出，不再突兀','更新卡背素材（新版钟楼之眼，四周镂空）','背景音乐循环改为提前10秒开始交叉淡化，接缝更自然；音乐文件更新','新增事件音效：墨水瓶写字声、魔典翻书声、指针转动声、好人/恶魔胜利结算音乐（结算时压低背景乐，静音时一并静音）']},
   {v:'v2.8.2', d:'2026-08-09', items:['说书人登录后背景统一为魔典暗背景（含大厅/座位视图），更干净：未登录=空酒馆、玩家=亮酒馆、说书人=魔典']},
@@ -1834,7 +1835,10 @@ function impKillUI(){
 }
 
 /* ---------- view ---------- */
-function setView(){ view=(view==="seat"?"grim":"seat"); if(view==="grim"){ ensureMeta(); try{ if(window._histReset) _histReset(); }catch(e){} try{ if(window._sfx) _sfx('grimoire'); }catch(e){} } render(); }   // 打开魔典：翻书声（并退出旧局记录）
+function setView(){ view=(view==="seat"?"grim":"seat");
+  if(view==="grim"){ ensureMeta(); try{ if(window._histReset) _histReset(); }catch(e){} try{ if(window._sfx) _sfx('grimoire'); }catch(e){} }   // 打开魔典：翻书声（并退出旧局记录）
+  else { try{ if(window._sfx) _sfx('grimoire-close'); }catch(e){} }   // 合上魔典：合书声
+  render(); }
 function setGtab(t){ gtab=t; render(); }
 function setListMode(m){ listMode=m; render(); }
 function toggleLock(id){ if(lockedRoles.has(id)) lockedRoles.delete(id); else lockedRoles.add(id); render(); }
@@ -2379,7 +2383,7 @@ load(); render();
   window._gotoHall=function(){ setMode('hall'); };
 
   /* ---------- 登录门 ---------- */
-  window.onBookClick=function(){ if(role==='st'){ if(typeof setView==='function') setView(); return; } show('pGate',false); document.getElementById('stErr').textContent='';
+  window.onBookClick=function(){ if(role==='st'){ if(typeof setView==='function') setView(); return; } show('pGate',false); document.getElementById('stErr').textContent=''; try{ if(window._sfx) _sfx('grimoire'); }catch(e){}   // 未登录点魔典（说书人登录门）：翻书声
     try{ const s=localStorage.getItem('botc_stid')||''; if(s) document.getElementById('stId').value=s; }catch(e){}
     document.getElementById('stRemember').checked=_remembered(); show('stGate',true);
     setTimeout(()=>document.getElementById(document.getElementById('stId').value?'stPw':'stId').focus(),60); };
@@ -2387,20 +2391,20 @@ load(); render();
     if(role==='st'){
       if(typeof view!=='undefined' && view==='grim'){   /* 魔典界面：墨水瓶切到「当前局日志」页；再点回到之前的标签 */
         if(typeof setGtab==='function'){
-          if(typeof gtab!=='undefined' && gtab==='log') setGtab(window.__prevGtab||'list');
-          else { window.__prevGtab=(typeof gtab!=='undefined'?gtab:'list'); setGtab('log'); }
+          if(typeof gtab!=='undefined' && gtab==='log'){ setGtab(window.__prevGtab||'list'); try{ if(window._sfx) _sfx('pen-return'); }catch(e){} }   // 回到魔典主界面：收笔声
+          else { window.__prevGtab=(typeof gtab!=='undefined'?gtab:'list'); setGtab('log'); try{ if(window._sfx) _sfx('inkwell'); }catch(e){} }   // 进入日志：写字沙沙声
         }
-      } else {   /* 大厅（座位）界面：墨水瓶进入/退出「旧局记录」 */
-        try{ if(window._toggleHist) _toggleHist(); if(window._sfx) _sfx('grimoire'); }catch(e){}
+      } else {   /* 大厅（座位）界面：墨水瓶进入/退出「旧局记录」（音效由 _toggleHist 根据进入/退出播放） */
+        try{ if(window._toggleHist) _toggleHist(); }catch(e){}
       }
       return; }
     if(role==='player'){ if(mode!=='notes') setMode('notes'); _nbSeatPage=!_nbSeatPage;   /* 玩家：墨水瓶在 笔记 ↔ 我的座位备注 之间切换，不再回大厅 */
       const np=document.getElementById('notesPanel'); if(np) np.classList.toggle('seatpage', _nbSeatPage);
-      try{ renderNotes(); }catch(e){} try{ if(window._sfx) _sfx('inkwell'); }catch(e){} return; }
+      try{ renderNotes(); }catch(e){} try{ if(window._sfx) _sfx(_nbSeatPage?'inkwell':'pen-return'); }catch(e){} return; }   // 进入座位备注=沙沙声，回主界面=收笔声
     show('stGate',false); document.getElementById('pErr').textContent='';
     try{ const sid=localStorage.getItem('botc_pid')||'', spw=localStorage.getItem('botc_ppw')||'';
       if(sid) document.getElementById('pId').value=sid; if(spw){ document.getElementById('pPw').value=spw; } document.getElementById('pRemember').checked=_remembered(); }catch(e){}
-    show('pGate',true); setTimeout(()=>document.getElementById(document.getElementById('pId').value?'pPw':'pId').focus(),60); };
+    show('pGate',true); try{ if(window._sfx) _sfx('inkwell'); }catch(e){} setTimeout(()=>document.getElementById(document.getElementById('pId').value?'pPw':'pId').focus(),60); };   // 未登录点墨水瓶（玩家登录门）：沙沙声
 
   function authErr(e){ const c=(e&&e.code)||''; if(c.includes('wrong-password')||c.includes('invalid-credential'))return'密码不对'; if(c.includes('email-already-in-use'))return'该 ID 已被占用'; if(c.includes('weak-password'))return'密码太弱（至少6位）'; if(c.includes('too-many'))return'尝试太频繁，稍后再试'; if(c.includes('network'))return'网络问题，稍后再试'; return'出错：'+c; }
 
@@ -2510,12 +2514,14 @@ load(); render();
     if(cc) cc.style.display='none';
     card.classList.remove('flip'); card.style.transition='none'; card.style.transform='scale(.86)'; card.style.opacity='0';
     if(hint){ hint.textContent='这是你本局的身份 · 点击任意处收起'; hint.style.display=''; }
+    try{ if(window._sfx) _sfx('card-open'); }catch(e){}   // 角色牌出现
     layer.classList.add('on'); void card.offsetWidth;
     card.style.transition='transform .5s cubic-bezier(.2,.85,.25,1), opacity .5s'; card.style.transform='scale(1)'; card.style.opacity='1';
     _rcState='intro';
   }
   window._openRoleCard=function(){ if(role!=='player'||!window.__myRole||_rcState) return; const {layer,card,cc,hint}=_rcEls(); if(!layer||!card||!cc) return;
     _rcState='anim';
+    try{ if(window._sfx) _sfx('card-open'); }catch(e){}   // 掀开卡背
     card.classList.add('flip'); card.style.transition='none'; card.style.transform=''; card.style.opacity='1';
     if(hint) hint.style.display='none';
     layer.classList.add('on'); void card.offsetWidth;
@@ -2530,6 +2536,7 @@ load(); render();
   window._roleLayerClick=function(e){ if(_rcState==='anim') return; _returnToCorner(); };
   function _returnToCorner(){ const {layer,card,cc,hint}=_rcEls(); if(!layer||!card||!cc) return;
     _rcState='anim'; if(hint) hint.style.display='none';
+    try{ if(window._sfx) _sfx('card-close'); }catch(e){}   // 收起卡牌
     cc.style.visibility='hidden'; cc.style.display='block';
     const cr=card.getBoundingClientRect(), sr=cc.getBoundingClientRect();
     const dx=(sr.left+sr.width/2)-(cr.left+cr.width/2), dy=(sr.top+sr.height/2)-(cr.top+cr.height/2), sc=sr.width/cr.width;
@@ -2582,7 +2589,11 @@ load(); render();
   function _sfxPlay(file, vol){ if(window.__muted) return null; try{ const a=new Audio(encodeURI('assets/'+file)); a.volume=(vol==null?0.8:vol); const p=a.play(); if(p&&p.catch)p.catch(()=>{}); return a; }catch(e){ return null; } }
   window._sfx=function(kind){
     if(kind==='inkwell') _sfxPlay('sfx-inkwell.mp3',0.7);
+    else if(kind==='pen-return') _sfxPlay('sfx-pen-return.mp3',0.7);
     else if(kind==='grimoire') _sfxPlay('sfx-grimoire.mp3',0.85);
+    else if(kind==='grimoire-close') _sfxPlay('sfx-grimoire-close.mp3',0.85);
+    else if(kind==='card-open') _sfxPlay('sfx-card-open.mp3',0.8);
+    else if(kind==='card-close') _sfxPlay('sfx-card-close.mp3',0.8);
     else if(kind==='win-good'||kind==='win-evil'){ try{ if(_sfxWinEl) _sfxWinEl.pause(); }catch(e){} _sfxWinEl=_sfxPlay('sfx-'+kind+'.mp3',0.9); } };
   window._sfxSpin=function(){ try{ if(_sfxSpinEl) _sfxSpinEl.pause(); }catch(e){} _sfxSpinEl=_sfxPlay('sfx-pointer-spin.mp3',0.85); };
   window._sfxStopWin=function(){ try{ if(_sfxWinEl){ _sfxWinEl.pause(); _sfxWinEl=null; } }catch(e){} };
@@ -2600,7 +2611,8 @@ load(); render();
   window._toggleHist=function(){ if(role!=='st') return; _histOn=!_histOn;
     document.body.classList.toggle('hist-view', _histOn);
     const bt=document.getElementById('bannerTitle'); if(bt) bt.textContent=_histOn?'旧局记录':'暗流涌动';
-    if(_histOn) _renderHist(); };
+    if(_histOn){ _renderHist(); try{ if(window._sfx) _sfx('inkwell'); }catch(e){} }   // 进入旧局记录：沙沙声
+    else { try{ if(window._sfx) _sfx('pen-return'); }catch(e){} } };   // 回到大厅主界面：收笔声
   window._histTab=function(t){ _histTabCur=t; ['list','stats','score'].forEach(x=>{ const el=document.getElementById('ht-'+x); if(el) el.classList.toggle('on',x===t); }); _renderHist(); };
   const _ALIGN=g=>(g==='tf'||g==='out')?'good':'evil';
   const _TEAMLBL={tf:'镇民',out:'外来者',min:'爪牙',dem:'恶魔'};
