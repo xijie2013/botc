@@ -960,6 +960,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.10.3', d:'2026-08-10', items:['修复：旧局记录会被下一局覆盖——改为每局一条唯一记录（不再按 gid 覆盖，重新发牌/开新局都各记一条）']},
   {v:'v2.10.2', d:'2026-08-10', items:['旧局记录（标签与文字）改为深色金色主题，与大厅一致（原紫色在浅色书页上偏淡）']},
   {v:'v2.10.1', d:'2026-08-10', items:['补充音效：合上魔典的合书声；进入日志/旧局记录/座位备注的写字沙沙声、返回主界面的收笔声；打开/合上角色卡牌的音效；未登录点墨水瓶/魔典登录也有对应音效']},
   {v:'v2.10.0', d:'2026-08-10', items:['玩家点墨水瓶不再回大厅，改为进入/退出「我的座位备注」独立页；标记页不再重复显示座位备注','说书人在大厅（座位）视图点墨水瓶进入「旧局记录」（对局列表/统计/积分榜）；魔典视图点墨水瓶仍进入当前局日志','分出胜负时自动把本局存档（座位、各玩家真实身份、胜负、说书人）到永久记录；统计各阵营次数与胜率、说书人场次与好/邪胜率；积分榜：好人胜+1、恶魔胜+2、说书人+1','更新全部音频文件（重新调整相对音量）']},
@@ -1061,6 +1062,7 @@ async function dealRoles(){
   const base=customDist||DIST[N]; if(!base) return;
   if(base.reduce((a,b)=>a+b,0)!==N){ await uiAlert('各阵营数量合计与人数（'+N+'）不符，请调整后再发牌。'); return; }
   if(!await uiConfirm("确定随机发牌？将重新分配所有身份。")) return;
+  try{ if(window._histNewRound) _histNewRound(); }catch(e){}   // 新一局：胜负另记一条
   ensureMeta(); night=1; impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
   Object.keys(nightChecks).forEach(k=>delete nightChecks[k]);   // 清空每夜勾选
   const pick=(team,k)=>{ const pool=ROLES.filter(r=>r.team===team&&!lockedRoles.has(r.id)).map(r=>r.id);
@@ -1096,7 +1098,7 @@ async function dealRoles(){
 async function resetRoles(){ if(!await uiConfirm("重置所有身份、状态、备注、伪装？（保留名字与座位）")) return;
   meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
   Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); overviewDecoys=[]; tokens.forEach(t=>t.dead=false); render();
-  try{ if(window._stClearPlayerRoles) _stClearPlayerRoles(); }catch(e){} }   // 重置角色：清空玩家手中的角色卡（开新局再下发）
+  try{ if(window._stClearPlayerRoles) _stClearPlayerRoles(); }catch(e){} try{ if(window._histNewRound) _histNewRound(); }catch(e){} }   // 重置角色：清空玩家角色卡；胜负另记一条
 function setBluff(k,v){ bluffs[k]=v; refreshOverviewDecoys(); render(); }
 
 /* ---------- 夜晚信息自动计算 ---------- */
@@ -2686,12 +2688,16 @@ load(); render();
     const ref=db.ref('games/'+curGid+'/public/result');
     if(win){ ref.set({w:win.w, r:win.r, ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); try{ _recordHistory(win); }catch(e){} }
     else ref.set(null).catch(()=>{}); };
-  /* 分出胜负时把本局存入永久记录（含各座位真实身份、胜负、说书人） */
+  /* 分出胜负时把本局存入永久记录（每局一条唯一记录，避免同一 gid 复盘覆盖） */
+  let _histSig=null, _histKey=null;
+  window._histNewRound=function(){ _histSig=null; _histKey=null; };   // 新一局/重新发牌：下一次胜负记为新的一条
   function _recordHistory(win){ if(role!=='st'||!curGid||!win) return;
     try{ const seats=[]; for(let i=0;i<N;i++){ const t=seatToken(i); const nm=(t&&t.name)?t.name:''; const m=meta[i]||{}; const rid=m.role||''; if(!nm&&!rid) continue;
       const team = m.isDrunk?'out':(rid&&RMAP[rid]?RMAP[rid].team:''); seats.push({name:nm, role:rid, team:team, dead:!!(t&&t.dead)}); }
-      const rec={ ts:firebase.database.ServerValue.TIMESTAMP, st:((me&&me.displayName)||_storedId('botc_stid')||''), name:(window.__botcGameName||'本局'), result:win.w, reason:win.r||'', count:N, seats:seats };
-      db.ref('history/'+curGid).set(rec).catch(()=>{});
+      const rec={ ts:firebase.database.ServerValue.TIMESTAMP, gid:curGid, st:((me&&me.displayName)||_storedId('botc_stid')||''), name:(window.__botcGameName||'本局'), result:win.w, reason:win.r||'', count:N, seats:seats };
+      const sig=curGid+'|'+win.w+'|'+(win.r||'');
+      if(sig===_histSig && _histKey){ db.ref('history/'+_histKey).set(rec).catch(()=>{}); return; }   // 同一局同一结果：更新同一条
+      const ref=db.ref('history').push(); _histKey=ref.key; _histSig=sig; ref.set(rec).catch(()=>{});   // 新一局：新增唯一记录
     }catch(e){} }
   function resultBadgeHTML(){ if(!pub||!pub.result||!pub.result.w) return '';
     const w=pub.result.w, t=w==='good'?'好人胜利':'邪恶胜利';
