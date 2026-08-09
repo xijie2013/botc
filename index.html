@@ -69,9 +69,11 @@
 
   /* 玩家本局角色卡（右上角卡背 + 入场/翻开动画） */
   #cornerCard{position:absolute; top:3.5%; right:2.5%; z-index:31; cursor:pointer; display:none;
-    height:clamp(56px,10vh,100px); aspect-ratio:720/1320; filter:drop-shadow(0 3px 8px rgba(0,0,0,.6)); transition:transform .14s;}
+    width:clamp(42px,5vw,62px); aspect-ratio:720/1320; filter:drop-shadow(0 3px 8px rgba(0,0,0,.6)); transition:transform .14s;}
+  #cornerCard{overflow:hidden; border-radius:7px;}
+  #cornerCard img{object-fit:cover;}
   #cornerCard:hover{transform:scale(1.06);}
-  #cornerCard .rc-fallback, #cornerCard img{position:absolute; inset:0;}
+  #cornerCard .rc-fallback, #cornerCard img{position:absolute; inset:0; width:100%; height:100%;}
   #roleCardLayer{position:absolute; inset:0; z-index:210; display:none; align-items:center; justify-content:center;
     background:rgba(8,6,14,.74); -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); cursor:pointer;}
   #roleCardLayer.on{display:flex;}
@@ -920,6 +922,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.7.2', d:'2026-08-09', items:['修复：右上角卡背过大——卡内图片未按容器缩放，现已正确显示为小卡片']},
   {v:'v2.7.1', d:'2026-08-09', items:['修复：角色牌点击后未归位到右上角（卡背归位/显示逻辑修正）','正式卡背素材上线（钟楼之眼，四周深蓝已抠成镂空）']},
   {v:'v2.7.0', d:'2026-08-09', items:['玩家登录后右上角不再显示魔典图标；开始新的一局后，会先展示你本局的角色牌，点击任意处后卡牌翻到背面归位到右上角','点击右上角卡背可像掀牌一样翻开查看本局角色','说书人开局时按座位名字自动把角色私密下发到对应玩家账号（仅本人与说书人可见，酒鬼显示其自以为的镇民牌）','新增22张角色卡图（已抠图）到 assets/roles']},
   {v:'v2.6.4', d:'2026-08-09', items:['exec2 非恶魔处决截取时长调整为 5.5 秒']},
