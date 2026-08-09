@@ -637,6 +637,24 @@
   .cfgitem button{border:1px solid #4a3a63; background:#241a34; color:#c8bcdd; border-radius:8px; padding:5px 10px; cursor:pointer; font-size:12px; white-space:nowrap;}
   .cfgitem button.load{background:#b9a0d6; color:#2e1a47; border-color:#b9a0d6; font-weight:700;}
   #cfgModal .empty{color:#9a8fb3; font-size:13px; text-align:center; padding:20px; line-height:1.6;}
+
+  /* 玩家笔记：座位备注独立页（点墨水瓶进入，隐藏标签栏） */
+  #notesPanel.seatpage .nbtabs{display:none;}
+  /* 说书人「旧局记录」面板（大厅视图点墨水瓶进入） */
+  #histPanel{display:none;}
+  body.hist-view.st-mode #histPanel{display:flex; flex-direction:column;}
+  body.hist-view.st-mode .ledger.seat-only{display:none;}
+  #histPanel .gcontent{overflow:auto;}
+  .htbl{width:100%; border-collapse:collapse; font-size:calc(.8 * var(--sw) / 100); color:#c8bcdd;}
+  .htbl th,.htbl td{border-bottom:1px solid rgba(120,90,160,.28); padding:3px 4px; text-align:center; white-space:nowrap;}
+  .htbl th{color:#b9a0d6; font-weight:800; position:sticky; top:0; background:#241a34;}
+  .htbl td.l,.htbl th.l{text-align:left;}
+  .htbl .win{color:#7fd39a;} .htbl .lose{color:#c98;}
+  .hgame{border-bottom:1px solid rgba(120,90,160,.28); padding:6px 2px;}
+  .hgame .hg-h{font-weight:800; color:#c8bcdd; margin-bottom:2px;}
+  .hgame .hg-res.good{color:#8fb7ff;} .hgame .hg-res.evil{color:#e0708a;}
+  .hgame .hg-p{font-size:calc(.78 * var(--sw) / 100); color:#a89bc4; line-height:1.5;}
+  .hgame .rtf{color:#6fa8dc;} .hgame .rout{color:#d8b25a;} .hgame .rmin{color:#e08a5a;} .hgame .rdem{color:#e05a5a;}
 </style>
 </head>
 <body>
@@ -706,6 +724,16 @@
         <button class="btn purple" onclick="dealRoles()">随机发牌</button>
         <button class="btn lpurple" onclick="resetRoles()">重置角色</button>
       </div>
+    </div>
+
+    <!-- LEFT · 说书人旧局记录 -->
+    <div class="grimoire" id="histPanel">
+      <div class="gtabs">
+        <button id="ht-list" class="on" onclick="_histTab('list')">对局列表</button>
+        <button id="ht-stats" onclick="_histTab('stats')">统计</button>
+        <button id="ht-score" onclick="_histTab('score')">积分榜</button>
+      </div>
+      <div class="gcontent" id="histContent"></div>
     </div>
 
     <!-- LEFT · 大厅（访客） -->
@@ -929,6 +957,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.10.0', d:'2026-08-10', items:['玩家点墨水瓶不再回大厅，改为进入/退出「我的座位备注」独立页；标记页不再重复显示座位备注','说书人在大厅（座位）视图点墨水瓶进入「旧局记录」（对局列表/统计/积分榜）；魔典视图点墨水瓶仍进入当前局日志','分出胜负时自动把本局存档（座位、各玩家真实身份、胜负、说书人）到永久记录；统计各阵营次数与胜率、说书人场次与好/邪胜率；积分榜：好人胜+1、恶魔胜+2、说书人+1','更新全部音频文件（重新调整相对音量）']},
   {v:'v2.9.0', d:'2026-08-09', items:['说书人重置角色时清空玩家手中的角色卡（卡片淡出，开新局再下发重现）','打开/收起卡背、发牌入场时的背景变暗改为淡入淡出，不再突兀','更新卡背素材（新版钟楼之眼，四周镂空）','背景音乐循环改为提前10秒开始交叉淡化，接缝更自然；音乐文件更新','新增事件音效：墨水瓶写字声、魔典翻书声、指针转动声、好人/恶魔胜利结算音乐（结算时压低背景乐，静音时一并静音）']},
   {v:'v2.8.2', d:'2026-08-09', items:['说书人登录后背景统一为魔典暗背景（含大厅/座位视图），更干净：未登录=空酒馆、玩家=亮酒馆、说书人=魔典']},
   {v:'v2.8.1', d:'2026-08-09', items:['登录状态切换（未登录/玩家/说书人之间）加入约2.5秒全屏黑场淡入淡出，背景音乐在同一时间交叉淡化，切换更顺滑']},
@@ -1805,7 +1834,7 @@ function impKillUI(){
 }
 
 /* ---------- view ---------- */
-function setView(){ view=(view==="seat"?"grim":"seat"); if(view==="grim"){ ensureMeta(); try{ if(window._sfx) _sfx('grimoire'); }catch(e){} } render(); }   // 打开魔典：翻书声
+function setView(){ view=(view==="seat"?"grim":"seat"); if(view==="grim"){ ensureMeta(); try{ if(window._histReset) _histReset(); }catch(e){} try{ if(window._sfx) _sfx('grimoire'); }catch(e){} } render(); }   // 打开魔典：翻书声（并退出旧局记录）
 function setGtab(t){ gtab=t; render(); }
 function setListMode(m){ listMode=m; render(); }
 function toggleLock(id){ if(lockedRoles.has(id)) lockedRoles.delete(id); else lockedRoles.add(id); render(); }
@@ -2355,13 +2384,19 @@ load(); render();
     document.getElementById('stRemember').checked=_remembered(); show('stGate',true);
     setTimeout(()=>document.getElementById(document.getElementById('stId').value?'stPw':'stId').focus(),60); };
   window.openPlayerGate=function(){
-    if(role==='st'){   /* 说书人：墨水瓶切到「日志」页；再点回到之前的标签 */
-      if(typeof setGtab==='function'){
-        if(typeof gtab!=='undefined' && gtab==='log') setGtab(window.__prevGtab||'list');
-        else { window.__prevGtab=(typeof gtab!=='undefined'?gtab:'list'); setGtab('log'); }
+    if(role==='st'){
+      if(typeof view!=='undefined' && view==='grim'){   /* 魔典界面：墨水瓶切到「当前局日志」页；再点回到之前的标签 */
+        if(typeof setGtab==='function'){
+          if(typeof gtab!=='undefined' && gtab==='log') setGtab(window.__prevGtab||'list');
+          else { window.__prevGtab=(typeof gtab!=='undefined'?gtab:'list'); setGtab('log'); }
+        }
+      } else {   /* 大厅（座位）界面：墨水瓶进入/退出「旧局记录」 */
+        try{ if(window._toggleHist) _toggleHist(); if(window._sfx) _sfx('grimoire'); }catch(e){}
       }
       return; }
-    if(role==='player'){ const goNotes=(mode!=='notes'); setMode(goNotes?'notes':'hall'); if(goNotes){ try{ if(window._sfx) _sfx('inkwell'); }catch(e){} } return; }   /* 已登录：墨水瓶在笔记/大厅间来回切换；打开笔记时写字沙沙声 */
+    if(role==='player'){ if(mode!=='notes') setMode('notes'); _nbSeatPage=!_nbSeatPage;   /* 玩家：墨水瓶在 笔记 ↔ 我的座位备注 之间切换，不再回大厅 */
+      const np=document.getElementById('notesPanel'); if(np) np.classList.toggle('seatpage', _nbSeatPage);
+      try{ renderNotes(); }catch(e){} try{ if(window._sfx) _sfx('inkwell'); }catch(e){} return; }
     show('stGate',false); document.getElementById('pErr').textContent='';
     try{ const sid=localStorage.getItem('botc_pid')||'', spw=localStorage.getItem('botc_ppw')||'';
       if(sid) document.getElementById('pId').value=sid; if(spw){ document.getElementById('pPw').value=spw; } document.getElementById('pRemember').checked=_remembered(); }catch(e){}
@@ -2456,7 +2491,7 @@ load(); render();
   }));
   function _storedId(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
   function enterSt(){ document.getElementById('stBadge').classList.add('on'); document.body.classList.remove('pl'); document.getElementById('stName').textContent=(me&&me.displayName)||_storedId('botc_stid'); db.ref('storytellerUid').transaction(c=>c||me.uid).catch(()=>{}); bindStPlayers(); bindStAccounts(); setMode('st'); }
-  function enterPlayer(){ document.getElementById('stBadge').classList.remove('on'); document.body.classList.add('pl'); document.getElementById('pbName').textContent=((me&&me.displayName)||_storedId('botc_pid')||'玩家'); bindNotes(); setMode('notes'); }
+  function enterPlayer(){ document.getElementById('stBadge').classList.remove('on'); document.body.classList.add('pl'); document.getElementById('pbName').textContent=((me&&me.displayName)||_storedId('botc_pid')||'玩家'); _nbSeatPage=false; const _np=document.getElementById('notesPanel'); if(_np) _np.classList.remove('seatpage'); bindNotes(); setMode('notes'); }
   function bindNotes(){ if(notesRef){ notesRef.off(); notesRef=null; } if(role==='player'&&me&&curGid){ notesRef=db.ref('games/'+curGid+'/players/'+me.uid); notesRef.on('value',s=>{ S=s.val(); ensureS(); window.__myRole=(S&&S.role)||''; try{ updateRoleCard(curGid, window.__myRole); }catch(e){} if(mode==='notes') renderView(); }); } }
 
   /* ===== 玩家本局角色卡（右上角卡背 + 入场/翻开动画） ===== */
@@ -2553,11 +2588,53 @@ load(); render();
   window._sfxStopWin=function(){ try{ if(_sfxWinEl){ _sfxWinEl.pause(); _sfxWinEl=null; } }catch(e){} };
 
   /* 说书人重置角色：清空当前局所有玩家的 role（玩家卡片淡出；开新局再下发重现） */
+  window._histReset=function(){ _histOn=false; document.body.classList.remove('hist-view'); const bt=document.getElementById('bannerTitle'); if(bt&&role==='st') bt.textContent='暗流涌动'; };
   window._stClearPlayerRoles=function(){ if(role!=='st'||!curGid) return;
     db.ref('games/'+curGid+'/players').once('value').then(s=>{ const v=s.val()||{}; const up={};
       Object.keys(v).forEach(uid=>{ up['games/'+curGid+'/players/'+uid+'/role']=null; });
       if(Object.keys(up).length) db.ref().update(up).catch(()=>{});
     }).catch(()=>{}); };
+
+  /* ===== 说书人：旧局记录（对局列表 / 统计 / 积分榜） ===== */
+  let _histOn=false, _histTabCur='list';
+  window._toggleHist=function(){ if(role!=='st') return; _histOn=!_histOn;
+    document.body.classList.toggle('hist-view', _histOn);
+    const bt=document.getElementById('bannerTitle'); if(bt) bt.textContent=_histOn?'旧局记录':'暗流涌动';
+    if(_histOn) _renderHist(); };
+  window._histTab=function(t){ _histTabCur=t; ['list','stats','score'].forEach(x=>{ const el=document.getElementById('ht-'+x); if(el) el.classList.toggle('on',x===t); }); _renderHist(); };
+  const _ALIGN=g=>(g==='tf'||g==='out')?'good':'evil';
+  const _TEAMLBL={tf:'镇民',out:'外来者',min:'爪牙',dem:'恶魔'};
+  function _histFetch(){ return db.ref('history').once('value').then(s=>{ const v=s.val()||{}; return Object.keys(v).map(k=>v[k]).filter(Boolean).sort((a,b)=>(b.ts||0)-(a.ts||0)); }); }
+  function _renderHist(){ const c=document.getElementById('histContent'); if(!c) return; c.innerHTML='<div style="padding:8px;color:#9a8fb3;font-size:12px">读取中…</div>';
+    _histFetch().then(games=>{ c.innerHTML = _histTabCur==='stats'?_histStatsHTML(games) : (_histTabCur==='score'?_histScoreHTML(games) : _histListHTML(games)); })
+      .catch(e=>{ c.innerHTML='<div style="padding:8px;color:#c98;font-size:12px">读取失败：'+((e&&e.code)||e&&e.message||'')+'</div>'; }); }
+  function _fmtDate(ts){ if(!ts) return ''; try{ const d=new Date(ts); const p=n=>(''+n).padStart(2,'0'); return (d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }catch(e){ return ''; } }
+  function _histListHTML(games){ if(!games.length) return '<div style="padding:8px;color:#9a8fb3;font-size:12px">还没有对局记录。分出胜负后会自动存档。</div>';
+    let h=''; games.forEach(g=>{ const res=g.result==='good'?'好人胜利':'邪恶胜利';
+      h+='<div class="hgame"><div class="hg-h">'+E(g.name||'本局')+' · <span class="hg-res '+g.result+'">'+res+'</span> <span style="color:#8a7ba8;font-weight:400">'+_fmtDate(g.ts)+' · 说书人 '+E(g.st||'—')+'</span></div>';
+      const ps=(g.seats||[]).filter(s=>s.name).map(s=>{ const cls=s.team?('r'+s.team):''; return '<span class="'+cls+'">'+E(s.name)+(s.role&&RMAP[s.role]?'（'+RMAP[s.role].name+'）':'')+'</span>'; }).join('、');
+      h+='<div class="hg-p">'+(ps||'—')+'</div></div>'; });
+    return h; }
+  function _aggregate(games){ const P={}; const get=n=>P[n]||(P[n]={tf:{n:0,w:0},out:{n:0,w:0},min:{n:0,w:0},dem:{n:0,w:0},stN:0,stG:0,stE:0});
+    games.forEach(g=>{ const res=g.result; (g.seats||[]).forEach(s=>{ if(!s.name||!s.team||!_TEAMLBL[s.team]) return; const p=get(s.name); p[s.team].n++; if(_ALIGN(s.team)===res) p[s.team].w++; });
+      if(g.st){ const p=get(g.st); p.stN++; if(res==='good')p.stG++; else if(res==='evil')p.stE++; } });
+    return P; }
+  function _pct(w,n){ return n?Math.round(w*100/n)+'%':'—'; }
+  function _histStatsHTML(games){ if(!games.length) return '<div style="padding:8px;color:#9a8fb3;font-size:12px">还没有对局记录。</div>';
+    const P=_aggregate(games); const names=Object.keys(P).sort();
+    let h='<table class="htbl"><thead><tr><th class="l">玩家</th><th>镇民</th><th>外来者</th><th>爪牙</th><th>恶魔</th><th>说书人</th></tr></thead><tbody>';
+    const cell=o=>o.n?(o.w+'/'+o.n+'<br>'+_pct(o.w,o.n)):'—';
+    names.forEach(nm=>{ const p=P[nm]; const st=p.stN?(p.stN+'局<br>好'+_pct(p.stG,p.stN)+'/邪'+_pct(p.stE,p.stN)):'—';
+      h+='<tr><td class="l">'+E(nm)+'</td><td>'+cell(p.tf)+'</td><td>'+cell(p.out)+'</td><td>'+cell(p.min)+'</td><td>'+cell(p.dem)+'</td><td>'+st+'</td></tr>'; });
+    h+='</tbody></table><div style="font-size:calc(.72*var(--sw)/100);color:#8a7ba8;margin-top:4px">格式：胜/局 · 胜率</div>';
+    return h; }
+  function _histScoreHTML(games){ if(!games.length) return '<div style="padding:8px;color:#9a8fb3;font-size:12px">还没有对局记录。</div>';
+    const P=_aggregate(games); const rows=Object.keys(P).map(nm=>{ const p=P[nm]; const good=p.tf.w+p.out.w, evil=2*(p.min.w+p.dem.w), st=p.stN; return {nm, good, evil, st, total:good+evil+st}; });
+    rows.sort((a,b)=>b.total-a.total || b.evil-a.evil);
+    let h='<table class="htbl"><thead><tr><th class="l">玩家ID</th><th>好人分</th><th>恶魔分</th><th>说书人分</th><th>总分</th></tr></thead><tbody>';
+    rows.forEach(r=>{ h+='<tr><td class="l">'+E(r.nm)+'</td><td>'+r.good+'</td><td>'+r.evil+'</td><td>'+r.st+'</td><td><b>'+r.total+'</b></td></tr>'; });
+    h+='</tbody></table><div style="font-size:calc(.72*var(--sw)/100);color:#8a7ba8;margin-top:4px">好人胜+1 · 恶魔胜+2 · 说书人+1</div>';
+    return h; }
 
   /* ---------- 软刷新：重新同步 + 重绘，不重载页面（保留全屏） ---------- */
   window._softRefresh=function(){
@@ -2591,8 +2668,15 @@ load(); render();
     const sig=win?(win.w+'|'+win.r):'';
     if(sig===_lastResultSig) return; _lastResultSig=sig;
     const ref=db.ref('games/'+curGid+'/public/result');
-    if(win) ref.set({w:win.w, r:win.r, ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{});
+    if(win){ ref.set({w:win.w, r:win.r, ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); try{ _recordHistory(win); }catch(e){} }
     else ref.set(null).catch(()=>{}); };
+  /* 分出胜负时把本局存入永久记录（含各座位真实身份、胜负、说书人） */
+  function _recordHistory(win){ if(role!=='st'||!curGid||!win) return;
+    try{ const seats=[]; for(let i=0;i<N;i++){ const t=seatToken(i); const nm=(t&&t.name)?t.name:''; const m=meta[i]||{}; const rid=m.role||''; if(!nm&&!rid) continue;
+      const team = m.isDrunk?'out':(rid&&RMAP[rid]?RMAP[rid].team:''); seats.push({name:nm, role:rid, team:team, dead:!!(t&&t.dead)}); }
+      const rec={ ts:firebase.database.ServerValue.TIMESTAMP, st:((me&&me.displayName)||_storedId('botc_stid')||''), name:(window.__botcGameName||'本局'), result:win.w, reason:win.r||'', count:N, seats:seats };
+      db.ref('history/'+curGid).set(rec).catch(()=>{});
+    }catch(e){} }
   function resultBadgeHTML(){ if(!pub||!pub.result||!pub.result.w) return '';
     const w=pub.result.w, t=w==='good'?'好人胜利':'邪恶胜利';
     return '<div class="resbadge '+w+'"><img src="assets/win-'+w+'.png"><div><b>'+t+'</b><div class="rb-r">'+E(pub.result.r||'')+'</div></div></div>'; }
@@ -2767,11 +2851,13 @@ load(); render();
   }
 
   /* ---------- 玩家笔记 ---------- */
-  window._nbTab=function(t){ nbTab=t; ['mark','nom','ref'].forEach(x=>document.getElementById('nb-'+x).classList.toggle('on',x===t)); renderNotes(); };
+  let _nbSeatPage=false;
+  window._nbTab=function(t){ _nbSeatPage=false; const np=document.getElementById('notesPanel'); if(np) np.classList.remove('seatpage'); nbTab=t; ['mark','nom','ref'].forEach(x=>document.getElementById('nb-'+x).classList.toggle('on',x===t)); renderNotes(); };
   function renderNotes(){ const c=document.getElementById('nbContent'); if(!c) return;
     if(!pub||!pub.count){ c.innerHTML='<div style="padding:8px;color:#9a7c4a;font-size:12px">🕯️ 说书人还没开局</div>'; return; }
     ensureS();
     const _rb=resultBadgeHTML();
+    if(_nbSeatPage){ c.innerHTML=_rb+seatNotesPageHTML(); return; }
     if(nbTab==='mark') c.innerHTML=_rb+markTabHTML(); else if(nbTab==='nom') c.innerHTML=_rb+nomLogHTML(); else c.innerHTML=_rb+refHTML();
   }
   function markTabHTML(){ let h='<div class="nb-sec">状态标记 · 点标记再点座位</div><div>';
@@ -2780,9 +2866,12 @@ load(); render();
     const locked=new Set(pub.locked||[]); const rs=ROLES.filter(r=>!locked.has(r.id)).map(r=>r.id), used={}; (S.seats||[]).forEach(s=>{ if(s&&s.role) used[s.role]=true; });
     h+=rs.map(id=>{ const r=RMAP[id]; if(!r) return ''; const on=sel&&sel.type==='role'&&sel.val===id;
       return '<span class="nbtok '+(on?'on':'')+' '+(used[id]?'used':'')+'" style="color:'+(on?'':TEAMC[r.team])+'" onclick="_nbPick(\''+'role'+'\',\''+id+'\')">'+r.name+'</span>'; }).join('')+'</div>';
-    h+='<div class="nb-sec">我的座位备注</div>';
+    return h;
+  }
+  /* 我的座位备注（独立页，点墨水瓶进入） */
+  function seatNotesPageHTML(){ let h='<div class="nb-sec">我的座位备注</div>';
     let any=false; (S.seats||[]).forEach((st,i)=>{ if(st&&st.note){ any=true; h+='<div class="nb-note"><b>'+(i+1)+' '+E(pname(i))+'</b>：'+E(st.note)+'</div>'; } });
-    if(!any) h+='<div style="font-size:11px;color:#8a6b3a">还没有备注</div>';
+    if(!any) h+='<div style="font-size:11px;color:#8a6b3a">还没有备注。点右侧座位即可添加备注。</div>';
     return h;
   }
   function refHTML(){ const locked=new Set(pub.locked||[]); const d=pub.dist||DIST[pub.count]||[0,0,0,0];
