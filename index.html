@@ -991,6 +991,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.15.0', d:'2026-08-10', items:['同一 ID 的玩家账号与说书人账号共用一个密码：登录/创建任一角色时，后台自动把另一角色账号也用同一密码建好；重置密码时两个账号同步更新','账号创建限制：只有在客人名单里的 ID 才能创建新账号（玩家与说书人都适用）；已有账号不受影响，仍可正常登录']},
   {v:'v2.14.0', d:'2026-08-10', items:['说书人整局存档改为跨设备云同步：每次操作自动上传到云端（按账号），任意设备登录说书人都会自动加载最新的一局（以最近编辑时间为准，覆盖旧的本地存档）；不再只存在创建它的那台设备']},
   {v:'v2.13.0', d:'2026-08-10', items:['概览「本局配置」各阵营人数改用阵营配色（镇民蓝/外来者金/爪牙橙/恶魔红），标题深紫','积分榜前三名改用新皇冠素材 crown-1/2/3','开场动画淡入淡出加长：刷新从黑场淡入，点击后先完全黑场再淡入新背景（与切换登录状态一致）','玩家笔记紫色字体加深为「说书人魔典」同款深紫（#43286b）','积分榜「总分」改用「暗流涌动」同款深金色，不再用黑色']},
   {v:'v2.12.0', d:'2026-08-10', items:['新增预加载动画：每次刷新先播放 intro-loop 开场循环，点击任意位置进入主画面（顺带缓冲加载并解锁声音）','提名tab「举手」去掉手掌表情、改为深紫色「举手：」','概览tab「本局配置」改深紫色；角色技能描述改为黑色','旧局记录·对局列表可删除某一局（说书人，二次确认），删除后不计入统计/积分','积分榜：首栏改称「玩家」；前三名皇冠移到玩家名之后']},
@@ -2449,6 +2450,16 @@ load(); render();
 
   function authErr(e){ const c=(e&&e.code)||''; if(c.includes('wrong-password')||c.includes('invalid-credential'))return'密码不对'; if(c.includes('email-already-in-use'))return'该 ID 已被占用'; if(c.includes('weak-password'))return'密码太弱（至少6位）'; if(c.includes('too-many'))return'尝试太频繁，稍后再试'; if(c.includes('network'))return'网络问题，稍后再试'; return'出错：'+c; }
 
+  /* 同一 ID 的玩家/说书人账号共用一个密码：登录/创建后在后台用「副 App 实例」把另一角色账号也建好（同密码），不影响当前登录态 */
+  async function _provApp(){ let a; try{ a=firebase.app('_prov'); }catch(e){ a=firebase.initializeApp(firebase.app().options,'_prov'); }
+    try{ await a.auth().setPersistence(firebase.auth.Auth.Persistence.NONE); }catch(e){} return a; }
+  async function _provisionOtherRole(id, fpw, otherDom){ try{ const a=await _provApp(); const em=idToLocal(id)+otherDom;
+    try{ const c=await a.auth().createUserWithEmailAndPassword(em,fpw); try{ await c.user.updateProfile({displayName:id}); }catch(e){} }catch(e){}   // 已存在则忽略
+    try{ await a.auth().signOut(); }catch(e){} }catch(e){} }
+  async function _syncOtherRolePw(id, oldFpw, otherDom, newFpw){ let ok=false; try{ const a=await _provApp(); const em=idToLocal(id)+otherDom;
+    try{ const c=await a.auth().signInWithEmailAndPassword(em, oldFpw); await c.user.updatePassword(newFpw); ok=true; }catch(e){}
+    try{ await a.auth().signOut(); }catch(e){} }catch(e){} return ok; }
+
   window._stLogin=async function(){ const id=document.getElementById('stId').value.trim().toLowerCase(), pw=document.getElementById('stPw').value, err=document.getElementById('stErr');
     if(!id){ err.textContent='请输入 ID'; return; }
     if(!/^[\p{L}\p{N}_]+$/u.test(id)){ err.textContent='ID 只能用中文/字母/数字/下划线（不能有空格）'; return; }
@@ -2456,9 +2467,12 @@ load(); render();
     const rem=!!document.getElementById('stRemember').checked; await _setPersist(rem);
     const email=idToLocal(id)+ST_DOM, fpw=fbPw(pw);
     const done=()=>{ show('stGate',false); document.getElementById('stPw').value='';
-      try{ if(rem){ localStorage.setItem('botc_stpw',pw); localStorage.setItem('botc_lastrole','st'); } else localStorage.removeItem('botc_stpw'); }catch(e){} };
+      try{ if(rem){ localStorage.setItem('botc_stpw',pw); localStorage.setItem('botc_lastrole','st'); } else localStorage.removeItem('botc_stpw'); }catch(e){}
+      try{ _provisionOtherRole(id,fpw,PLAYER_DOM); }catch(e){} };   // 同 ID 玩家账号也用同一密码建好
     try{ await auth.signInWithEmailAndPassword(email,fpw); done(); }
     catch(e){ if((e.code||'').match(/user-not-found|invalid-credential/)){
+        const allowed=await window._checkRoster(id);
+        if(!allowed){ err.textContent='你不在客人名单里，不能创建账号（请让说书人先把你加进名单）'; return; }
         try{ await auth.createUserWithEmailAndPassword(email,fpw); await auth.currentUser.updateProfile({displayName:id}); toast('已创建说书人账号'); done(); }
         catch(e2){ err.textContent=(e2.code||'').includes('email-already-in-use')?'密码不对':authErr(e2); }
       } else err.textContent=authErr(e); } };
@@ -2470,16 +2484,16 @@ load(); render();
   window._pLogin=async function(){ const id=document.getElementById('pId').value.trim().toLowerCase(), pw=document.getElementById('pPw').value, err=document.getElementById('pErr');
     if(!id){ err.textContent='请输入 ID'; return; }
     if(!/^[\p{L}\p{N}_]+$/u.test(id)){ err.textContent='ID 只能用中文/字母/数字/下划线（不能有空格）'; return; }
-    err.textContent='核对名单…';
-    const allowed=await window._checkRoster(id);
-    if(!allowed){ err.textContent='你不在本局客人名册里，请让说书人先把你加进去'; return; }
     const email=idToLocal(id)+PLAYER_DOM, fpw=fbPw(pw); err.textContent='登录中…'; try{ localStorage.setItem('botc_pid',id); }catch(e){}
     const rem=!!document.getElementById('pRemember').checked; await _setPersist(rem);
-    const done=()=>{ show('pGate',false); try{ if(rem){ localStorage.setItem('botc_ppw',pw); localStorage.setItem('botc_lastrole','player'); } else localStorage.removeItem('botc_ppw'); }catch(e){} document.getElementById('pPw').value=''; try{ window._recordAccount(id); }catch(e){} };
+    const done=()=>{ show('pGate',false); try{ if(rem){ localStorage.setItem('botc_ppw',pw); localStorage.setItem('botc_lastrole','player'); } else localStorage.removeItem('botc_ppw'); }catch(e){} document.getElementById('pPw').value=''; try{ window._recordAccount(id); }catch(e){}
+      try{ _provisionOtherRole(id,fpw,ST_DOM); }catch(e){} };   // 同 ID 说书人账号也用同一密码建好
     try{ await auth.signInWithEmailAndPassword(email,fpw); done(); }
     catch(e){ if((e.code||'').match(/user-not-found|invalid-credential/)){
+        const allowed=await window._checkRoster(id);
+        if(!allowed){ err.textContent='你不在客人名单里，不能创建账号（请让说书人先把你加进名单）'; return; }
         try{ await auth.createUserWithEmailAndPassword(email,fpw); await auth.currentUser.updateProfile({displayName:id}); toast('已创建你的笔记本'); done(); }
-        catch(e2){ err.textContent=authErr(e2); }
+        catch(e2){ err.textContent=(e2.code||'').includes('email-already-in-use')?'密码不对':authErr(e2); }
       } else err.textContent=authErr(e); } };
 
   window._logout=function(){ try{ localStorage.removeItem('botc_ppw'); localStorage.removeItem('botc_stpw'); localStorage.removeItem('botc_lastrole'); localStorage.setItem('botc_remember',''); }catch(e){} auth.signOut(); };
@@ -2500,8 +2514,11 @@ load(); render();
     if(curRole!==wantRole || (curId&&curId!==id)){ err.textContent='只能重置当前登录的账号：'+(curRole==='st'?'说书人':'玩家')+' '+(u.displayName||''); return; }
     err.textContent='重置中…';
     try{ await u.updatePassword(fbPw(npw));
-      try{ if(_remembered()){ if(curRole==='st') localStorage.setItem('botc_stpw',npw); else localStorage.setItem('botc_ppw',npw); } }catch(e){}
-      err.textContent=''; document.getElementById('rpPw').value=''; document.getElementById('rpForm').style.display='none'; toast('✅ 密码已重置');
+      let otherOk=false;   // 同 ID 另一角色账号同步改成同一密码（best-effort，需要本地存有旧密码）
+      try{ const oldRaw=localStorage.getItem(curRole==='st'?'botc_stpw':'botc_ppw')||''; if(oldRaw) otherOk=await _syncOtherRolePw(id, fbPw(oldRaw), curRole==='st'?PLAYER_DOM:ST_DOM, fbPw(npw)); }catch(e){}
+      try{ if(_remembered()){ if(curRole==='st') localStorage.setItem('botc_stpw',npw); else localStorage.setItem('botc_ppw',npw);
+        if(otherOk){ if(curRole==='st') localStorage.setItem('botc_ppw',npw); else localStorage.setItem('botc_stpw',npw); } } }catch(e){}
+      err.textContent=''; document.getElementById('rpPw').value=''; document.getElementById('rpForm').style.display='none'; toast(otherOk?'✅ 密码已重置（玩家/说书人已同步）':'✅ 密码已重置');
     }catch(e){ err.textContent=(e.code||'').includes('requires-recent-login') ? '为安全起见，请退出后用旧密码重新登录，再来重置' : ('重置失败：'+(e.code||e.message||'')); } };
 
   /* 记住登录：本标签页若未登录，用本地保存的凭据自动登录（各标签页独立，互不影响） */
