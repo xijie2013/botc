@@ -644,17 +644,20 @@
   #histPanel{display:none;}
   body.hist-view.st-mode #histPanel{display:flex; flex-direction:column;}
   body.hist-view.st-mode .ledger.seat-only{display:none;}
-  #histPanel .gcontent{overflow:auto;}
-  .htbl{width:100%; border-collapse:collapse; font-size:calc(.8 * var(--sw) / 100); color:#c8bcdd;}
-  .htbl th,.htbl td{border-bottom:1px solid rgba(120,90,160,.28); padding:3px 4px; text-align:center; white-space:nowrap;}
-  .htbl th{color:#b9a0d6; font-weight:800; position:sticky; top:0; background:#241a34;}
+  /* 旧局记录：深色金色主题（与大厅一致，页面为浅色羊皮纸） */
+  #histPanel .gcontent{overflow:auto; color:#3a2a12;}
+  #histPanel .gtabs button{color:#6b4a1e; border:1px solid rgba(122,83,32,.45); background:rgba(255,250,235,.4);}
+  #histPanel .gtabs button.on{background:rgba(184,134,11,.32); color:#6b4a1e; border-color:rgba(122,83,32,.6);}
+  .htbl{width:100%; border-collapse:collapse; font-size:calc(.8 * var(--sw) / 100); color:#3a2a12;}
+  .htbl th,.htbl td{border-bottom:1px solid rgba(122,83,32,.28); padding:3px 4px; text-align:center; white-space:nowrap;}
+  .htbl th{color:#6b4a1e; font-weight:800; position:sticky; top:0; background:#efe0bf;}
   .htbl td.l,.htbl th.l{text-align:left;}
-  .htbl .win{color:#7fd39a;} .htbl .lose{color:#c98;}
-  .hgame{border-bottom:1px solid rgba(120,90,160,.28); padding:6px 2px;}
-  .hgame .hg-h{font-weight:800; color:#c8bcdd; margin-bottom:2px;}
-  .hgame .hg-res.good{color:#8fb7ff;} .hgame .hg-res.evil{color:#e0708a;}
-  .hgame .hg-p{font-size:calc(.78 * var(--sw) / 100); color:#a89bc4; line-height:1.5;}
-  .hgame .rtf{color:#6fa8dc;} .hgame .rout{color:#d8b25a;} .hgame .rmin{color:#e08a5a;} .hgame .rdem{color:#e05a5a;}
+  .htbl .win{color:#2e7d43;} .htbl .lose{color:#b0402e;}
+  .hgame{border-bottom:1px solid rgba(122,83,32,.28); padding:6px 2px;}
+  .hgame .hg-h{font-weight:800; color:#6b4a1e; margin-bottom:2px;}
+  .hgame .hg-res.good{color:#2e6db0;} .hgame .hg-res.evil{color:#b0402e;}
+  .hgame .hg-p{font-size:calc(.78 * var(--sw) / 100); color:#5b4a2e; line-height:1.5;}
+  .hgame .rtf{color:#2f6db0;} .hgame .rout{color:#9a6b12;} .hgame .rmin{color:#c06a2e;} .hgame .rdem{color:#b0402e;}
 </style>
 </head>
 <body>
@@ -957,6 +960,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.10.2', d:'2026-08-10', items:['旧局记录（标签与文字）改为深色金色主题，与大厅一致（原紫色在浅色书页上偏淡）']},
   {v:'v2.10.1', d:'2026-08-10', items:['补充音效：合上魔典的合书声；进入日志/旧局记录/座位备注的写字沙沙声、返回主界面的收笔声；打开/合上角色卡牌的音效；未登录点墨水瓶/魔典登录也有对应音效']},
   {v:'v2.10.0', d:'2026-08-10', items:['玩家点墨水瓶不再回大厅，改为进入/退出「我的座位备注」独立页；标记页不再重复显示座位备注','说书人在大厅（座位）视图点墨水瓶进入「旧局记录」（对局列表/统计/积分榜）；魔典视图点墨水瓶仍进入当前局日志','分出胜负时自动把本局存档（座位、各玩家真实身份、胜负、说书人）到永久记录；统计各阵营次数与胜率、说书人场次与好/邪胜率；积分榜：好人胜+1、恶魔胜+2、说书人+1','更新全部音频文件（重新调整相对音量）']},
   {v:'v2.9.0', d:'2026-08-09', items:['说书人重置角色时清空玩家手中的角色卡（卡片淡出，开新局再下发重现）','打开/收起卡背、发牌入场时的背景变暗改为淡入淡出，不再突兀','更新卡背素材（新版钟楼之眼，四周镂空）','背景音乐循环改为提前10秒开始交叉淡化，接缝更自然；音乐文件更新','新增事件音效：墨水瓶写字声、魔典翻书声、指针转动声、好人/恶魔胜利结算音乐（结算时压低背景乐，静音时一并静音）']},
@@ -2617,13 +2621,13 @@ load(); render();
   const _ALIGN=g=>(g==='tf'||g==='out')?'good':'evil';
   const _TEAMLBL={tf:'镇民',out:'外来者',min:'爪牙',dem:'恶魔'};
   function _histFetch(){ return db.ref('history').once('value').then(s=>{ const v=s.val()||{}; return Object.keys(v).map(k=>v[k]).filter(Boolean).sort((a,b)=>(b.ts||0)-(a.ts||0)); }); }
-  function _renderHist(){ const c=document.getElementById('histContent'); if(!c) return; c.innerHTML='<div style="padding:8px;color:#9a8fb3;font-size:12px">读取中…</div>';
+  function _renderHist(){ const c=document.getElementById('histContent'); if(!c) return; c.innerHTML='<div style="padding:8px;color:#8a6b3a;font-size:12px">读取中…</div>';
     _histFetch().then(games=>{ c.innerHTML = _histTabCur==='stats'?_histStatsHTML(games) : (_histTabCur==='score'?_histScoreHTML(games) : _histListHTML(games)); })
       .catch(e=>{ c.innerHTML='<div style="padding:8px;color:#c98;font-size:12px">读取失败：'+((e&&e.code)||e&&e.message||'')+'</div>'; }); }
   function _fmtDate(ts){ if(!ts) return ''; try{ const d=new Date(ts); const p=n=>(''+n).padStart(2,'0'); return (d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }catch(e){ return ''; } }
-  function _histListHTML(games){ if(!games.length) return '<div style="padding:8px;color:#9a8fb3;font-size:12px">还没有对局记录。分出胜负后会自动存档。</div>';
+  function _histListHTML(games){ if(!games.length) return '<div style="padding:8px;color:#8a6b3a;font-size:12px">还没有对局记录。分出胜负后会自动存档。</div>';
     let h=''; games.forEach(g=>{ const res=g.result==='good'?'好人胜利':'邪恶胜利';
-      h+='<div class="hgame"><div class="hg-h">'+E(g.name||'本局')+' · <span class="hg-res '+g.result+'">'+res+'</span> <span style="color:#8a7ba8;font-weight:400">'+_fmtDate(g.ts)+' · 说书人 '+E(g.st||'—')+'</span></div>';
+      h+='<div class="hgame"><div class="hg-h">'+E(g.name||'本局')+' · <span class="hg-res '+g.result+'">'+res+'</span> <span style="color:#8a6b3a;font-weight:400">'+_fmtDate(g.ts)+' · 说书人 '+E(g.st||'—')+'</span></div>';
       const ps=(g.seats||[]).filter(s=>s.name).map(s=>{ const cls=s.team?('r'+s.team):''; return '<span class="'+cls+'">'+E(s.name)+(s.role&&RMAP[s.role]?'（'+RMAP[s.role].name+'）':'')+'</span>'; }).join('、');
       h+='<div class="hg-p">'+(ps||'—')+'</div></div>'; });
     return h; }
@@ -2632,20 +2636,20 @@ load(); render();
       if(g.st){ const p=get(g.st); p.stN++; if(res==='good')p.stG++; else if(res==='evil')p.stE++; } });
     return P; }
   function _pct(w,n){ return n?Math.round(w*100/n)+'%':'—'; }
-  function _histStatsHTML(games){ if(!games.length) return '<div style="padding:8px;color:#9a8fb3;font-size:12px">还没有对局记录。</div>';
+  function _histStatsHTML(games){ if(!games.length) return '<div style="padding:8px;color:#8a6b3a;font-size:12px">还没有对局记录。</div>';
     const P=_aggregate(games); const names=Object.keys(P).sort();
     let h='<table class="htbl"><thead><tr><th class="l">玩家</th><th>镇民</th><th>外来者</th><th>爪牙</th><th>恶魔</th><th>说书人</th></tr></thead><tbody>';
     const cell=o=>o.n?(o.w+'/'+o.n+'<br>'+_pct(o.w,o.n)):'—';
     names.forEach(nm=>{ const p=P[nm]; const st=p.stN?(p.stN+'局<br>好'+_pct(p.stG,p.stN)+'/邪'+_pct(p.stE,p.stN)):'—';
       h+='<tr><td class="l">'+E(nm)+'</td><td>'+cell(p.tf)+'</td><td>'+cell(p.out)+'</td><td>'+cell(p.min)+'</td><td>'+cell(p.dem)+'</td><td>'+st+'</td></tr>'; });
-    h+='</tbody></table><div style="font-size:calc(.72*var(--sw)/100);color:#8a7ba8;margin-top:4px">格式：胜/局 · 胜率</div>';
+    h+='</tbody></table><div style="font-size:calc(.72*var(--sw)/100);color:#8a6b3a;margin-top:4px">格式：胜/局 · 胜率</div>';
     return h; }
-  function _histScoreHTML(games){ if(!games.length) return '<div style="padding:8px;color:#9a8fb3;font-size:12px">还没有对局记录。</div>';
+  function _histScoreHTML(games){ if(!games.length) return '<div style="padding:8px;color:#8a6b3a;font-size:12px">还没有对局记录。</div>';
     const P=_aggregate(games); const rows=Object.keys(P).map(nm=>{ const p=P[nm]; const good=p.tf.w+p.out.w, evil=2*(p.min.w+p.dem.w), st=p.stN; return {nm, good, evil, st, total:good+evil+st}; });
     rows.sort((a,b)=>b.total-a.total || b.evil-a.evil);
     let h='<table class="htbl"><thead><tr><th class="l">玩家ID</th><th>好人分</th><th>恶魔分</th><th>说书人分</th><th>总分</th></tr></thead><tbody>';
     rows.forEach(r=>{ h+='<tr><td class="l">'+E(r.nm)+'</td><td>'+r.good+'</td><td>'+r.evil+'</td><td>'+r.st+'</td><td><b>'+r.total+'</b></td></tr>'; });
-    h+='</tbody></table><div style="font-size:calc(.72*var(--sw)/100);color:#8a7ba8;margin-top:4px">好人胜+1 · 恶魔胜+2 · 说书人+1</div>';
+    h+='</tbody></table><div style="font-size:calc(.72*var(--sw)/100);color:#8a6b3a;margin-top:4px">好人胜+1 · 恶魔胜+2 · 说书人+1</div>';
     return h; }
 
   /* ---------- 软刷新：重新同步 + 重绘，不重载页面（保留全屏） ---------- */
