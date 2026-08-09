@@ -873,6 +873,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v1.9.6', d:'2026-08-09', items:['魔典不再在座位中央显示结算图标，改为在日志页顶部显示结算横幅（与玩家笔记一致）']},
   {v:'v1.9.5', d:'2026-08-09', items:['投票浮条改为单层按钮（去掉外框，只剩一个方框）','处决/猎人射杀：座位出局图标实时同步到大厅与玩家笔记','随机发牌/重置角色时一并回到第一夜','墨水瓶进入日志页时隐藏上方三标签与底部夜数/按钮']},
   {v:'v1.9.4', d:'2026-08-09', items:['投票浮条精简为单个按钮：举手↔放下（举手后按钮加深，不变绿）；鬼票在按钮后标“（鬼票）”','说书人魔典默认只保留 角色设置/夜晚/白天 三个标签','点击墨水瓶进入说书人日志页（再点返回上一标签），不再弹出玩家登录框']},
   {v:'v1.9.3', d:'2026-08-09', items:['修复：图书管理员“没有外来者”等自动结果未记入日志','投票浮条：指针转动时不再显示提示','投票浮条：指针停下后只保留“举手”按钮（去掉提名文字与座位号）']},
@@ -1352,10 +1353,7 @@ function checkWin(){
 function renderWin(){
   const wi=document.getElementById("winIcon"); const win=checkWin();
   if(window._autoResult) window._autoResult(win);   // 满足胜负自动公布，无需按钮
-  if(win && tableCenter){ const stg=document.getElementById("stage");
-    if(!wi.dataset.w || wi.dataset.w!==win.w){ wi.dataset.w=win.w; wi.innerHTML='<img src="assets/win-'+win.w+'.png" onerror="this.parentNode.style.display=\'none\'">'; }
-    wi.style.left=tableCenter.x+'px'; wi.style.top=tableCenter.y+'px'; wi.style.width=Math.round(stg.clientWidth*0.26)+'px'; wi.style.display='block';
-  } else { wi.style.display='none'; wi.dataset.w=''; }
+  if(wi){ wi.style.display='none'; wi.dataset.w=''; }   // 魔典不再在座位中央显示结算图标（改为日志页顶部横幅）
 }
 /* ---------- 结算特效 ---------- */
 var RES={_seenTs:0, _dismissed:0};
@@ -1774,6 +1772,8 @@ function renderGrim(){
     return;
   }
   if(gtab==="log"){
+    const _win=checkWin();   // 结算横幅移到日志页顶部（与玩家笔记一致），不再在座位中央出现
+    if(_win) h+='<div class="resbadge '+_win.w+'" style="margin-top:2px"><img src="assets/win-'+_win.w+'.png" onerror="this.style.display=\'none\'"><div><b>'+(_win.w==='good'?'好人胜利':'邪恶胜利')+'</b><div class="rb-r">'+esc(_win.r||'')+'</div></div></div>';
     let maxN=night; meta.forEach(m=>{ if(m.hist) Object.keys(m.hist).forEach(k=>maxN=Math.max(maxN,+k)); });
     Object.keys(nominations).forEach(k=>maxN=Math.max(maxN,+k)); Object.keys(executions).forEach(k=>maxN=Math.max(maxN,+k));
     const TAGO=['evil','info','poison','poisoned','kill','protected','death','role'];
