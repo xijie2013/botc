@@ -437,7 +437,7 @@
   .nbtabs{display:flex; gap:4px; flex:0 0 auto;}
   .nbtabs button{flex:1; padding:5px 2px; font-size:calc(.92 * var(--sw) / 100); font-weight:800; border-radius:6px; cursor:pointer;
     border:1px solid rgba(122,83,32,.4); background:rgba(255,250,235,.6); color:#6b4a1e;}
-  .nbtabs button.on{background:var(--gold); color:#fff; border-color:var(--gold);}
+  .nbtabs button.on{background:rgba(184,134,11,.32); color:#6b4a1e; border-color:rgba(122,83,32,.6);}
   #notesPanel .nbcontent{flex:1; min-height:0; overflow:auto; padding-right:3px; font-size:calc(1 * var(--sw) / 100); color:#3a2a12;}
   #notesPanel .nbcontent::-webkit-scrollbar{width:6px;} #notesPanel .nbcontent::-webkit-scrollbar-thumb{background:rgba(74,43,107,.35); border-radius:3px;}
   .nb-sec{font-weight:800; color:#6b4a1e; margin:8px 0 4px; letter-spacing:.5px;}
@@ -883,6 +883,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.4.0', d:'2026-08-09', items:['登录改为按标签页独立（一个页面登录不再影响其它页面）；勾选记住后各页面用本地凭据各自自动登录','密码可用任意长度（含留空）；不足6位自动补齐以满足服务端要求（老账号不受影响）','阵营合计满员改为深紫色（同“角色设置”）、加粗、字号与“镇民”一致','玩家笔记标签字色恒为深金，选中仅加深底色（不再金底白字）']},
   {v:'v2.3.0', d:'2026-08-09', items:['玩家角标去掉笔图标；阵营合计满员显示为紫色主题色','说书人名册已注册账号的圆点改为紫色','玩家笔记标签重命名为 标记/提名/概览，标签与标记选中态改为金色','删除笔记里的操作提示文字','玩家大厅客人名单固定只显示座号+名字（不随死亡/状态变化，无结算横幅）','接入猎人射杀恶魔动画 slayer.mp4']},
   {v:'v2.2.0', d:'2026-08-09', items:['玩家笔记字体改为深金色（与大厅一致），不再是魔典紫色','举手改为整座位金色圆形手掌图标：谁举手谁的座位背景就变成它（保留座号）']},
   {v:'v2.1.0', d:'2026-08-09', items:['静音按钮改为金色图标（与其它按钮统一）','新增猎人射杀恶魔动画（assets/slayer.mp4）：命中即播放（红唇女郎继任也播），若因此获胜则接胜利动画']},
@@ -1822,7 +1823,7 @@ function renderGrim(){
       });
       h+='</div>';
     });
-    h+='<div class="rrow" style="border:none;font-size:.9em;color:'+(total===N?'#7a1f8f':'#b0402e')+'">阵营合计 '+total+'/'+N
+    h+='<div class="rrow" style="border:none;font-weight:800;font-size:calc(1.02 * var(--sw) / 100);color:'+(total===N?'#43286b':'#b0402e')+'">阵营合计 '+total+'/'+N
       +(customDist?' <span class="regbtn" onclick="resetDist()">恢复默认</span>':'')+'</div>';
     /* ===== 设置（原“设置”标签内容并入，置于阵营合计下方）===== */
     h+='<div class="gsec" style="color:#43286b;margin-top:12px;border-top:1px solid rgba(122,83,32,.25);padding-top:8px">⚙ 设置</div>';
@@ -2195,7 +2196,7 @@ load(); render();
     <div class="sub">只有你能进入魔典与公布信息。</div>
     <div class="err" id="stErr"></div>
     <input id="stId" type="text" placeholder="说书人 ID（可用中文，如 说书人小明）" maxlength="20" autocomplete="off">
-    <input id="stPw" type="password" placeholder="密码（至少 6 位）" onkeydown="if(event.key==='Enter')_stLogin()">
+    <input id="stPw" type="password" placeholder="密码（可留空）" onkeydown="if(event.key==='Enter')_stLogin()">
     <label style="display:flex;align-items:center;gap:7px;justify-content:center;font-size:12.5px;color:#b3a6c8;margin:2px 0 10px;cursor:pointer">
       <input id="stRemember" type="checkbox" style="width:auto;margin:0"> 在本机记住我（下次免敲密码）
     </label>
@@ -2212,7 +2213,7 @@ load(); render();
     <div class="sub">用你的 ID 和密码进入私人笔记本。<br>第一次登录会自动创建。</div>
     <div class="err" id="pErr"></div>
     <input id="pId" type="text" placeholder="你的 ID（可用中文，如 张三 / alice）" maxlength="20" autocomplete="off">
-    <input id="pPw" type="password" placeholder="密码（至少 6 位）" onkeydown="if(event.key==='Enter')_pLogin()">
+    <input id="pPw" type="password" placeholder="密码（可留空）" onkeydown="if(event.key==='Enter')_pLogin()">
     <label style="display:flex;align-items:center;gap:7px;justify-content:center;font-size:12.5px;color:#b3a6c8;margin:2px 0 10px;cursor:pointer">
       <input id="pRemember" type="checkbox" style="width:auto;margin:0"> 在本机记住我（下次免敲密码）
     </label>
@@ -2228,8 +2229,10 @@ load(); render();
   /* 记住我：勾选→LOCAL 持久化（跨会话自动登录，免密码）；否则→SESSION（关标签即登出） */
   function _remembered(){ try{ return localStorage.getItem('botc_remember')==='1'; }catch(e){ return false; } }
   function _setPersist(remember){ try{ localStorage.setItem('botc_remember', remember?'1':''); }catch(e){}
-    return auth.setPersistence(remember?firebase.auth.Auth.Persistence.LOCAL:firebase.auth.Auth.Persistence.SESSION).catch(()=>{}); }
-  const AUTH_READY = auth.setPersistence(_remembered()?firebase.auth.Auth.Persistence.LOCAL:firebase.auth.Auth.Persistence.SESSION).catch(()=>{});
+    return auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(()=>{}); }   // 始终按标签页隔离：各页面各自登录，互不影响
+  const AUTH_READY = auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(()=>{});
+  /* Firebase 要求密码≥6位：不足则补齐到6位，≥6位原样（老账号不受影响），从而允许任意长度/留空 */
+  function fbPw(pw){ pw=pw||''; return pw.length>=6 ? pw : (pw+'______').slice(0,6); }
   let me=null, role='anon', mode='hall', curGid=null, pub=null, S=null, sel=null, nbTab='mark';
   let notesRef=null, pubBound=null;
 
@@ -2282,15 +2285,16 @@ load(); render();
   function authErr(e){ const c=(e&&e.code)||''; if(c.includes('wrong-password')||c.includes('invalid-credential'))return'密码不对'; if(c.includes('email-already-in-use'))return'该 ID 已被占用'; if(c.includes('weak-password'))return'密码太弱（至少6位）'; if(c.includes('too-many'))return'尝试太频繁，稍后再试'; if(c.includes('network'))return'网络问题，稍后再试'; return'出错：'+c; }
 
   window._stLogin=async function(){ const id=document.getElementById('stId').value.trim().toLowerCase(), pw=document.getElementById('stPw').value, err=document.getElementById('stErr');
-    if(!id||!pw){ err.textContent='请输入 ID 和密码'; return; } if(pw.length<6){ err.textContent='密码至少 6 位'; return; }
+    if(!id){ err.textContent='请输入 ID'; return; }
     if(!/^[\p{L}\p{N}_]+$/u.test(id)){ err.textContent='ID 只能用中文/字母/数字/下划线（不能有空格）'; return; }
     err.textContent='登录中…'; try{ localStorage.setItem('botc_stid',id); }catch(e){}
-    await _setPersist(!!document.getElementById('stRemember').checked);
-    const email=idToLocal(id)+ST_DOM;
-    const done=()=>{ show('stGate',false); document.getElementById('stPw').value=''; };
-    try{ await auth.signInWithEmailAndPassword(email,pw); done(); }
+    const rem=!!document.getElementById('stRemember').checked; await _setPersist(rem);
+    const email=idToLocal(id)+ST_DOM, fpw=fbPw(pw);
+    const done=()=>{ show('stGate',false); document.getElementById('stPw').value='';
+      try{ if(rem){ localStorage.setItem('botc_stpw',pw); localStorage.setItem('botc_lastrole','st'); } else localStorage.removeItem('botc_stpw'); }catch(e){} };
+    try{ await auth.signInWithEmailAndPassword(email,fpw); done(); }
     catch(e){ if((e.code||'').match(/user-not-found|invalid-credential/)){
-        try{ await auth.createUserWithEmailAndPassword(email,pw); await auth.currentUser.updateProfile({displayName:id}); toast('已创建说书人账号'); done(); }
+        try{ await auth.createUserWithEmailAndPassword(email,fpw); await auth.currentUser.updateProfile({displayName:id}); toast('已创建说书人账号'); done(); }
         catch(e2){ err.textContent=(e2.code||'').includes('email-already-in-use')?'密码不对':authErr(e2); }
       } else err.textContent=authErr(e); } };
 
@@ -2299,25 +2303,36 @@ load(); render();
   function idToLocal(id){ let s=id.replace(/[^a-z0-9_]/g, c=>'-'+c.codePointAt(0).toString(16)+'-');
     if(s.charAt(0)==='-') s='0'+s; if(s.charAt(s.length-1)==='-') s=s+'0'; return s; }
   window._pLogin=async function(){ const id=document.getElementById('pId').value.trim().toLowerCase(), pw=document.getElementById('pPw').value, err=document.getElementById('pErr');
-    if(!id||!pw){ err.textContent='请输入 ID 和密码'; return; } if(pw.length<6){ err.textContent='密码至少 6 位'; return; }
+    if(!id){ err.textContent='请输入 ID'; return; }
     if(!/^[\p{L}\p{N}_]+$/u.test(id)){ err.textContent='ID 只能用中文/字母/数字/下划线（不能有空格）'; return; }
     err.textContent='核对名单…';
     const allowed=await window._checkRoster(id);
     if(!allowed){ err.textContent='你不在本局客人名册里，请让说书人先把你加进去'; return; }
-    const email=idToLocal(id)+PLAYER_DOM; err.textContent='登录中…'; try{ localStorage.setItem('botc_pid',id); }catch(e){}
-    await _setPersist(!!document.getElementById('pRemember').checked);
-    const done=()=>{ show('pGate',false); try{ if(document.getElementById('pRemember').checked) localStorage.setItem('botc_ppw',pw); else localStorage.removeItem('botc_ppw'); }catch(e){} document.getElementById('pPw').value=''; try{ window._recordAccount(id); }catch(e){} };
-    try{ await auth.signInWithEmailAndPassword(email,pw); done(); }
+    const email=idToLocal(id)+PLAYER_DOM, fpw=fbPw(pw); err.textContent='登录中…'; try{ localStorage.setItem('botc_pid',id); }catch(e){}
+    const rem=!!document.getElementById('pRemember').checked; await _setPersist(rem);
+    const done=()=>{ show('pGate',false); try{ if(rem){ localStorage.setItem('botc_ppw',pw); localStorage.setItem('botc_lastrole','player'); } else localStorage.removeItem('botc_ppw'); }catch(e){} document.getElementById('pPw').value=''; try{ window._recordAccount(id); }catch(e){} };
+    try{ await auth.signInWithEmailAndPassword(email,fpw); done(); }
     catch(e){ if((e.code||'').match(/user-not-found|invalid-credential/)){
-        try{ await auth.createUserWithEmailAndPassword(email,pw); await auth.currentUser.updateProfile({displayName:id}); toast('已创建你的笔记本'); done(); }
+        try{ await auth.createUserWithEmailAndPassword(email,fpw); await auth.currentUser.updateProfile({displayName:id}); toast('已创建你的笔记本'); done(); }
         catch(e2){ err.textContent=authErr(e2); }
       } else err.textContent=authErr(e); } };
 
-  window._logout=function(){ try{ localStorage.removeItem('botc_ppw'); localStorage.setItem('botc_remember',''); }catch(e){} auth.signOut(); };
+  window._logout=function(){ try{ localStorage.removeItem('botc_ppw'); localStorage.removeItem('botc_stpw'); localStorage.removeItem('botc_lastrole'); localStorage.setItem('botc_remember',''); }catch(e){} auth.signOut(); };
+
+  /* 记住登录：本标签页若未登录，用本地保存的凭据自动登录（各标签页独立，互不影响） */
+  async function _autoLogin(){ try{ if(!_remembered()||auth.currentUser) return;
+    const role=localStorage.getItem('botc_lastrole')||'';
+    if(role==='st'){ const id=_storedId('botc_stid'); if(!id) return; await auth.signInWithEmailAndPassword(idToLocal(id)+ST_DOM, fbPw(localStorage.getItem('botc_stpw')||'')); }
+    else if(role==='player'){ const id=_storedId('botc_pid'); if(!id) return; await auth.signInWithEmailAndPassword(idToLocal(id)+PLAYER_DOM, fbPw(localStorage.getItem('botc_ppw')||'')); }
+  }catch(e){} }
 
   /* ---------- 认证状态 ---------- */
+  let _autoTried=false;
   AUTH_READY.then(()=>auth.onAuthStateChanged(user=>{ me=user;
-    if(!user){ role='anon'; document.getElementById('stBadge').classList.remove('on'); document.body.classList.remove('pl'); if(notesRef){notesRef.off();notesRef=null;} S=null; setMode('hall'); return; }
+    if(!user){ role='anon'; document.getElementById('stBadge').classList.remove('on'); document.body.classList.remove('pl'); if(notesRef){notesRef.off();notesRef=null;} S=null; setMode('hall');
+      if(!_autoTried){ _autoTried=true; _autoLogin(); }   // 首次未登录时才尝试记住的自动登录
+      return; }
+    _autoTried=true;
     if((user.email||'').endsWith(ST_DOM)){ role='st'; enterSt(); }
     else { role='player'; enterPlayer(); }
   }));
