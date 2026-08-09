@@ -66,6 +66,29 @@
   /* 魔典界面（书页打开）按钮放大 20% */
   .stage.grim .view-toggle{width:clamp(60px,6.62vw,103px); height:clamp(60px,6.62vw,103px);}
   .view-toggle img{width:100%; height:100%; object-fit:contain; display:block;}
+
+  /* 玩家本局角色卡（右上角卡背 + 入场/翻开动画） */
+  #cornerCard{position:absolute; top:3.5%; right:2.5%; z-index:31; cursor:pointer; display:none;
+    height:clamp(56px,10vh,100px); aspect-ratio:720/1320; filter:drop-shadow(0 3px 8px rgba(0,0,0,.6)); transition:transform .14s;}
+  #cornerCard:hover{transform:scale(1.06);}
+  #cornerCard .rc-fallback, #cornerCard img{position:absolute; inset:0;}
+  #roleCardLayer{position:absolute; inset:0; z-index:210; display:none; align-items:center; justify-content:center;
+    background:rgba(8,6,14,.74); -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); cursor:pointer;}
+  #roleCardLayer.on{display:flex;}
+  #roleCard{position:relative; height:min(74vh, calc(88vw * 1320 / 720)); aspect-ratio:720/1320; will-change:transform, opacity;}
+  #roleCard .rc-inner{position:absolute; inset:0; transform-style:preserve-3d; transition:transform .7s cubic-bezier(.4,.05,.2,1); will-change:transform;}
+  #roleCard.flip .rc-inner{transform:rotateY(180deg);}
+  #roleCard .rc-face{position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; border-radius:16px; overflow:hidden;}
+  #roleCard .rc-face img{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; display:block;}
+  #roleCard .rc-back{transform:rotateY(180deg);}
+  #roleCard .rc-back img{object-fit:cover;}
+  .rc-fallback{width:100%; height:100%; border-radius:16px; position:relative; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 50% 40%, rgba(184,134,11,.22), rgba(0,0,0,0) 62%), linear-gradient(160deg,#261c38,#130d20 58%,#0b0713);
+    border:2px solid rgba(184,134,11,.55); box-shadow:inset 0 0 0 3px rgba(0,0,0,.4), inset 0 0 22px rgba(0,0,0,.55);}
+  .rc-fallback::after{content:""; width:40%; aspect-ratio:1; border:2px solid rgba(200,165,90,.6); border-radius:8px; transform:rotate(45deg); box-shadow:inset 0 0 16px rgba(184,134,11,.3);}
+  .rc-fallback::before{content:""; position:absolute; width:20%; aspect-ratio:1; border-radius:50%; background:radial-gradient(circle, rgba(220,190,120,.55), rgba(184,134,11,0) 70%);}
+  #rcHint{position:absolute; left:0; right:0; bottom:6%; text-align:center; color:#ece0c6; font-weight:600;
+    font-size:clamp(13px,2.1vh,18px); text-shadow:0 1px 5px rgba(0,0,0,.85); pointer-events:none;}
   /* 左上角工具栏：全屏 / 刷新 / 设置 */
   #toolBar{position:fixed; top:12px; left:12px; z-index:60; display:flex; gap:8px; align-items:center;}
   .fsbtn{width:clamp(30px,2.6vw,40px); height:clamp(30px,2.6vw,40px);
@@ -612,6 +635,14 @@
   <div class="stage" id="stage">
     <div class="darklayer"></div>
     <button class="view-toggle" id="viewToggle" onclick="onBookClick()" title="进入说书人魔典">📖</button>
+    <div id="cornerCard" onclick="window._openRoleCard&&_openRoleCard()" title="查看本局角色"><div class="rc-fallback"></div><img id="ccBackImg" src="assets/cardback.png" alt="" onerror="this.style.display='none'"></div>
+    <div id="roleCardLayer" onclick="window._roleLayerClick&&_roleLayerClick(event)">
+      <div id="roleCard"><div class="rc-inner">
+        <div class="rc-face rc-front"><img id="rcFrontImg" alt=""></div>
+        <div class="rc-face rc-back"><div class="rc-fallback"></div><img id="rcBackImg" src="assets/cardback.png" alt="" onerror="this.style.display='none'"></div>
+      </div></div>
+      <div id="rcHint">点击任意处收起</div>
+    </div>
     <div id="toolBar">
       <button class="fsbtn" id="fsBtn" onclick="toggleFull()" title="网页全屏">⛶</button>
       <button class="fsbtn" id="refreshBtn" onclick="window._softRefresh?window._softRefresh():location.reload()" title="刷新（重新同步，不退出全屏）"><span class="ric">⟳</span></button>
@@ -889,6 +920,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.7.0', d:'2026-08-09', items:['玩家登录后右上角不再显示魔典图标；开始新的一局后，会先展示你本局的角色牌，点击任意处后卡牌翻到背面归位到右上角','点击右上角卡背可像掀牌一样翻开查看本局角色（卡背素材待正式替换）','说书人开局时按座位名字自动把角色私密下发到对应玩家账号（仅本人与说书人可见，酒鬼显示其自以为的镇民牌）','新增22张角色卡图（已抠图）到 assets/roles']},
   {v:'v2.6.4', d:'2026-08-09', items:['exec2 非恶魔处决截取时长调整为 5.5 秒']},
   {v:'v2.6.3', d:'2026-08-09', items:['exec2 非恶魔处决截取时长调整为 6.0 秒']},
   {v:'v2.6.2', d:'2026-08-09', items:['exec2 非恶魔处决截取时长调整为 6.5 秒']},
@@ -2284,7 +2316,9 @@ load(); render();
     document.body.classList.toggle('st-mode', m==='st');
     window.BOTC_VIEWER = (m!=='st');
     if(m==='st'){ try{ if(typeof render==='function') render(); }catch(e){} }
-    else { const vt=document.getElementById('viewToggle'); if(vt) vt.innerHTML='<img src="assets/book-closed.png" alt="魔典">';
+    else { const vt=document.getElementById('viewToggle');
+      if(role==='player'){ if(vt) vt.style.display='none'; try{ updateRoleCard(curGid, window.__myRole||''); }catch(e){} }   // 玩家：右上角改为本局角色卡（无卡则空），不再显示魔典图标
+      else { if(vt){ vt.style.display=''; vt.innerHTML='<img src="assets/book-closed.png" alt="魔典">'; } try{ if(window._clearRoleCard) _clearRoleCard(); }catch(e){} }
       const stg=document.getElementById('stage'); if(stg) stg.classList.remove('grim');   // 访客(大厅/玩家)始终用酒馆背景，绝不用魔典暗背景
       const bt=document.getElementById('bannerTitle'); if(bt) bt.textContent=(m==='notes'?'玩家笔记':'暗流涌动');
       renderView(); }
@@ -2386,7 +2420,56 @@ load(); render();
   function _storedId(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
   function enterSt(){ document.getElementById('stBadge').classList.add('on'); document.body.classList.remove('pl'); document.getElementById('stName').textContent=(me&&me.displayName)||_storedId('botc_stid'); db.ref('storytellerUid').transaction(c=>c||me.uid).catch(()=>{}); bindStPlayers(); bindStAccounts(); setMode('st'); }
   function enterPlayer(){ document.getElementById('stBadge').classList.remove('on'); document.body.classList.add('pl'); document.getElementById('pbName').textContent=((me&&me.displayName)||_storedId('botc_pid')||'玩家'); bindNotes(); setMode('notes'); }
-  function bindNotes(){ if(notesRef){ notesRef.off(); notesRef=null; } if(role==='player'&&me&&curGid){ notesRef=db.ref('games/'+curGid+'/players/'+me.uid); notesRef.on('value',s=>{ S=s.val(); ensureS(); if(mode==='notes') renderView(); }); } }
+  function bindNotes(){ if(notesRef){ notesRef.off(); notesRef=null; } if(role==='player'&&me&&curGid){ notesRef=db.ref('games/'+curGid+'/players/'+me.uid); notesRef.on('value',s=>{ S=s.val(); ensureS(); window.__myRole=(S&&S.role)||''; try{ updateRoleCard(curGid, window.__myRole); }catch(e){} if(mode==='notes') renderView(); }); } }
+
+  /* ===== 玩家本局角色卡（右上角卡背 + 入场/翻开动画） ===== */
+  window.__myRole='';
+  let _rcState='';   /* ''|'intro'|'open'|'anim' */
+  function roleImg(rid){ return 'assets/roles/'+rid+'.png'; }
+  function _rcEls(){ return { layer:document.getElementById('roleCardLayer'), card:document.getElementById('roleCard'), cc:document.getElementById('cornerCard'), hint:document.getElementById('rcHint') }; }
+  function updateRoleCard(gid, rid){ if(role!=='player') return; const {cc,layer}=_rcEls();
+    if(!rid){ if(cc&&!_rcState) cc.style.display='none'; if(layer&&!_rcState) layer.classList.remove('on'); return; }
+    const fi=document.getElementById('rcFrontImg'); if(fi && fi.getAttribute('src')!==roleImg(rid)) fi.src=roleImg(rid);
+    let seen=''; try{ seen=localStorage.getItem('botc_roleseen_'+((me&&me.uid)||''))||''; }catch(e){}
+    if(gid && seen!==gid){ try{ localStorage.setItem('botc_roleseen_'+((me&&me.uid)||''), gid); }catch(e){} _playRoleIntro(rid); }
+    else { if(cc&&!_rcState) cc.style.display=''; }
+  }
+  function _playRoleIntro(rid){ const {layer,card,cc,hint}=_rcEls(); if(!layer||!card) return;
+    if(cc) cc.style.display='none';
+    card.classList.remove('flip'); card.style.transition='none'; card.style.transform='scale(.86)'; card.style.opacity='0';
+    if(hint){ hint.textContent='这是你本局的身份 · 点击任意处收起'; hint.style.display=''; }
+    layer.classList.add('on'); void card.offsetWidth;
+    card.style.transition='transform .5s cubic-bezier(.2,.85,.25,1), opacity .5s'; card.style.transform='scale(1)'; card.style.opacity='1';
+    _rcState='intro';
+  }
+  window._openRoleCard=function(){ if(role!=='player'||!window.__myRole||_rcState) return; const {layer,card,cc,hint}=_rcEls(); if(!layer||!card||!cc) return;
+    _rcState='anim';
+    card.classList.add('flip'); card.style.transition='none'; card.style.transform=''; card.style.opacity='1';
+    if(hint) hint.style.display='none';
+    layer.classList.add('on'); void card.offsetWidth;
+    const cr=card.getBoundingClientRect(), sr=cc.getBoundingClientRect();
+    const dx=(sr.left+sr.width/2)-(cr.left+cr.width/2), dy=(sr.top+sr.height/2)-(cr.top+cr.height/2), sc=sr.width/cr.width;
+    cc.style.display='none';
+    card.style.transform='translate('+dx+'px,'+dy+'px) scale('+sc+')'; void card.offsetWidth;
+    card.style.transition='transform .7s cubic-bezier(.4,.05,.2,1)'; card.classList.remove('flip'); card.style.transform='';
+    const done=(e)=>{ if(e&&e.target!==card) return; card.removeEventListener('transitionend',done); if(hint){ hint.textContent='点击任意处收起'; hint.style.display=''; } _rcState='open'; };
+    card.addEventListener('transitionend',done); setTimeout(()=>{ if(_rcState==='anim') done(); }, 900);
+  };
+  window._roleLayerClick=function(e){ if(_rcState==='anim') return; _returnToCorner(); };
+  function _returnToCorner(){ const {layer,card,cc,hint}=_rcEls(); if(!layer||!card||!cc) return;
+    _rcState='anim'; if(hint) hint.style.display='none';
+    cc.style.visibility='hidden'; cc.style.display='';
+    const cr=card.getBoundingClientRect(), sr=cc.getBoundingClientRect();
+    const dx=(sr.left+sr.width/2)-(cr.left+cr.width/2), dy=(sr.top+sr.height/2)-(cr.top+cr.height/2), sc=sr.width/cr.width;
+    card.style.opacity='1'; card.style.transition='transform .65s cubic-bezier(.5,.05,.2,1)'; card.classList.add('flip');
+    card.style.transform='translate('+dx+'px,'+dy+'px) scale('+sc+')';
+    const done=(e)=>{ if(e&&e.target!==card) return; card.removeEventListener('transitionend',done); layer.classList.remove('on');
+      card.style.transition='none'; card.style.transform=''; card.classList.remove('flip'); card.style.opacity='';
+      cc.style.visibility=''; cc.style.display=''; _rcState=''; };
+    card.addEventListener('transitionend',done); setTimeout(()=>{ if(_rcState==='anim') done(); }, 850);
+  }
+  window._clearRoleCard=function(){ const {layer,card,cc}=_rcEls(); if(layer) layer.classList.remove('on'); if(cc) cc.style.display='none';
+    if(card){ card.style.transition='none'; card.style.transform=''; card.classList.remove('flip'); card.style.opacity=''; } _rcState=''; window.__myRole=''; };
 
   /* ---------- 软刷新：重新同步 + 重绘，不重载页面（保留全屏） ---------- */
   window._softRefresh=function(){
@@ -2672,7 +2755,7 @@ load(); render();
   }
   function hideSeatNote(){ const b=document.getElementById('hoverBox'); if(b) b.classList.remove('on'); }
   function ensureS(){ const n=(pub&&pub.count)||0; if(!S) S={seats:[],v:1}; if(!S.seats) S.seats=[]; for(let i=0;i<n;i++){ if(!S.seats[i]) S.seats[i]={role:'',status:[],note:''}; if(!S.seats[i].status) S.seats[i].status=[]; } }
-  function saveNotes(){ if(notesRef&&S) notesRef.set(S).catch(e=>toast('保存失败：'+(e.code||''))); }
+  function saveNotes(){ if(notesRef&&S) notesRef.update(S).catch(e=>toast('保存失败：'+(e.code||''))); }   // 用 update：不覆盖说书人写入的 role 字段
 
   /* ---------- 说书人：从本地状态构建公开数据 ---------- */
   function buildPublic(){ const seats=[];
@@ -2700,7 +2783,13 @@ load(); render();
     const gid='t'+Date.now();
     const seats=[]; for(let i=0;i<N;i++){ const t=seatToken(i); seats.push({name:(t&&t.name)?t.name:'', dead:false, cause:''}); }
     const g={ name:window.__botcGameName, count:N, day:night, seats:seats, locked:[...lockedRoles], dist:(customDist||DIST[N]||[0,0,0,0]), noms:[], clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null}, result:null, vote:null };
-    try{ await db.ref('storytellerUid').set(me.uid); await db.ref('games/'+gid+'/public').set(g); await db.ref('currentGame').set(gid); toast('✅ 已开始新的一局');
+    try{ await db.ref('storytellerUid').set(me.uid); await db.ref('games/'+gid+'/public').set(g);
+      /* 私密下发每位已登录玩家本局的角色（仅本人与说书人可读；酒鬼下发其自以为的镇民牌） */
+      try{ const accSnap=await db.ref('accounts').once('value'); const accs=accSnap.val()||{}; const ru={};
+        for(let i=0;i<N;i++){ const t=seatToken(i); const nm=(t&&t.name)?t.name:''; if(!nm) continue; const rid=(meta[i]&&meta[i].role)||''; if(!rid) continue; const acc=accs[rkey(nm)]; if(acc&&acc.uid) ru['games/'+gid+'/players/'+acc.uid+'/role']=rid; }
+        if(Object.keys(ru).length) await db.ref().update(ru);
+      }catch(e){}
+      await db.ref('currentGame').set(gid); toast('✅ 已开始新的一局');
       /* 清理：删掉除当前局外的所有旧牌局（含旧笔记），云端只留当前一局，避免累积 */
       try{ const snap=await db.ref('games').once('value'); const all=snap.val()||{};
         const dels=Object.keys(all).filter(k=>k!==gid).map(k=>db.ref('games/'+k).remove().catch(()=>{}));
