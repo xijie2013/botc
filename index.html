@@ -238,7 +238,8 @@
   #winBanner.good{background:linear-gradient(#3a7d4a,#2c6640); color:#eafff0; border:2px solid #61c281; border-top:none;}
   #winBanner.evil{background:linear-gradient(#8a2f26,#661d18); color:#ffe8e4; border:2px solid #cf4436; border-top:none;}
   #winBanner.on{display:block;}
-  #execVideo{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#000; z-index:200; display:none;}
+  #execVideo{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#000; z-index:200; display:none; opacity:0; transition:opacity .55s ease;}
+  #execVideo.show{opacity:1;}
   #winIcon{position:absolute; transform:translate(-50%,-50%); z-index:55; display:none; pointer-events:none;
     filter:drop-shadow(0 6px 22px rgba(0,0,0,.6));}
   #winIcon img{width:100%; display:block;}
@@ -875,7 +876,8 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
-  {v:'v1.9.7', d:'2026-08-09', items:['新增处决动画：三段视频随机播放，全端同步（说书人/大厅/玩家笔记）','非恶魔或红唇女郎接任时只播前半段（到第6秒）；处决场上最后一个恶魔（好人胜利）才播完整变身视频，随后接胜利动画','视频带声音播放，若浏览器拦截自动有声播放则退回静音']},
+  {v:'v1.9.8', d:'2026-08-09', items:['处决动画加入淡入淡出，衔接更顺','非恶魔/红唇接任的截断点由6秒改为7秒']},
+  {v:'v1.9.7', d:'2026-08-09', items:['新增处决动画：三段视频随机播放，全端同步（说书人/大厅/玩家笔记）','非恶魔或红唇女郎接任时只播前半段（到第7秒）；处决场上最后一个恶魔（好人胜利）才播完整变身视频，随后接胜利动画','视频带声音播放，若浏览器拦截自动有声播放则退回静音']},
   {v:'v1.9.6', d:'2026-08-09', items:['魔典不再在座位中央显示结算图标，改为在日志页顶部显示结算横幅（与玩家笔记一致）']},
   {v:'v1.9.5', d:'2026-08-09', items:['投票浮条改为单层按钮（去掉外框，只剩一个方框）','处决/猎人射杀：座位出局图标实时同步到大厅与玩家笔记','随机发牌/重置角色时一并回到第一夜','墨水瓶进入日志页时隐藏上方三标签与底部夜数/按钮']},
   {v:'v1.9.4', d:'2026-08-09', items:['投票浮条精简为单个按钮：举手↔放下（举手后按钮加深，不变绿）；鬼票在按钮后标“（鬼票）”','说书人魔典默认只保留 角色设置/夜晚/白天 三个标签','点击墨水瓶进入说书人日志页（再点返回上一标签），不再弹出玩家登录框']},
@@ -1385,20 +1387,29 @@ window.applyResult=function(res){
 /* ---------- 处决动画（三选一随机；非恶魔只播前半段，恶魔播完整→随后胜利动画） ---------- */
 const EXEC_VIDEOS=['assets/exec1.mp4','assets/exec2.mp4','assets/exec3.mp4'];
 /* 各视频「变身（变成恶魔）」开始的秒数：非恶魔被处决时播到此处即停。三个视频可不同，按需修改。 */
-const EXEC_CUT=[6, 6, 6];
+const EXEC_CUT=[7, 7, 7];
 var EXEC={_seenTs:0};
 window.__execPlaying=false; window.__pendingResult=null;
-function endExec(){ const v=document.getElementById('execVideo'); if(v){ try{v.pause();}catch(e){} v.onended=null; v.ontimeupdate=null; v.style.display='none'; try{ v.removeAttribute('src'); v.load(); }catch(e){} }
+function _finalizeExec(){ const v=document.getElementById('execVideo'); if(v){ v.classList.remove('show'); v.style.display='none'; v._ending=false; try{ v.removeAttribute('src'); v.load(); }catch(e){} }
   window.__execPlaying=false;
-  if(window.__pendingResult){ const pr=window.__pendingResult; window.__pendingResult=null; showResult(pr.w, pr.r); }   // 恶魔被处决：视频放完再放胜利
+  if(window.__pendingResult){ const pr=window.__pendingResult; window.__pendingResult=null; showResult(pr.w, pr.r); }   // 恶魔被处决：视频淡出后再放胜利
+}
+function endExec(){ const v=document.getElementById('execVideo'); if(!v){ window.__execPlaying=false; if(window.__pendingResult){ const pr=window.__pendingResult; window.__pendingResult=null; showResult(pr.w,pr.r); } return; }
+  if(v._ending) return; v._ending=true;
+  try{ v.pause(); }catch(e){}   // 定格在截断处，避免露出后半段
+  v.onended=null; v.ontimeupdate=null;
+  v.classList.remove('show');   // 淡出
+  clearTimeout(v._ft); v._ft=setTimeout(_finalizeExec, 600);
 }
 window.__endExec=endExec;
 function playExec(idx, full){ const v=document.getElementById('execVideo'); if(!v){ return; }
   idx=(idx|0); if(idx<0||idx>=EXEC_VIDEOS.length) idx=0;
-  const cut = full ? Infinity : (EXEC_CUT[idx]||5);
+  const cut = full ? Infinity : (EXEC_CUT[idx]||7);
+  clearTimeout(v._ft); v._ending=false;
   window.__execPlaying=true;
   try{ v.src=EXEC_VIDEOS[idx]; }catch(e){}
   v.style.display='block'; v.currentTime=0; v.muted=false;
+  void v.offsetWidth; v.classList.add('show');   // 触发淡入
   v.ontimeupdate=function(){ if(cut!==Infinity && v.currentTime>=cut) endExec(); };
   v.onended=function(){ endExec(); };
   const p=v.play(); if(p&&p.catch) p.catch(()=>{ v.muted=true; const p2=v.play(); if(p2&&p2.catch) p2.catch(()=>endExec()); });   // 有声被拦→退回静音播放
