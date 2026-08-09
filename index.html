@@ -923,8 +923,9 @@ const NIGHT={
 function blankMeta(){return {role:null,poison:false,drunk:false,dead:false,note:"",info:"",hist:{},isDrunk:false};}
 function ensureMeta(){ while(meta.length<N) meta.push(blankMeta()); meta.length=N; }
 
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,impKills,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,sickAns,redHerring,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist,ts:Date.now()})); }catch(e){}
-  try{ if(window._stCloudPush) window._stCloudPush(); }catch(e){} }   // 说书人存档云同步（防抖上传）
+function save(){ if(window.__stApplyingRemote) return;   // 正在应用远端同步时不重复写/上传，避免回声循环
+  try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,impKills,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,sickAns,redHerring,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist,ts:Date.now()})); }catch(e){}
+  try{ if(window._stCloudPush) window._stCloudPush(); }catch(e){} }   // 说书人存档实时云同步（防抖上传）
 function load(){
   try{ const d=JSON.parse(localStorage.getItem(KEY)||"{}");
     if(Array.isArray(d.guests)) guests=d.guests;
@@ -992,6 +993,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.17.0', d:'2026-08-10', items:['说书人整局存档改为「实时双向同步」：同一账号在多台设备上会实时保持一致，任一台的改动会立刻同步到另一台（谁最后操作以谁为准），不再各看各的、也不再互相覆盖抢控制；本机当前所在的标签/视图不会被强制跳转','（提示：需要所有设备都刷新到最新版本才能生效）']},
   {v:'v2.16.0', d:'2026-08-10', items:['同一时间只允许一个说书人在线：已有说书人登录时，其他人尝试登录会看到「说书人XX已登录」并被登出，需等在线说书人退出后才能登录（关闭页面/断线会自动释放）','说书人日志页标题从「说书人魔典」改为「说书人日志」；每次打开魔典都默认进入「说书人魔典」页，不再停留在日志页']},
   {v:'v2.15.0', d:'2026-08-10', items:['同一 ID 的玩家账号与说书人账号共用一个密码：登录/创建任一角色时，后台自动把另一角色账号也用同一密码建好；重置密码时两个账号同步更新','账号创建限制：只有在客人名单里的 ID 才能创建新账号（玩家与说书人都适用）；已有账号不受影响，仍可正常登录']},
   {v:'v2.14.0', d:'2026-08-10', items:['说书人整局存档改为跨设备云同步：每次操作自动上传到云端（按账号），任意设备登录说书人都会自动加载最新的一局（以最近编辑时间为准，覆盖旧的本地存档）；不再只存在创建它的那台设备']},
@@ -2549,6 +2551,7 @@ load(); render();
   AUTH_READY.then(()=>auth.onAuthStateChanged(user=>{ me=user;
     if(!user){
       const willAuto = !_autoTried && _remembered() && !!(_storedId('botc_pid')||_storedId('botc_stid'));
+      try{ if(window._stSyncStop) _stSyncStop(); }catch(e){}   // 登出：停止说书人实时同步监听
       _stateTransition(()=>{ role='anon'; document.getElementById('stBadge').classList.remove('on'); document.body.classList.remove('pl'); if(notesRef){notesRef.off();notesRef=null;} S=null; setMode('hall'); }, willAuto);
       if(willAuto) setTimeout(()=>{ if(!me) _fadeReveal(); }, 4000);   // 自动登录失败兜底：4s 后仍未登录则显示大厅
       if(window.__stBlockedMsg){ const m=window.__stBlockedMsg; window.__stBlockedMsg=''; setTimeout(()=>{ try{ if(typeof toast==='function') toast(m); }catch(e){} const se=document.getElementById('stErr'); if(se) se.textContent=m; }, 600); }   // 说书人已被占用：提示
@@ -2566,24 +2569,35 @@ load(); render();
         try{ db.ref('storytellerUid').onDisconnect().remove(); }catch(e){}   // 断线/关闭页面自动释放，避免锁死
         _enterStUI(); })
       .catch(()=>{ _enterStUI(); }); }   // 出错兜底：仍进入，避免误锁
-  /* ===== 说书人整局存档：跨设备云同步（本地 localStorage ↔ stState/{uid}，以 ts 取新） ===== */
-  let _stPushT=null;
+  /* ===== 说书人整局存档：跨设备「实时双向同步」（本地 localStorage ↔ stState/{uid}，以 ts 取新，带回声保护） ===== */
+  let _stPushT=null, _stSyncTs=0, _stSyncRef=null;
   window._stCloudPush=function(){ if(role!=='st'||!me||!me.uid) return;
     clearTimeout(_stPushT); _stPushT=setTimeout(()=>{ try{ const str=localStorage.getItem(KEY)||''; if(!str) return;
       let ts=0; try{ ts=JSON.parse(str).ts||0; }catch(e){}
+      _stSyncTs=ts;   // 记录我们已同步到这个 ts，忽略自己的回声
       db.ref('stState/'+me.uid).set({data:str, ts:ts}).catch(()=>{}); }catch(e){} }, 1200); };
+  function _stApplyRemote(cdata, cts){   // 应用远端同步过来的整局（不触发保存/上传，避免回声循环；保留本机当前视图/标签，不强制跳转）
+    window.__stApplyingRemote=true;
+    let _v=null,_g=null; try{ _v=(typeof view!=='undefined')?view:null; _g=(typeof gtab!=='undefined')?gtab:null; }catch(e){}
+    try{ localStorage.setItem(KEY, cdata);
+      if(typeof load==='function') load();
+      try{ if(_v!=null) view=_v; if(_g!=null && _g!=='log') gtab=_g; }catch(e){}
+      if(typeof render==='function') render();
+    }catch(e){}
+    window.__stApplyingRemote=false; _stSyncTs=cts; }
+  window._stSyncStart=function(){ if(!me||!me.uid) return; try{ if(_stSyncRef) _stSyncRef.off(); }catch(e){} _stSyncRef=db.ref('stState/'+me.uid);
+    _stSyncRef.on('value', snap=>{ try{ const c=snap.val(); if(!c||!c.data) return; const cts=c.ts||0;
+      if(cts<=_stSyncTs) return;                                   // 自己的回声或更旧 → 忽略
+      if(localStorage.getItem(KEY)===c.data){ _stSyncTs=cts; return; }
+      _stApplyRemote(c.data, cts); }catch(e){} }); };
+  window._stSyncStop=function(){ try{ if(_stSyncRef){ _stSyncRef.off(); _stSyncRef=null; } }catch(e){} };
   window._stCloudLoad=function(){ if(role!=='st'||!me||!me.uid) return;
     db.ref('stState/'+me.uid).once('value').then(snap=>{ const c=snap.val();
       let localTs=0; try{ localTs=JSON.parse(localStorage.getItem(KEY)||'{}').ts||0; }catch(e){}
-      if(c && c.data && (c.ts||0) > localTs){                       // 云端更新：覆盖本地并重载
-        localStorage.setItem(KEY, c.data);
-        try{ if(typeof load==='function') load(); }catch(e){}
-        try{ if(typeof render==='function') render(); }catch(e){}
-        try{ if(window._softRefresh) _softRefresh(); }catch(e){}
-      } else if(!c || !c.data || localTs>(c.ts||0)){                // 本地更新或云端无：上传本地
-        try{ if(window._stCloudPush) _stCloudPush(); }catch(e){}
-      }
-    }).catch(()=>{}); };
+      if(c && c.data && (c.ts||0) > localTs){ _stApplyRemote(c.data, c.ts||0); }   // 云端更新：应用
+      else { _stSyncTs=localTs; if(!c || !c.data || localTs>(c.ts||0)){ if(window._stCloudPush) _stCloudPush(); } }   // 本地更新或云端无：上传
+      if(window._stSyncStart) _stSyncStart();   // 开启实时监听
+    }).catch(()=>{ if(window._stSyncStart) _stSyncStart(); }); };
   function enterPlayer(){ document.getElementById('stBadge').classList.remove('on'); document.body.classList.add('pl'); document.getElementById('pbName').textContent=((me&&me.displayName)||_storedId('botc_pid')||'玩家'); _nbSeatPage=false; const _np=document.getElementById('notesPanel'); if(_np) _np.classList.remove('seatpage'); bindNotes(); setMode('notes'); }
   function bindNotes(){ if(notesRef){ notesRef.off(); notesRef=null; } if(role==='player'&&me&&curGid){ notesRef=db.ref('games/'+curGid+'/players/'+me.uid); notesRef.on('value',s=>{ S=s.val(); ensureS(); window.__myRole=(S&&S.role)||''; try{ updateRoleCard(curGid, window.__myRole); }catch(e){} if(mode==='notes') renderView(); }); } }
 
