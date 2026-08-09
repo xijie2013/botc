@@ -363,8 +363,8 @@
   .seat .handfill{position:absolute; inset:0; border-radius:50%; z-index:1; overflow:hidden; pointer-events:none;}
   .seat .handfill img{width:100%; height:100%; object-fit:cover; display:block;}
   .seat.raised{opacity:1!important; filter:none!important; border-color:#fff3cf; box-shadow:0 0 0 3px rgba(233,196,106,.65), 0 3px 8px rgba(0,0,0,.5);}
-  /* 举手图标只作背景：编号/姓名/角色仍显示在其之上 */
-  .seat.raised .num, .seat.raised .nm, .seat.raised .role, .seat.raised .vrole, .seat.raised .deathcause{position:relative; z-index:2;}
+  /* 举手图标只作背景：姓名/角色抬到其上（编号本就是绝对定位徽章+z-index:2，不要改成relative以免移位） */
+  .seat.raised .nm, .seat.raised .role, .seat.raised .vrole, .seat.raised .deathcause{position:relative; z-index:2;}
   .seat .role{line-height:1.05; font-weight:800; margin-top:1px; text-shadow:0 1px 2px rgba(0,0,0,.6); white-space:nowrap;}
   .seat .st{position:absolute; bottom:-7%; right:-7%; display:flex; gap:2px; z-index:2;}
   .seat .st span{background:#1a1220; border:1px solid rgba(233,196,106,.6); border-radius:7px; font-size:10px; padding:0 3px; color:#e9c46a;}
@@ -889,6 +889,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.6.1', d:'2026-08-09', items:['修复：举手时座位左上角编号被挪位（编号徽章不再被误改为相对定位）']},
   {v:'v2.6.0', d:'2026-08-09', items:['举手图标改用手绘手掌徽章：活人举手用金手、出局鬼票用幽绿魂体手，铺满座位背景（座号/姓名/角色仍在其上）']},
   {v:'v2.5.0', d:'2026-08-09', items:['举手图标改为纯背景层：不再遮挡座号/姓名/角色','设置里新增“重置我的密码”（需当前已登录该账号）','设置“字号”改为“平台”（移动端/PC端，暂时一致，后续单独优化移动端）','开局后预取处决/射杀视频，减少首次播放卡顿']},
   {v:'v2.4.0', d:'2026-08-09', items:['登录改为按标签页独立（一个页面登录不再影响其它页面）；勾选记住后各页面用本地凭据各自自动登录','密码可用任意长度（含留空）；不足6位自动补齐以满足服务端要求（老账号不受影响）','阵营合计满员改为深紫色（同“角色设置”）、加粗、字号与“镇民”一致','玩家笔记标签字色恒为深金，选中仅加深底色（不再金底白字）']},
