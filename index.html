@@ -876,6 +876,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.0.1', d:'2026-08-09', items:['处决动画：定格最后一帧后在3秒内逐渐变黑（非恶魔与恶魔均如此），恶魔全黑后再放胜利']},
   {v:'v2.0.0', d:'2026-08-09', items:['处决动画：非恶魔与恶魔均定格在最后一帧额外停留3秒再淡出']},
   {v:'v1.9.9', d:'2026-08-09', items:['非恶魔处决：定格在最后一帧额外停留2秒再淡出','exec1 截断点改为6.2秒（exec2/exec3 仍为7秒）']},
   {v:'v1.9.8', d:'2026-08-09', items:['处决动画加入淡入淡出，衔接更顺','非恶魔/红唇接任的截断点由6秒改为7秒']},
@@ -1390,31 +1391,33 @@ window.applyResult=function(res){
 const EXEC_VIDEOS=['assets/exec1.mp4','assets/exec2.mp4','assets/exec3.mp4'];
 /* 各视频「变身（变成恶魔）」开始的秒数：非恶魔被处决时播到此处即停。三个视频可不同，按需修改。 */
 const EXEC_CUT=[6.2, 7, 7];
+const EXEC_HOLD_MS=3000;   // 截断/结尾后：定格最后一帧并在这段时间内逐渐变黑
 var EXEC={_seenTs:0};
 window.__execPlaying=false; window.__pendingResult=null;
-function _finalizeExec(){ const v=document.getElementById('execVideo'); if(v){ v.classList.remove('show'); v.style.display='none'; v._ending=false; clearTimeout(v._hold); try{ v.removeAttribute('src'); v.load(); }catch(e){} }
+function _finalizeExec(){ const v=document.getElementById('execVideo'); if(v){ v.classList.remove('show'); v.style.display='none'; v.style.filter=''; v.style.transition=''; v._ending=false; clearTimeout(v._hold); try{ v.removeAttribute('src'); v.load(); }catch(e){} }
   window.__execPlaying=false;
-  if(window.__pendingResult){ const pr=window.__pendingResult; window.__pendingResult=null; showResult(pr.w, pr.r); }   // 恶魔被处决：视频淡出后再放胜利
+  if(window.__pendingResult){ const pr=window.__pendingResult; window.__pendingResult=null; showResult(pr.w, pr.r); }   // 恶魔被处决：画面全黑后再放胜利
 }
 function endExec(hold){ const v=document.getElementById('execVideo'); if(!v){ window.__execPlaying=false; if(window.__pendingResult){ const pr=window.__pendingResult; window.__pendingResult=null; showResult(pr.w,pr.r); } return; }
   if(v._ending) return; v._ending=true;
   try{ v.pause(); }catch(e){}   // 定格在截断处/最后一帧，避免露出后半段
   v.onended=null; v.ontimeupdate=null;
-  const fade=function(){ v.classList.remove('show'); clearTimeout(v._ft); v._ft=setTimeout(_finalizeExec, 600); };
-  if(hold){ clearTimeout(v._hold); v._hold=setTimeout(fade, 3000); }   // 定格最后一帧额外 3 秒再淡出
-  else fade();
+  if(hold){ void v.offsetWidth; v.style.transition='filter '+EXEC_HOLD_MS+'ms linear'; v.style.filter='brightness(0)';   // 定格帧在 3 秒内逐渐变黑
+    clearTimeout(v._hold); v._hold=setTimeout(_finalizeExec, EXEC_HOLD_MS); }
+  else _finalizeExec();
 }
 window.__endExec=endExec;
 function playExec(idx, full){ const v=document.getElementById('execVideo'); if(!v){ return; }
   idx=(idx|0); if(idx<0||idx>=EXEC_VIDEOS.length) idx=0;
   const cut = full ? Infinity : (EXEC_CUT[idx]||7);
-  clearTimeout(v._ft); clearTimeout(v._hold); v._ending=false;
+  clearTimeout(v._hold); v._ending=false;
   window.__execPlaying=true;
   try{ v.src=EXEC_VIDEOS[idx]; }catch(e){}
+  v.style.filter=''; v.style.transition='';   // 清除上一次的“变黑”，恢复初始
   v.style.display='block'; v.currentTime=0; v.muted=false;
-  void v.offsetWidth; v.classList.add('show');   // 触发淡入
-  v.ontimeupdate=function(){ if(cut!==Infinity && v.currentTime>=cut) endExec(true); };   // 非恶魔：截断→定格3秒→淡出
-  v.onended=function(){ endExec(true); };                                                 // 恶魔：播完→定格3秒→淡出→接胜利
+  void v.offsetWidth; v.classList.add('show');   // 触发淡入（透明度）
+  v.ontimeupdate=function(){ if(cut!==Infinity && v.currentTime>=cut) endExec(true); };   // 非恶魔：截断→定格并逐渐变黑
+  v.onended=function(){ endExec(true); };                                                 // 恶魔：播完→定格并逐渐变黑→接胜利
   const p=v.play(); if(p&&p.catch) p.catch(()=>{ v.muted=true; const p2=v.play(); if(p2&&p2.catch) p2.catch(()=>endExec(false)); });   // 有声被拦→退回静音播放
 }
 window.playExec=playExec;
