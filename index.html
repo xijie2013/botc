@@ -531,7 +531,9 @@
   #voteBar button{flex:1; max-width:150px; padding:9px 0; border-radius:12px; font-size:15px; font-weight:800; cursor:pointer;
     border:1.5px solid rgba(233,196,106,.4); background:rgba(255,252,244,.14); color:#f3e6c4;}
   #voteBar .vb-yes.act{background:#2e9d4f; border-color:#2e9d4f; color:#fff; box-shadow:0 0 10px rgba(46,190,90,.7);}
-  #voteBar .vb-no.act{background:#6b4b8a; border-color:#6b4b8a; color:#fff;}
+  #voteBar button[disabled]{opacity:.45; cursor:not-allowed; filter:grayscale(1);}
+  #voteBar .vb-hint{font-size:12px; margin-bottom:7px; color:#e9c46a;}
+  #voteBar .vb-hint .vb-ghost.used{color:#f0a89e;}
   /* 手机竖屏引导：竖着拿时提示转横 */
   #rotateGate{position:fixed; inset:0; z-index:99999; display:none; flex-direction:column; align-items:center; justify-content:center;
     background:radial-gradient(circle at 50% 40%,#3a2a1e,#160e1c 82%); color:#f3e6c4; text-align:center; padding:24px;}
@@ -873,6 +875,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v1.9.0', d:'2026-08-09', items:['提名举手改为实时公开（大厅/笔记/魔典同步显示✋，取消X）','指针在投票期间一直锁定提名者/被提名者，说书人“停止计票”后才恢复','鬼票提示，鬼票用完则举手置灰','修复：开新局仍残留上局提名与座位举手图标']},
   {v:'v1.8.0', d:'2026-08-08', items:['只有在客人名册里的 ID 才能登录/注册','过往客人名册标出已注册账号，删除=停用其登录并清空笔记','（需在 Firebase 部署新版安全规则后生效）']},
   {v:'v1.7.0', d:'2026-08-08', items:['开新局时自动清理旧牌局（云端只保留当前一局，旧笔记一并清除，避免长期累积）']},
   {v:'v1.6.9', d:'2026-08-08', items:['设置里只显示最近一次更新','修复说书人角标不显示 ID','去掉说书人角标前的骰子图标']},
@@ -1369,7 +1372,7 @@ window.applyResult=function(res){
   if(res.ts!==RES._seenTs){ RES._seenTs=res.ts; showResult(res.w, res.r); }
 };
 /* ---------- 中央时钟 ---------- */
-var CLK={dayStart:null, nom:null, offset:0, _tick:null, _loadTs:Date.now(), _realBusy:false, _nomSeenTs:0, _outTimer:null, _busyTimer:null};
+var CLK={dayStart:null, nom:null, offset:0, _tick:null, _loadTs:Date.now(), _realBusy:false, _nomSeenTs:0, _outTimer:null, _busyTimer:null, _nomLock:false};
 var _clkEls=null;
 var CLK_PIVOT={hour:{px:0.4938,py:0.8345,ar:0.14038}, minute:{px:0.4969,py:0.7931,ar:0.12173}};
 var CLK_HOLD=8000, CLK_DAY_MS=20*60*1000;
@@ -1418,19 +1421,19 @@ function clockUpdate(snap){ if(!_clkEls) return; const a=dayAngles(clockServerNo
 }
 function scheduleRouletteOut(nom){ const delay=Math.max(0,(nom.ts+CLK_HOLD)-clockServerNow());
   clearTimeout(CLK._outTimer); CLK._outTimer=setTimeout(endRoulette, delay); }
-function startRoulette(nom){ if(!_clkEls) return; const N2=clockSeatCount()||1; CLK._realBusy=true;
+function startRoulette(nom){ if(!_clkEls) return; const N2=clockSeatCount()||1; CLK._realBusy=true; CLK._nomLock=true;
+  clearTimeout(CLK._outTimer);   /* 锁定指向提名者/被提名者，直到说书人停止计票 */
   _clkEls.hHour.classList.add('blue'); _clkEls.hHour.classList.remove('red');
   _clkEls.hMin.classList.add('red'); _clkEls.hMin.classList.remove('blue');
   clkSpin(_clkEls.hHour, nom.nr*360/N2, CLK_TURN_H, CLK_SPIN_H);
-  clkSpin(_clkEls.hMin, nom.ne*360/N2, CLK_TURN_M, CLK_SPIN_M);
-  scheduleRouletteOut(nom); }
-function snapNomination(nom){ if(!_clkEls) return; const N2=clockSeatCount()||1; CLK._realBusy=true;
+  clkSpin(_clkEls.hMin, nom.ne*360/N2, CLK_TURN_M, CLK_SPIN_M); }
+function snapNomination(nom){ if(!_clkEls) return; const N2=clockSeatCount()||1; CLK._realBusy=true; CLK._nomLock=true;
+  clearTimeout(CLK._outTimer);
   _clkEls.hHour.classList.add('blue'); _clkEls.hHour.classList.remove('red');
   _clkEls.hMin.classList.add('red'); _clkEls.hMin.classList.remove('blue');
   clkSetHand(_clkEls.hHour, nom.nr*360/N2, {dur:0});
-  clkSetHand(_clkEls.hMin, nom.ne*360/N2, {dur:0});
-  scheduleRouletteOut(nom); }
-function endRoulette(){ if(!_clkEls){ CLK._realBusy=false; CLK.nom=null; return; }
+  clkSetHand(_clkEls.hMin, nom.ne*360/N2, {dur:0}); }
+function endRoulette(){ CLK._nomLock=false; if(!_clkEls){ CLK._realBusy=false; CLK.nom=null; return; }
   const a=dayAngles(clockServerNow()-clockAnchor());
   _clkEls.hHour.classList.remove('blue','red'); _clkEls.hMin.classList.remove('blue','red');
   clkSpin(_clkEls.hHour, a.hour, CLK_TURN_H, CLK_SPIN_H);
@@ -1449,7 +1452,7 @@ function renderClock(){ const geo=clockGeo(); const layer=document.getElementByI
   clockUpdate(true); ensureClockTick();
 }
 window.renderClock=renderClock;
-function startDawnSpin(){ if(!_clkEls) return; CLK._realBusy=true; CLK._dawnBusy=true;   /* 天亮：真针+影子一起转几圈缓慢对齐到正上方(不变色) */
+function startDawnSpin(){ if(!_clkEls) return; CLK._realBusy=true; CLK._dawnBusy=true; CLK._nomLock=false;   /* 天亮：真针+影子一起转几圈缓慢对齐到正上方(不变色) */
   _clkEls.hHour.classList.remove('blue','red'); _clkEls.hMin.classList.remove('blue','red');
   clkSpin(_clkEls.hHour, 0, CLK_TURN_H, CLK_SPIN_H);
   clkSpin(_clkEls.hMin, 0, CLK_TURN_M, CLK_SPIN_M);
@@ -1463,13 +1466,15 @@ window.clockApplyState=function(c){ c=c||{};
   if(nom && nom.ts!==CLK._nomSeenTs){
     CLK._nomSeenTs=nom.ts; CLK.nom=nom; renderClock();
     const el=clockServerNow()-nom.ts;
-    if(el < CLK_HOLD){ if(el<600) startRoulette(nom); else snapNomination(nom); }
+    if(el<600) startRoulette(nom); else snapNomination(nom);   /* 提名进行中就一直指向（含中途加入者），停止计票后由 _clockVoteState 释放 */
   } else {
     CLK.nom=nom;
     if(dayChanged){ CLK._realBusy=true; CLK._dawnBusy=true; renderClock(); startDawnSpin(); }
     else renderClock();
   }
 };
+/* 投票结束（说书人停止计票→pub.vote 关闭）时，释放指针、恢复走时 */
+window._clockVoteState=function(v){ const open=!!(v&&v.open); if(!open && CLK._nomLock){ endRoulette(); } };
 /* ---------- 白天：提名 / 投票 / 处决 ---------- */
 function dayThreshold(){ return Math.ceil(countAlive()/2); }
 function ghostUsedAnywhere(seat){   // 鬼票只由「死后投出的票」消耗（记录在各提名的 ghostVoters 里）
@@ -1779,9 +1784,9 @@ function renderGrim(){
       for(let s=0;s<N;s++){ const voted=nom.voters.includes(s), dead=isDeadSeat(s), raising=active&&hands[s]&&!voted;
         h+='<span class="voter'+(voted?' on':'')+(dead?' ghost':'')+(raising?' raising':'')+'" title="'+nameAt(s)+(dead?'（已出局）':'')+(raising?'（正在举手）':'')+'" onclick="toggleVote('+day+','+idx+','+s+')">'+(s+1)+'</span>'; }
       h+='</div>';
-      if(!nom.revealed){ h+='<div class="votectl">'+(active?'<span class="hcnt">✋ '+handCnt+' 人举手中</span>':'')
-          +'<span class="regbtn pub" onclick="_voteReveal('+day+','+idx+')">📣 公开投票结果</span></div>'; }
-      else { h+='<div class="votectl"><span class="revok">✓ 已公开</span><span class="regbtn" onclick="_voteReopen('+day+','+idx+')">撤回重投</span></div>'; }
+      if(!nom.tallied){ h+='<div class="votectl">'+(active?'<span class="hcnt">✋ '+handCnt+' 人举手中</span>':'')
+          +'<span class="regbtn pub" onclick="_voteTally('+day+','+idx+')">⏹ 停止计票</span></div>'; }
+      else { h+='<div class="votectl"><span class="revok">✓ 已计票 · '+v+' 票</span><span class="regbtn" onclick="_voteReopen('+day+','+idx+')">重新计票</span></div>'; }
       h+='</div>'; });
     const neSet=new Set(noms.map(x=>x.nominee)), nrSet=new Set(noms.map(x=>x.nominator));
     let nrOpt='<option value="">提名人</option>', neOpt='<option value="">被提名</option>';
@@ -2228,6 +2233,7 @@ load(); render();
     pubBound=db.ref('games/'+curGid+'/public'); pubBound.on('value',s=>{ pub=s.val(); ensureS();
       window.__pubHasGame=!!(pub&&pub.count); window.__pubCount=(pub&&pub.count)||0;
       if(window.clockApplyState) window.clockApplyState(pub&&pub.clock);
+      if(window._clockVoteState) window._clockVoteState(pub&&pub.vote);
       if(window.applyResult) window.applyResult(pub&&pub.result);
       window.__pubVote=pub&&pub.vote;
       if(role==='st'&&stPlayersRef){ stPlayersRef.once('value').then(ss=>recomputeHands(ss.val())).catch(()=>{}); }
@@ -2270,19 +2276,24 @@ load(); render();
   function myVoteSeat(){ if(role!=='player'||!me) return -1; return findSeatByName(me.displayName||''); }
   function voteArmed(){ const v=pub&&pub.vote; if(!v) return false;
     const now=Date.now()+((window.CLK&&CLK.offset)||0); return (now-(v.ts||0))>=VOTE_ARM_MS; }
-  /* 玩家：举手/放下（写进自己的笔记节点，随 saveNotes 一起存） */
+  /* 鬼票是否已用（从公开提名记录判断：座位出现在任一提名的 ghost 里即已用） */
+  function ghostUsedPub(seat){ const noms=(pub&&pub.noms)||[]; return noms.some(n=>(n.ghost||[]).indexOf(seat)>=0); }
+  /* 玩家：举手/放下（写进自己的笔记节点；说书人会实时转播给所有人） */
   window._raiseHand=function(on){ const seat=myVoteSeat(); const v=pub&&pub.vote;
-    if(seat<0||!v||!v.open||v.revealed) return; ensureS();
+    if(seat<0||!v||!v.open) return;
+    const dead=!!(pub.seats&&pub.seats[seat]&&pub.seats[seat].dead);
+    if(dead && ghostUsedPub(seat) && on) return;   // 鬼票已用完，不能再举
+    ensureS();
     S.vote={day:v.day,by:v.by,to:v.to,hand:!!on,seat:seat,name:(me.displayName||'')};
-    saveNotes(); updateVoteBar(); };
+    saveNotes(); updateVoteBar(); drawSeats(); };
   function myHandOn(){ const v=pub&&pub.vote; if(!v||!S||!S.vote) return false;
     return S.vote.hand&&S.vote.day===v.day&&S.vote.by===v.by&&S.vote.to===v.to; }
-  /* 玩家端浮条：指针停后出现「举手 / 放下（=X）」 */
+  /* 玩家端浮条：指针停后出现「举手」（实时公开，无需 X） */
   let _voteArmT=null;
   function updateVoteBar(){ const bar=document.getElementById('voteBar'); if(!bar) return;
     clearTimeout(_voteArmT);
     const v=pub&&pub.vote;
-    if(role!=='player'||!v||!v.open||v.revealed){ bar.classList.remove('on'); return; }
+    if(role!=='player'||!v||!v.open){ bar.classList.remove('on'); return; }
     const seat=myVoteSeat();
     if(seat<0){ bar.classList.remove('on'); return; }
     bar.classList.add('on');
@@ -2292,14 +2303,17 @@ load(); render();
       const now=Date.now()+((window.CLK&&CLK.offset)||0);
       _voteArmT=setTimeout(updateVoteBar, Math.max(300,VOTE_ARM_MS-(now-(v.ts||0))+80)); return;
     }
-    const on=myHandOn(), dead=!!(pub.seats&&pub.seats[seat]&&pub.seats[seat].dead);
-    bar.innerHTML='<div class="vb-line">'+line+'　你是 '+(seat+1)+' 号'+(dead?'（已出局·鬼票）':'')+'</div>'
-      +'<div class="vb-btns"><button class="vb-yes'+(on?' act':'')+'" onclick="_raiseHand(true)">✋ 举手</button>'
-      +'<button class="vb-no'+(!on?' act':'')+'" onclick="_raiseHand(false)">✕ 不举手</button></div>'; }
+    const on=myHandOn(), dead=!!(pub.seats&&pub.seats[seat]&&pub.seats[seat].dead), used=dead&&ghostUsedPub(seat);
+    let hint=''; if(dead) hint = used ? '<span class="vb-ghost used">🚫 鬼票已用完</span>' : '<span class="vb-ghost">👻 你已出局，这是鬼票（每局一次）</span>';
+    let btn;
+    if(used) btn='<button class="vb-yes" disabled>✋ 举手</button>';
+    else btn='<button class="vb-yes'+(on?' act':'')+'" onclick="_raiseHand('+(on?'false':'true')+')">✋ '+(on?'已举手（点击放下）':'举手')+'</button>';
+    bar.innerHTML='<div class="vb-line">'+line+'　你是 '+(seat+1)+' 号</div>'+(hint?'<div class="vb-hint">'+hint+'</div>':'')
+      +'<div class="vb-btns">'+btn+'</div>'; }
 
   /* 说书人：开启一轮举手 */
   window._voteOpen=function(day,by,to){ if(role!=='st'||!curGid) return;
-    db.ref('games/'+curGid+'/public/vote').set({day:day,by:by,to:to,open:true,revealed:false,hands:null,ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); };
+    db.ref('games/'+curGid+'/public/vote').set({day:day,by:by,to:to,open:true,hands:null,ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); };
   /* 说书人：实时把提名列表推给所有端（不含死亡，避免夜杀泄露） */
   window._syncNoms=function(){ if(role!=='st'||!curGid) return;
     try{ const p=buildPublic(); db.ref('games/'+curGid+'/public/noms').set(p.noms).catch(()=>{}); }catch(e){} };
@@ -2316,22 +2330,25 @@ load(); render();
       if(seat<0 || !(pub.seats&&pub.seats[seat]&&norm(pub.seats[seat].name)===nm)) seat=findSeatByName(nm);
       if(seat>=0) hands[seat]=true; }); }
     window.__playerHands=hands;
+    /* 说书人转播：把实时举手写进公开数据，让大厅/所有玩家实时看到 */
+    if(role==='st'&&curGid&&v&&v.open){ db.ref('games/'+curGid+'/public/vote/hands').set(hands).catch(()=>{}); }
     if(role==='st'&&mode==='st'&&typeof render==='function'){ try{ render(); }catch(e){} } }
-  /* 说书人：公开投票结果（采纳当前举手 → 写入该提名 → 亮给所有人） */
-  window._voteReveal=function(day,idx){ if(role!=='st'||!curGid) return;
+  /* 说书人：停止计票（把当前举手记入该提名 → 结束本轮，指针恢复） */
+  window._voteTally=function(day,idx){ if(role!=='st'||!curGid) return;
     const nom=(nominations[day]||[])[idx]; if(!nom) return;
     const hands=window.__playerHands||{};
     Object.keys(hands).forEach(k=>{ const s=+k; if(!nom.voters.includes(s)) nom.voters.push(s);
       if(typeof isDeadSeat==='function'&&isDeadSeat(s)){ nom.ghostVoters=nom.ghostVoters||[]; if(!nom.ghostVoters.includes(s)) nom.ghostVoters.push(s); } });
-    nom.revealed=true;
-    const hmap={}; nom.voters.forEach(s=>hmap[s]=true);
-    db.ref('games/'+curGid+'/public/vote').update({open:false,revealed:true,hands:hmap,by:nom.nominator,to:nom.nominee,day:+day}).catch(()=>{});
+    nom.tallied=true;
+    db.ref('games/'+curGid+'/public/vote').set(null).catch(()=>{});   // 关闭本轮：清除实时举手
+    db.ref('games/'+curGid+'/public/clock/nom').set(null).catch(()=>{});   // 释放指针，恢复走时
     if(window._syncNoms) window._syncNoms();
     if(typeof enforceButler==='function') enforceButler();
     if(typeof render==='function') render(); };
   window._voteReopen=function(day,idx){ if(role!=='st'||!curGid) return;
-    const nom=(nominations[day]||[])[idx]; if(nom) nom.revealed=false;
-    db.ref('games/'+curGid+'/public/vote').set({day:+day,by:(nom?nom.nominator:0),to:(nom?nom.nominee:0),open:true,revealed:false,hands:null,ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{});
+    const nom=(nominations[day]||[])[idx]; if(nom) nom.tallied=false;
+    db.ref('games/'+curGid+'/public/vote').set({day:+day,by:(nom?nom.nominator:0),to:(nom?nom.nominee:0),open:true,hands:null,ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{});
+    if(window._clockBroadcastNom&&nom) window._clockBroadcastNom(nom.nominator,nom.nominee);
     if(window._syncNoms) window._syncNoms(); if(typeof render==='function') render(); };
 
   /* ---------- 渲染分发 ---------- */
@@ -2361,11 +2378,11 @@ load(); render();
         const bd=bD*(m2[2]||1), a=m2[0]*Math.PI/180, bx=r+dist*Math.sin(a), by=r-dist*Math.cos(a);
         bhtml+='<div class="shieldbadge" title="'+k+'" style="width:'+bd+'px;height:'+bd+'px;left:'+(bx-bd/2)+'px;top:'+(by-bd/2)+'px;filter:drop-shadow(0 0 2px '+m2[3]+') drop-shadow(0 0 4px '+m2[3]+');"><img src="'+m2[1]+'"></div>'; });
       if(bhtml) s.insertAdjacentHTML('beforeend', bhtml);
-      /* 公开后：座位显示举手/X */
+      /* 投票进行中：座位实时显示举手（所有人可见，无 X） */
       const vv=pub.vote;
-      if(vv&&vv.revealed){ const raised=!!(vv.hands&&vv.hands[i]);
-        if(raised) s.insertAdjacentHTML('beforeend','<div class="votehand up" title="举手">✋</div>');
-        else if(!dead) s.insertAdjacentHTML('beforeend','<div class="votehand no" title="未举手">✕</div>'); }
+      if(vv&&vv.open){ let raised=!!(vv.hands&&vv.hands[i]);
+        if(mode==='notes'&&i===myVoteSeat()&&myHandOn()) raised=true;   // 本人举手即时显示
+        if(raised) s.insertAdjacentHTML('beforeend','<div class="votehand up" title="举手">✋</div>'); }
       if(mode==='notes'){ s.style.cursor='pointer'; const sx=zoneLeft+x, sy=zoneTop+y, sd=seatD;
         s.addEventListener('click',e=>{ e.stopPropagation(); seatTap(i,sx,sy,sd); });
         s.addEventListener('mouseenter',()=>showSeatNote(i));
@@ -2388,13 +2405,11 @@ load(); render();
     let h=''; keys.forEach(d=>{ h+='<div class="nb-sec" style="color:inherit;font-weight:800;margin:6px 0 3px">第 '+d+' 天</div>';
       days[d].forEach(n=>{ const voters=n.voters||[], ghost=n.ghost||[];
         h+='<div class="nb-nom"><div class="nb-nomhead">'+E(pname(n.by))+' <span class="arw">提名 ▸</span> '+E(pname(n.to))+' · <b>'+voters.length+' 票</b>'+(n.exec?' · <span class="nb-exec">处决</span>':'')+'</div>';
-        if(n.revealed){
+        if(n.tallied){
           const raised=voters.map(s=>E(pname(s))+(ghost.indexOf(s)>=0?'<span class="ghostv">鬼票</span>':'')).join('、')||'—';
-          const noHand=[]; for(let i=0;i<seats.length;i++){ if(!seats[i]||seats[i].dead) continue; if(voters.indexOf(i)>=0) continue; noHand.push(E(pname(i))); }
           h+='<div class="nb-vsub"><span class="vlab up">✋ 举手</span> '+raised+'</div>';
-          h+='<div class="nb-vsub dim"><span class="vlab no">✕ 未举手</span> '+(noHand.join('、')||'—')+'</div>';
         } else {
-          h+='<div class="nb-vsub dim">🕯️ 投票进行中 · 待说书人公开</div>';
+          h+='<div class="nb-vsub dim">🕯️ 投票进行中…</div>';
         }
         h+='</div>'; }); });
     return h;
@@ -2489,12 +2504,21 @@ load(); render();
       seats.push({ name:(t&&t.name)?t.name:'', dead:dead, cause:cause });
     }
     const gs=gameOverviewSet(), roleset=[]; ORDER.forEach(tm=>{ ROLES.filter(r=>r.team===tm&&gs.has(r.id)).forEach(r=>roleset.push(r.id)); });
-    const noms=[]; Object.keys(nominations).forEach(dd=>{ (nominations[dd]||[]).forEach(nm=>{ noms.push({day:+dd,by:nm.nominator,to:nm.nominee,voters:(nm.voters||[]).slice(),ghost:(nm.ghostVoters||[]).slice(),revealed:!!nm.revealed,exec:executions[dd]===nm.nominee}); }); });
+    const noms=[]; Object.keys(nominations).forEach(dd=>{ (nominations[dd]||[]).forEach(nm=>{ noms.push({day:+dd,by:nm.nominator,to:nm.nominee,voters:(nm.voters||[]).slice(),ghost:(nm.ghostVoters||[]).slice(),tallied:!!nm.tallied,exec:executions[dd]===nm.nominee}); }); });
     return { name:(window.__botcGameName||'本局'), count:N, day:night, seats:seats, roleset:roleset, dist:(customDist||DIST[N]||[0,0,0,0]), noms:noms };
   }
   window.stNewGame=async function(){ if(role!=='st'){ toast('请先以说书人登录（点📖）'); return; }
     let nm='本局'; try{ nm=await uiPrompt('给这局起个名字（玩家会看到）：','本局',{title:'开始新的一局'}); if(nm===null) return; }catch(e){}
-    window.__botcGameName=nm||'本局'; const gid='t'+Date.now();
+    window.__botcGameName=nm||'本局';
+    /* 重置本局进程（保留座位与角色）：清空提名/处决/夜数/举手，并复活所有人 */
+    try{ night=1; nominations={}; executions={}; virginUsed=false; slayerShot=null;
+      impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={};
+      if(typeof nightChecks==='object') Object.keys(nightChecks).forEach(k=>delete nightChecks[k]);
+      if(Array.isArray(tokens)) tokens.forEach(t=>{ if(t) t.dead=false; });
+      if(Array.isArray(meta)) meta.forEach(m=>{ if(m){ m.dead=false; m.poison=false; m.drunk=false; } });
+      try{ save(); }catch(e){} try{ if(typeof render==='function') render(); }catch(e){}
+    }catch(e){}
+    const gid='t'+Date.now();
     const seats=[]; for(let i=0;i<N;i++){ const t=seatToken(i); seats.push({name:(t&&t.name)?t.name:'', dead:false, cause:''}); }
     const g={ name:window.__botcGameName, count:N, day:night, seats:seats, locked:[...lockedRoles], dist:(customDist||DIST[N]||[0,0,0,0]), noms:[], clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null}, result:null, vote:null };
     try{ await db.ref('storytellerUid').set(me.uid); await db.ref('games/'+gid+'/public').set(g); await db.ref('currentGame').set(gid); toast('✅ 已开始新的一局');
