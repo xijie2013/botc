@@ -604,6 +604,7 @@
       <button class="fsbtn" id="fsBtn" onclick="toggleFull()" title="网页全屏">⛶</button>
       <button class="fsbtn" id="refreshBtn" onclick="window._softRefresh?window._softRefresh():location.reload()" title="刷新（重新同步，不退出全屏）"><span class="ric">⟳</span></button>
       <button class="fsbtn" id="setBtn" onclick="openSettings()" title="设置">⚙</button>
+      <button class="fsbtn" id="muteBtn" onclick="toggleMute()" title="静音/取消静音">🔊</button>
       <div id="stBadge">说书人<span id="stName"></span>已登录 <button onclick="_logout()">退出</button></div>
       <div id="playerBadge">🖋 玩家<span id="pbName"></span>已登录 <button onclick="_logout()">退出</button></div>
     </div>
@@ -876,6 +877,8 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.0.3', d:'2026-08-09', items:['左上角设置右侧新增静音按钮：静音后处决视频等不再出声（设置本地记住）']},
+  {v:'v2.0.2', d:'2026-08-09', items:['恶魔处决：去掉最后一帧定格3秒与变黑，仅保留淡入淡出，随后接胜利；非恶魔仍为定格并逐渐变黑']},
   {v:'v2.0.1', d:'2026-08-09', items:['处决动画：定格最后一帧后在3秒内逐渐变黑（非恶魔与恶魔均如此），恶魔全黑后再放胜利']},
   {v:'v2.0.0', d:'2026-08-09', items:['处决动画：非恶魔与恶魔均定格在最后一帧额外停留3秒再淡出']},
   {v:'v1.9.9', d:'2026-08-09', items:['非恶魔处决：定格在最后一帧额外停留2秒再淡出','exec1 截断点改为6.2秒（exec2/exec3 仍为7秒）']},
@@ -1398,12 +1401,14 @@ function _finalizeExec(){ const v=document.getElementById('execVideo'); if(v){ v
   window.__execPlaying=false;
   if(window.__pendingResult){ const pr=window.__pendingResult; window.__pendingResult=null; showResult(pr.w, pr.r); }   // 恶魔被处决：画面全黑后再放胜利
 }
-function endExec(hold){ const v=document.getElementById('execVideo'); if(!v){ window.__execPlaying=false; if(window.__pendingResult){ const pr=window.__pendingResult; window.__pendingResult=null; showResult(pr.w,pr.r); } return; }
+function endExec(mode){ const v=document.getElementById('execVideo'); if(!v){ window.__execPlaying=false; if(window.__pendingResult){ const pr=window.__pendingResult; window.__pendingResult=null; showResult(pr.w,pr.r); } return; }
   if(v._ending) return; v._ending=true;
   try{ v.pause(); }catch(e){}   // 定格在截断处/最后一帧，避免露出后半段
   v.onended=null; v.ontimeupdate=null;
-  if(hold){ void v.offsetWidth; v.style.transition='filter '+EXEC_HOLD_MS+'ms linear'; v.style.filter='brightness(0)';   // 定格帧在 3 秒内逐渐变黑
+  if(mode==='dark'){ void v.offsetWidth; v.style.transition='filter '+EXEC_HOLD_MS+'ms linear'; v.style.filter='brightness(0)';   // 非恶魔：定格帧在 3 秒内逐渐变黑
     clearTimeout(v._hold); v._hold=setTimeout(_finalizeExec, EXEC_HOLD_MS); }
+  else if(mode==='fade'){ v.classList.remove('show');   // 恶魔：仅淡出，不定格、不变黑
+    clearTimeout(v._hold); v._hold=setTimeout(_finalizeExec, 600); }
   else _finalizeExec();
 }
 window.__endExec=endExec;
@@ -1414,11 +1419,11 @@ function playExec(idx, full){ const v=document.getElementById('execVideo'); if(!
   window.__execPlaying=true;
   try{ v.src=EXEC_VIDEOS[idx]; }catch(e){}
   v.style.filter=''; v.style.transition='';   // 清除上一次的“变黑”，恢复初始
-  v.style.display='block'; v.currentTime=0; v.muted=false;
+  v.style.display='block'; v.currentTime=0; v.muted=!!window.__muted;   // 全局静音时不出声
   void v.offsetWidth; v.classList.add('show');   // 触发淡入（透明度）
-  v.ontimeupdate=function(){ if(cut!==Infinity && v.currentTime>=cut) endExec(true); };   // 非恶魔：截断→定格并逐渐变黑
-  v.onended=function(){ endExec(true); };                                                 // 恶魔：播完→定格并逐渐变黑→接胜利
-  const p=v.play(); if(p&&p.catch) p.catch(()=>{ v.muted=true; const p2=v.play(); if(p2&&p2.catch) p2.catch(()=>endExec(false)); });   // 有声被拦→退回静音播放
+  v.ontimeupdate=function(){ if(cut!==Infinity && v.currentTime>=cut) endExec('dark'); };   // 非恶魔：截断→定格并逐渐变黑
+  v.onended=function(){ endExec('fade'); };                                                 // 恶魔：播完→仅淡出→接胜利
+  const p=v.play(); if(p&&p.catch) p.catch(()=>{ v.muted=true; const p2=v.play(); if(p2&&p2.catch) p2.catch(()=>endExec('now')); });   // 有声被拦→退回静音播放
 }
 window.playExec=playExec;
 /* 所有端订阅公开的处决事件，同步播放同一个视频（刷新时若事件过旧则不重播） */
@@ -1427,6 +1432,15 @@ window._applyExec=function(e){ if(!e||!e.ts) return; if(e.ts===EXEC._seenTs) ret
   if(now - e.ts > 15000) return;   // 陈旧事件（刷新/重连）不重播
   playExec(e.idx||0, !!e.full);
 };
+/* ---------- 全局静音（按钮在左上角设置右侧） ---------- */
+window.__muted=false;
+window.toggleMute=function(){ window.__muted=!window.__muted;
+  try{ localStorage.setItem('botc_muted', window.__muted?'1':''); }catch(e){}
+  const el=document.getElementById('muteBtn'); if(el) el.textContent=window.__muted?'🔇':'🔊';
+  const v=document.getElementById('execVideo'); if(v) v.muted=!!window.__muted;   // 立即应用到正在播放的视频
+};
+(function(){ try{ window.__muted = localStorage.getItem('botc_muted')==='1'; }catch(e){}
+  const el=document.getElementById('muteBtn'); if(el) el.textContent=window.__muted?'🔇':'🔊'; })();
 /* ---------- 中央时钟 ---------- */
 var CLK={dayStart:null, nom:null, offset:0, _tick:null, _loadTs:Date.now(), _realBusy:false, _nomSeenTs:0, _outTimer:null, _busyTimer:null, _nomLock:false};
 var _clkEls=null;
