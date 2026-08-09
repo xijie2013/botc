@@ -654,17 +654,30 @@
   .htbl td.l,.htbl th.l{text-align:left;}
   .htbl .win{color:#2e7d43;} .htbl .lose{color:#b0402e;}
   .hgame{border-bottom:1px solid rgba(122,83,32,.28); padding:6px 2px;}
-  .hgame .hg-h{font-weight:800; color:#6b4a1e; margin-bottom:2px;}
+  .hgame .hg-h{font-weight:800; color:#6b4a1e; margin-bottom:2px; display:flex; align-items:center; gap:8px;}
+  .hgame .hg-t{flex:1; min-width:0;}
+  .hgame .hg-del{flex:none; font-size:calc(.7 * var(--sw) / 100); font-weight:700; color:#9a5b3a; background:rgba(176,64,46,.08); border:1px solid rgba(176,64,46,.4); border-radius:6px; padding:2px 8px; cursor:pointer; white-space:nowrap;}
+  .hgame .hg-del.armed{color:#fff; background:#b0402e; border-color:#b0402e;}
   .hgame .hg-res.good{color:#2e6db0;} .hgame .hg-res.evil{color:#b0402e;}
   .hgame .hg-p{font-size:calc(.78 * var(--sw) / 100); color:#5b4a2e; line-height:1.5;}
   .hgame .rtf{color:#2f6db0;} .hgame .rout{color:#9a6b12;} .hgame .rmin{color:#c06a2e;} .hgame .rdem{color:#b0402e;}
   /* 统计 / 积分榜：阵营配色（标题与整列一致） */
   .htbl .c-tf{color:#2f6db0;} .htbl .c-out{color:#b8860b;} .htbl .c-min{color:#c06a2e;} .htbl .c-dem{color:#b0402e;} .htbl .c-st{color:#7a3f9d;}
   .htbl .c-good{color:#2f6db0;} .htbl .c-evil{color:#b0402e;} .htbl .c-total{color:#1c150e;}
-  .htbl .crown{vertical-align:-2px; margin-right:3px;}
+  .htbl .crown{vertical-align:-2px; margin-left:4px;}
+  /* 预加载动画 intro-loop：每次刷新出现，点击进入并解锁声音 */
+  #introLayer{position:fixed; inset:0; z-index:9999; background:#0a0713; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:opacity .8s ease;}
+  #introLayer.hide{opacity:0; pointer-events:none;}
+  #introLayer video{position:absolute; inset:0; width:100%; height:100%; object-fit:cover;}
+  #introLayer .intro-hint{position:absolute; bottom:8%; left:0; right:0; text-align:center; color:#e9d8b0; font-size:clamp(14px,2.4vw,22px); letter-spacing:.18em; text-shadow:0 2px 14px rgba(0,0,0,.85); animation:introPulse 1.9s ease-in-out infinite; z-index:2; pointer-events:none;}
+  @keyframes introPulse{0%,100%{opacity:.45} 50%{opacity:1}}
 </style>
 </head>
 <body>
+  <div id="introLayer" onclick="this.classList.add('hide'); setTimeout(()=>{this.style.display='none'; var v=document.getElementById('introVid'); if(v){try{v.pause();}catch(e){}}},850);">
+    <video id="introVid" src="assets/intro-loop.mp4" autoplay muted loop playsinline></video>
+    <div class="intro-hint">点击任意位置进入</div>
+  </div>
   <div id="fadeLayer"></div>
   <div class="stage" id="stage">
     <div class="darklayer"></div>
@@ -964,6 +977,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.12.0', d:'2026-08-10', items:['新增预加载动画：每次刷新先播放 intro-loop 开场循环，点击任意位置进入主画面（顺带缓冲加载并解锁声音）','提名tab「举手」去掉手掌表情、改为深紫色「举手：」','概览tab「本局配置」改深紫色；角色技能描述改为黑色','旧局记录·对局列表可删除某一局（说书人，二次确认），删除后不计入统计/积分','积分榜：首栏改称「玩家」；前三名皇冠移到玩家名之后']},
   {v:'v2.11.0', d:'2026-08-10', items:['旧局记录·统计/积分榜阵营配色：镇民蓝、外来者黄、爪牙橙、恶魔红、说书人紫（标题与整列一致）','统计·说书人栏改为「局数（紫）」＋第二行「好人胜率（蓝）/恶魔胜率（红）」','积分榜：好人分蓝、恶魔分红、说书人分紫、总分黑；前三名加皇冠（冠军金冠红钻、亚军银冠蓝钻、季军银冠）']},
   {v:'v2.10.3', d:'2026-08-10', items:['修复：旧局记录会被下一局覆盖——改为每局一条唯一记录（不再按 gid 覆盖，重新发牌/开新局都各记一条）']},
   {v:'v2.10.2', d:'2026-08-10', items:['旧局记录（标签与文字）改为深色金色主题，与大厅一致（原紫色在浅色书页上偏淡）']},
@@ -2627,17 +2641,21 @@ load(); render();
   window._histTab=function(t){ _histTabCur=t; ['list','stats','score'].forEach(x=>{ const el=document.getElementById('ht-'+x); if(el) el.classList.toggle('on',x===t); }); _renderHist(); };
   const _ALIGN=g=>(g==='tf'||g==='out')?'good':'evil';
   const _TEAMLBL={tf:'镇民',out:'外来者',min:'爪牙',dem:'恶魔'};
-  function _histFetch(){ return db.ref('history').once('value').then(s=>{ const v=s.val()||{}; return Object.keys(v).map(k=>v[k]).filter(Boolean).sort((a,b)=>(b.ts||0)-(a.ts||0)); }); }
+  function _histFetch(){ return db.ref('history').once('value').then(s=>{ const v=s.val()||{}; return Object.keys(v).map(k=>{ const g=v[k]; if(g&&typeof g==='object') g.__key=k; return g; }).filter(Boolean).sort((a,b)=>(b.ts||0)-(a.ts||0)); }); }
   function _renderHist(){ const c=document.getElementById('histContent'); if(!c) return; c.innerHTML='<div style="padding:8px;color:#8a6b3a;font-size:12px">读取中…</div>';
     _histFetch().then(games=>{ c.innerHTML = _histTabCur==='stats'?_histStatsHTML(games) : (_histTabCur==='score'?_histScoreHTML(games) : _histListHTML(games)); })
       .catch(e=>{ c.innerHTML='<div style="padding:8px;color:#c98;font-size:12px">读取失败：'+((e&&e.code)||e&&e.message||'')+'</div>'; }); }
   function _fmtDate(ts){ if(!ts) return ''; try{ const d=new Date(ts); const p=n=>(''+n).padStart(2,'0'); return (d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }catch(e){ return ''; } }
   function _histListHTML(games){ if(!games.length) return '<div style="padding:8px;color:#8a6b3a;font-size:12px">还没有对局记录。分出胜负后会自动存档。</div>';
     let h=''; games.forEach(g=>{ const res=g.result==='good'?'好人胜利':'邪恶胜利';
-      h+='<div class="hgame"><div class="hg-h">'+E(g.name||'本局')+' · <span class="hg-res '+g.result+'">'+res+'</span> <span style="color:#8a6b3a;font-weight:400">'+_fmtDate(g.ts)+' · 说书人 '+E(g.st||'—')+'</span></div>';
+      h+='<div class="hgame"><div class="hg-h"><span class="hg-t">'+E(g.name||'本局')+' · <span class="hg-res '+g.result+'">'+res+'</span> <span style="color:#8a6b3a;font-weight:400">'+_fmtDate(g.ts)+' · 说书人 '+E(g.st||'—')+'</span></span><button class="hg-del" onclick="_histDel(this,\''+(g.__key||'')+'\')">删除</button></div>';
       const ps=(g.seats||[]).filter(s=>s.name).map(s=>{ const cls=s.team?('r'+s.team):''; return '<span class="'+cls+'">'+E(s.name)+(s.role&&RMAP[s.role]?'（'+RMAP[s.role].name+'）':'')+'</span>'; }).join('、');
       h+='<div class="hg-p">'+(ps||'—')+'</div></div>'; });
     return h; }
+  window._histDel=function(btn,key){ if(role!=='st'||!key) return;
+    if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.textContent='确认删除？'; btn.classList.add('armed');
+      clearTimeout(btn._t); btn._t=setTimeout(()=>{ if(!btn) return; btn.dataset.armed=''; btn.textContent='删除'; btn.classList.remove('armed'); },3000); return; }
+    db.ref('history/'+key).remove().then(()=>{ try{ if(window._sfx) _sfx('pen-return'); }catch(e){} _renderHist(); }).catch(()=>{}); };
   function _aggregate(games){ const P={}; const get=n=>P[n]||(P[n]={tf:{n:0,w:0},out:{n:0,w:0},min:{n:0,w:0},dem:{n:0,w:0},stN:0,stG:0,stE:0});
     games.forEach(g=>{ const res=g.result; (g.seats||[]).forEach(s=>{ if(!s.name||!s.team||!_TEAMLBL[s.team]) return; const p=get(s.name); p[s.team].n++; if(_ALIGN(s.team)===res) p[s.team].w++; });
       if(g.st){ const p=get(g.st); p.stN++; if(res==='good')p.stG++; else if(res==='evil')p.stE++; } });
@@ -2659,9 +2677,9 @@ load(); render();
   function _histScoreHTML(games){ if(!games.length) return '<div style="padding:8px;color:#8a6b3a;font-size:12px">还没有对局记录。</div>';
     const P=_aggregate(games); const rows=Object.keys(P).map(nm=>{ const p=P[nm]; const good=p.tf.w+p.out.w, evil=2*(p.min.w+p.dem.w), st=p.stN; return {nm, good, evil, st, total:good+evil+st}; });
     rows.sort((a,b)=>b.total-a.total || b.evil-a.evil);
-    let h='<table class="htbl"><thead><tr><th class="l">玩家ID</th><th class="c-good">好人分</th><th class="c-evil">恶魔分</th><th class="c-st">说书人分</th><th class="c-total">总分</th></tr></thead><tbody>';
+    let h='<table class="htbl"><thead><tr><th class="l">玩家</th><th class="c-good">好人分</th><th class="c-evil">恶魔分</th><th class="c-st">说书人分</th><th class="c-total">总分</th></tr></thead><tbody>';
     rows.forEach((r,i)=>{ const cr=i<3?_crown(i+1):'';
-      h+='<tr><td class="l">'+cr+E(r.nm)+'</td><td class="c-good">'+r.good+'</td><td class="c-evil">'+r.evil+'</td><td class="c-st">'+r.st+'</td><td class="c-total"><b>'+r.total+'</b></td></tr>'; });
+      h+='<tr><td class="l">'+E(r.nm)+cr+'</td><td class="c-good">'+r.good+'</td><td class="c-evil">'+r.evil+'</td><td class="c-st">'+r.st+'</td><td class="c-total"><b>'+r.total+'</b></td></tr>'; });
     h+='</tbody></table><div style="font-size:calc(.72*var(--sw)/100);color:#8a6b3a;margin-top:4px">好人胜+1 · 恶魔胜+2 · 说书人+1</div>';
     return h; }
 
@@ -2875,7 +2893,7 @@ load(); render();
         h+='<div class="nb-nom"><div class="nb-nomhead">'+E(pname(n.by))+' <span class="arw">提名 ▸</span> '+E(pname(n.to))+' · <b>'+voters.length+' 票</b>'+(n.exec?' · <span class="nb-exec">处决</span>':'')+'</div>';
         if(n.tallied){
           const raised=voters.map(s=>E(pname(s))+(ghost.indexOf(s)>=0?'<span class="ghostv">鬼票</span>':'')).join('、')||'—';
-          h+='<div class="nb-vsub"><span class="vlab up">✋ 举手</span> '+raised+'</div>';
+          h+='<div class="nb-vsub"><span class="vlab up" style="color:#6a3f9d">举手：</span> '+raised+'</div>';
         } else {
           h+='<div class="nb-vsub dim">🕯️ 投票进行中…</div>';
         }
@@ -2908,12 +2926,12 @@ load(); render();
     return h;
   }
   function refHTML(){ const locked=new Set(pub.locked||[]); const d=pub.dist||DIST[pub.count]||[0,0,0,0];
-    let h='<div class="nb-role"><b>本局配置</b><br>'+pub.count+'人 · 镇民'+d[0]+' 外来者'+d[1]+' 爪牙'+d[2]+' 恶魔'+d[3]+'</div>';
+    let h='<div class="nb-role" style="color:#6a3f9d"><b>本局配置</b><br>'+pub.count+'人 · 镇民'+d[0]+' 外来者'+d[1]+' 爪牙'+d[2]+' 恶魔'+d[3]+'</div>';
     h+='<div class="nb-sec">剧本角色（灰色为本局未启用）</div>';
     ORDER.forEach(t=>{ const list=ROLES.filter(r=>r.team===t); if(!list.length) return;
       h+='<div style="font-weight:800;color:'+TEAMC[t]+';margin:8px 0 3px">'+TEAMLABEL[t]+'</div>';
       list.forEach(r=>{ const off=locked.has(r.id);
-        h+='<div class="nb-role" style="'+(off?'opacity:.4;':'')+'"><b style="color:'+TEAMC[t]+'">'+r.name+(off?' · 未启用':'')+'</b><div style="color:#6a4e8f;margin-top:2px">'+E(r.ab||'')+'</div></div>'; }); });
+        h+='<div class="nb-role" style="'+(off?'opacity:.4;':'')+'"><b style="color:'+TEAMC[t]+'">'+r.name+(off?' · 未启用':'')+'</b><div style="color:#1c150e;margin-top:2px">'+E(r.ab||'')+'</div></div>'; }); });
     return h;
   }
   window._nbPick=function(type,val){ if(sel&&sel.type===type&&sel.val===val) sel=null; else sel={type,val}; renderNotes(); drawSeats(); };
