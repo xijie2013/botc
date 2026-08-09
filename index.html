@@ -658,6 +658,10 @@
   .hgame .hg-res.good{color:#2e6db0;} .hgame .hg-res.evil{color:#b0402e;}
   .hgame .hg-p{font-size:calc(.78 * var(--sw) / 100); color:#5b4a2e; line-height:1.5;}
   .hgame .rtf{color:#2f6db0;} .hgame .rout{color:#9a6b12;} .hgame .rmin{color:#c06a2e;} .hgame .rdem{color:#b0402e;}
+  /* 统计 / 积分榜：阵营配色（标题与整列一致） */
+  .htbl .c-tf{color:#2f6db0;} .htbl .c-out{color:#b8860b;} .htbl .c-min{color:#c06a2e;} .htbl .c-dem{color:#b0402e;} .htbl .c-st{color:#7a3f9d;}
+  .htbl .c-good{color:#2f6db0;} .htbl .c-evil{color:#b0402e;} .htbl .c-total{color:#1c150e;}
+  .htbl .crown{vertical-align:-2px; margin-right:3px;}
 </style>
 </head>
 <body>
@@ -960,6 +964,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.11.0', d:'2026-08-10', items:['旧局记录·统计/积分榜阵营配色：镇民蓝、外来者黄、爪牙橙、恶魔红、说书人紫（标题与整列一致）','统计·说书人栏改为「局数（紫）」＋第二行「好人胜率（蓝）/恶魔胜率（红）」','积分榜：好人分蓝、恶魔分红、说书人分紫、总分黑；前三名加皇冠（冠军金冠红钻、亚军银冠蓝钻、季军银冠）']},
   {v:'v2.10.3', d:'2026-08-10', items:['修复：旧局记录会被下一局覆盖——改为每局一条唯一记录（不再按 gid 覆盖，重新发牌/开新局都各记一条）']},
   {v:'v2.10.2', d:'2026-08-10', items:['旧局记录（标签与文字）改为深色金色主题，与大厅一致（原紫色在浅色书页上偏淡）']},
   {v:'v2.10.1', d:'2026-08-10', items:['补充音效：合上魔典的合书声；进入日志/旧局记录/座位备注的写字沙沙声、返回主界面的收笔声；打开/合上角色卡牌的音效；未登录点墨水瓶/魔典登录也有对应音效']},
@@ -2640,17 +2645,23 @@ load(); render();
   function _pct(w,n){ return n?Math.round(w*100/n)+'%':'—'; }
   function _histStatsHTML(games){ if(!games.length) return '<div style="padding:8px;color:#8a6b3a;font-size:12px">还没有对局记录。</div>';
     const P=_aggregate(games); const names=Object.keys(P).sort();
-    let h='<table class="htbl"><thead><tr><th class="l">玩家</th><th>镇民</th><th>外来者</th><th>爪牙</th><th>恶魔</th><th>说书人</th></tr></thead><tbody>';
-    const cell=o=>o.n?(o.w+'/'+o.n+'<br>'+_pct(o.w,o.n)):'—';
-    names.forEach(nm=>{ const p=P[nm]; const st=p.stN?(p.stN+'局<br>好'+_pct(p.stG,p.stN)+'/邪'+_pct(p.stE,p.stN)):'—';
-      h+='<tr><td class="l">'+E(nm)+'</td><td>'+cell(p.tf)+'</td><td>'+cell(p.out)+'</td><td>'+cell(p.min)+'</td><td>'+cell(p.dem)+'</td><td>'+st+'</td></tr>'; });
-    h+='</tbody></table><div style="font-size:calc(.72*var(--sw)/100);color:#8a6b3a;margin-top:4px">格式：胜/局 · 胜率</div>';
+    let h='<table class="htbl"><thead><tr><th class="l">玩家</th><th class="c-tf">镇民</th><th class="c-out">外来者</th><th class="c-min">爪牙</th><th class="c-dem">恶魔</th><th class="c-st">说书人</th></tr></thead><tbody>';
+    const cell=(o,cls)=>o.n?('<span class="'+cls+'">'+o.w+'/'+o.n+'<br>'+_pct(o.w,o.n)+'</span>'):'—';
+    names.forEach(nm=>{ const p=P[nm];
+      const st=p.stN?('<span class="c-st">'+p.stN+'</span><br><span class="c-good">'+_pct(p.stG,p.stN)+'</span>/<span class="c-evil">'+_pct(p.stE,p.stN)+'</span>'):'—';
+      h+='<tr><td class="l">'+E(nm)+'</td><td>'+cell(p.tf,'c-tf')+'</td><td>'+cell(p.out,'c-out')+'</td><td>'+cell(p.min,'c-min')+'</td><td>'+cell(p.dem,'c-dem')+'</td><td>'+st+'</td></tr>'; });
+    h+='</tbody></table><div style="font-size:calc(.72*var(--sw)/100);color:#8a6b3a;margin-top:4px">阵营格式：胜/局 · 胜率 ｜ 说书人：局数 · 好人胜率/恶魔胜率</div>';
     return h; }
+  function _crown(rank){ const c={1:{k:'#e3b924',g:'#d63b2f'},2:{k:'#c8cdd3',g:'#2f6db0'},3:{k:'#c8cdd3',g:null}}[rank]; if(!c) return '';
+    const gem=c.g?'<rect x="10.2" y="10.6" width="3.6" height="3.6" transform="rotate(45 12 12.4)" fill="'+c.g+'" stroke="rgba(0,0,0,.28)" stroke-width=".5"/>':'';
+    return '<svg class="crown" viewBox="0 0 24 20" width="1.05em" height="1.05em" aria-hidden="true">'
+      +'<path d="M2 16 L4.5 7 L8.5 11.5 L12 4.5 L15.5 11.5 L19.5 7 L22 16 Z" fill="'+c.k+'" stroke="rgba(90,60,10,.55)" stroke-width="1" stroke-linejoin="round"/>'+gem+'</svg>'; }
   function _histScoreHTML(games){ if(!games.length) return '<div style="padding:8px;color:#8a6b3a;font-size:12px">还没有对局记录。</div>';
     const P=_aggregate(games); const rows=Object.keys(P).map(nm=>{ const p=P[nm]; const good=p.tf.w+p.out.w, evil=2*(p.min.w+p.dem.w), st=p.stN; return {nm, good, evil, st, total:good+evil+st}; });
     rows.sort((a,b)=>b.total-a.total || b.evil-a.evil);
-    let h='<table class="htbl"><thead><tr><th class="l">玩家ID</th><th>好人分</th><th>恶魔分</th><th>说书人分</th><th>总分</th></tr></thead><tbody>';
-    rows.forEach(r=>{ h+='<tr><td class="l">'+E(r.nm)+'</td><td>'+r.good+'</td><td>'+r.evil+'</td><td>'+r.st+'</td><td><b>'+r.total+'</b></td></tr>'; });
+    let h='<table class="htbl"><thead><tr><th class="l">玩家ID</th><th class="c-good">好人分</th><th class="c-evil">恶魔分</th><th class="c-st">说书人分</th><th class="c-total">总分</th></tr></thead><tbody>';
+    rows.forEach((r,i)=>{ const cr=i<3?_crown(i+1):'';
+      h+='<tr><td class="l">'+cr+E(r.nm)+'</td><td class="c-good">'+r.good+'</td><td class="c-evil">'+r.evil+'</td><td class="c-st">'+r.st+'</td><td class="c-total"><b>'+r.total+'</b></td></tr>'; });
     h+='</tbody></table><div style="font-size:calc(.72*var(--sw)/100);color:#8a6b3a;margin-top:4px">好人胜+1 · 恶魔胜+2 · 说书人+1</div>';
     return h; }
 
