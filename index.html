@@ -638,8 +638,7 @@
     <!-- LEFT · grimoire view -->
     <div class="grimoire grim-only">
       <div class="gtabs">
-        <button id="gt-list" onclick="setGtab('list')">角色名单</button>
-        <button id="gt-roles" class="on" onclick="setGtab('roles')">设置</button>
+        <button id="gt-list" class="on" onclick="setGtab('list')">角色设置</button>
         <button id="gt-night" onclick="setGtab('night')">夜晚</button>
         <button id="gt-day" onclick="setGtab('day')">白天</button>
         <button id="gt-log" onclick="setGtab('log')">日志</button>
@@ -744,7 +743,7 @@ function _cfCancel(){ _cfDone(_cfMode==="prompt"?null:false); }
 const KEY="botc_seating_v2";
 let N=8, tokens=[], guests=[], uid=0, selected=null;
 let meta=[], bluffs=["","",""];
-let view="seat", gtab="roles", sel=-1, night=1, listMode="all", lockedRoles=new Set(), overviewDecoys=[], redHerring=-1, customDist=null;
+let view="seat", gtab="list", sel=-1, night=1, listMode="all", lockedRoles=new Set(), overviewDecoys=[], redHerring=-1, customDist=null;
 let openBubbles=new Set(), seatPos=[], tableCenter=null, impKills={}, poisonPicks={}, monkPicks={}, ftPicks={}, butlerPicks={}, pingPicks={}, ravenPicks={}, undertakerPicks={}, sickAns={}, nominations={}, executions={}, virginUsed=false, slayerShot=null;
 const nightChecks={};
 
@@ -820,6 +819,7 @@ function load(){
     if(Array.isArray(d.bluffs)) bluffs=d.bluffs;
     if(d.view) view=d.view; if(d.gtab) gtab=d.gtab;
     if(gtab==="first"||gtab==="other") gtab="night";   // 旧存档标签兼容
+    if(gtab==="roles") gtab="list";                    // “设置”并入“角色设置”
     if(typeof d.night==="number") night=Math.max(1,d.night);
     if(d.nightChecks&&typeof d.nightChecks==="object") Object.assign(nightChecks,d.nightChecks);
     if(d.impKills&&typeof d.impKills==="object") impKills=d.impKills;
@@ -875,6 +875,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v1.9.1', d:'2026-08-09', items:['“设置”与“角色名单”合并为“角色设置”（设置内容移到阵营合计下方）','删除“伪装介绍”','修复：第二次及以后的提名，指针指向后又立刻弹回原位']},
   {v:'v1.9.0', d:'2026-08-09', items:['提名举手改为实时公开（大厅/笔记/魔典同步显示✋，取消X）','指针在投票期间一直锁定提名者/被提名者，说书人“停止计票”后才恢复','鬼票提示，鬼票用完则举手置灰','修复：开新局仍残留上局提名与座位举手图标']},
   {v:'v1.8.0', d:'2026-08-08', items:['只有在客人名册里的 ID 才能登录/注册','过往客人名册标出已注册账号，删除=停用其登录并清空笔记','（需在 Firebase 部署新版安全规则后生效）']},
   {v:'v1.7.0', d:'2026-08-08', items:['开新局时自动清理旧牌局（云端只保留当前一局，旧笔记一并清除，避免长期累积）']},
@@ -1466,15 +1467,19 @@ window.clockApplyState=function(c){ c=c||{};
   if(nom && nom.ts!==CLK._nomSeenTs){
     CLK._nomSeenTs=nom.ts; CLK.nom=nom; renderClock();
     const el=clockServerNow()-nom.ts;
-    if(el<600) startRoulette(nom); else snapNomination(nom);   /* 提名进行中就一直指向（含中途加入者），停止计票后由 _clockVoteState 释放 */
-  } else {
-    CLK.nom=nom;
-    if(dayChanged){ CLK._realBusy=true; CLK._dawnBusy=true; renderClock(); startDawnSpin(); }
-    else renderClock();
+    if(el<600) startRoulette(nom); else snapNomination(nom);   /* 提名进行中就一直指向（含中途加入者），由 clock.nom 被清空来释放 */
+    return;
   }
+  CLK.nom=nom;
+  if(!nom){ CLK._nomSeenTs=0;
+    if(CLK._nomLock){ endRoulette(); return; }   /* 说书人停止计票 → clock.nom 被清空 → 释放指针、恢复走时 */
+  }
+  if(dayChanged){ CLK._realBusy=true; CLK._dawnBusy=true; renderClock(); startDawnSpin(); }
+  else renderClock();
 };
-/* 投票结束（说书人停止计票→pub.vote 关闭）时，释放指针、恢复走时 */
-window._clockVoteState=function(v){ const open=!!(v&&v.open); if(!open && CLK._nomLock){ endRoulette(); } };
+/* 指针释放改由 clock.nom 被清空驱动（见 clockApplyState），不再依赖 vote 开关——
+   避免开始新一轮提名时 clock/nom 与 vote 两次写入的先后竞态，导致指针刚指向又立刻弹回原位 */
+window._clockVoteState=function(v){};
 /* ---------- 白天：提名 / 投票 / 处决 ---------- */
 function dayThreshold(){ return Math.ceil(countAlive()/2); }
 function ghostUsedAnywhere(seat){   // 鬼票只由「死后投出的票」消耗（记录在各提名的 ghostVoters 里）
@@ -1704,7 +1709,7 @@ function bluffSel(k){
   return '<select onchange="setBluff('+k+',this.value)">'+o+'</select>';
 }
 function renderGrim(){
-  ["list","roles","night","day","log"].forEach(t=>{ const el=document.getElementById("gt-"+t); if(el) el.classList.toggle("on",gtab===t); });
+  ["list","night","day","log"].forEach(t=>{ const el=document.getElementById("gt-"+t); if(el) el.classList.toggle("on",gtab===t); });
   const c=document.getElementById("gcontent"); let h="";
   if(gtab==="list"){
     const cd=(customDist||DIST[N]||[0,0,0,0]).slice();
@@ -1725,6 +1730,30 @@ function renderGrim(){
     });
     h+='<div class="rrow" style="border:none;font-size:.9em;color:'+(total===N?'#2e7d32':'#b0402e')+'">阵营合计 '+total+'/'+N
       +(customDist?' <span class="regbtn" onclick="resetDist()">恢复默认</span>':'')+'</div>';
+    /* ===== 设置（原“设置”标签内容并入，置于阵营合计下方）===== */
+    h+='<div class="gsec" style="color:#43286b;margin-top:12px;border-top:1px solid rgba(122,83,32,.25);padding-top:8px">⚙ 设置</div>';
+    if(meta.some(m=>m.role==="baron")) h+='<div class="rrow" style="border:none;color:#8a5f28">🜲 男爵在场：外来者应比常规多 2、镇民少 2</div>';
+    const regRoles=[]; meta.forEach((mm,j)=>{ if(mm.role==="spy"||mm.role==="recluse") regRoles.push(j); });
+    if(regRoles.length){
+      h+='<div class="gsec">误判设置（影响他人信息）</div>';
+      regRoles.forEach(j=>{ const cur=effReg(j);
+        h+='<div class="rrow" style="border:none">'+RMAP[meta[j].role].name+'（'+nameAt(j)+'）判定为：'
+          +'<span class="regbtn'+(cur==="good"?" on":"")+'" onclick="setReg('+j+',\'good\')">善良</span>'
+          +'<span class="regbtn'+(cur==="evil"?" on":"")+'" onclick="setReg('+j+',\'evil\')">邪恶</span></div>'; });
+    }
+    if(meta.some(m=>m.role==="fortuneteller")){
+      let o='<option value="">（未设）</option>';
+      meta.forEach((m,i)=>{ if(m.role && !isEvil(RMAP[m.role].team) && m.role!=="fortuneteller"){
+        const rn = m.isDrunk ? RMAP.drunk.name : RMAP[m.role].name;
+        o+='<option value="'+i+'"'+(redHerring===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+'＝'+rn+'</option>'; } });
+      h+='<div class="gsec" style="display:flex;align-items:center;gap:8px">红鲱鱼<select onchange="setRedHerring(this.value)" style="flex:1;min-width:0;font-weight:400;font-size:clamp(9px,.9vw,12px);padding:3px;border:1px solid rgba(122,83,32,.5);border-radius:5px;background:rgba(255,252,244,.85);color:#3a2a12;font-family:inherit">'+o+'</select></div>';
+    }
+    if(meta.some(m=>m&&m.isDrunk)){ const dSel=meta.findIndex(m=>m&&m.isDrunk); let o='<option value="">（无）</option>';
+      meta.forEach((m,i)=>{ if(m.role && (m.isDrunk || RMAP[m.role].team==="tf"))
+        o+='<option value="'+i+'"'+(dSel===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+'（自以为是 '+RMAP[m.role].name+'）</option>'; });
+      h+='<div class="gsec" style="display:flex;align-items:center;gap:8px">酒鬼<select onchange="setDrunk(this.value)" style="flex:1;min-width:0;font-weight:400;font-size:clamp(9px,.9vw,12px);padding:3px;border:1px solid rgba(122,83,32,.5);border-radius:5px;background:rgba(255,252,244,.85);color:#3a2a12;font-family:inherit">'+o+'</select></div>'; }
+    h+='<div class="gsec">恶魔伪装</div><div class="bluffsel">'+bluffSel(0)+bluffSel(1)+bluffSel(2)+'</div>';
+    h+='<div class="gsec" style="margin-top:12px;border-top:1px solid rgba(122,83,32,.25);padding-top:8px;color:#43286b">牌局</div>';
     h+='<div style="display:flex;gap:6px;margin-top:6px;align-items:stretch">'
       +'<button class="btn purple" style="flex:1;'+(ready?'':'opacity:.4;cursor:not-allowed;')+'" '+(ready?'onclick="stNewGame()"':'disabled title="发满牌后可点"')+'>新的一局</button>'
       +'<button class="btn purple" style="flex:0 0 auto;padding:7px 9px" onclick="stSaveConfig()">保存本局</button>'
@@ -1817,32 +1846,7 @@ function renderGrim(){
     }
     c.innerHTML=h; return;
   }
-  if(gtab==="roles"){
-    if(meta.some(m=>m.role==="baron")) h+='<div class="rrow" style="border:none;color:#8a5f28">🜲 男爵在场：外来者应比常规多 2、镇民少 2</div>';
-    const regRoles=[]; meta.forEach((mm,j)=>{ if(mm.role==="spy"||mm.role==="recluse") regRoles.push(j); });
-    if(regRoles.length){
-      h+='<div class="gsec">误判设置（影响他人信息）</div>';
-      regRoles.forEach(j=>{ const cur=effReg(j);
-        h+='<div class="rrow" style="border:none">'+RMAP[meta[j].role].name+'（'+nameAt(j)+'）判定为：'
-          +'<span class="regbtn'+(cur==="good"?" on":"")+'" onclick="setReg('+j+',\'good\')">善良</span>'
-          +'<span class="regbtn'+(cur==="evil"?" on":"")+'" onclick="setReg('+j+',\'evil\')">邪恶</span></div>'; });
-    }
-    if(meta.some(m=>m.role==="fortuneteller")){
-      let o='<option value="">（未设）</option>';
-      meta.forEach((m,i)=>{ if(m.role && !isEvil(RMAP[m.role].team) && m.role!=="fortuneteller"){
-        const rn = m.isDrunk ? RMAP.drunk.name : RMAP[m.role].name;
-        o+='<option value="'+i+'"'+(redHerring===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+'＝'+rn+'</option>'; } });
-      h+='<div class="gsec" style="display:flex;align-items:center;gap:8px">红鲱鱼<select onchange="setRedHerring(this.value)" style="flex:1;min-width:0;font-weight:400;font-size:clamp(9px,.9vw,12px);padding:3px;border:1px solid rgba(122,83,32,.5);border-radius:5px;background:rgba(255,252,244,.85);color:#3a2a12;font-family:inherit">'+o+'</select></div>';
-    }
-    if(meta.some(m=>m&&m.isDrunk)){ const dSel=meta.findIndex(m=>m&&m.isDrunk); let o='<option value="">（无）</option>';
-      meta.forEach((m,i)=>{ if(m.role && (m.isDrunk || RMAP[m.role].team==="tf"))
-        o+='<option value="'+i+'"'+(dSel===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+'（自以为是 '+RMAP[m.role].name+'）</option>'; });
-      h+='<div class="gsec" style="display:flex;align-items:center;gap:8px">酒鬼<select onchange="setDrunk(this.value)" style="flex:1;min-width:0;font-weight:400;font-size:clamp(9px,.9vw,12px);padding:3px;border:1px solid rgba(122,83,32,.5);border-radius:5px;background:rgba(255,252,244,.85);color:#3a2a12;font-family:inherit">'+o+'</select></div>'; }
-    h+='<div class="gsec">恶魔伪装</div><div class="bluffsel">'+bluffSel(0)+bluffSel(1)+bluffSel(2)+'</div>';
-    const bl=bluffs.filter(Boolean);
-    if(bl.length){ h+='<div class="gsec">伪装介绍</div>';
-      bl.forEach(id=>{ const r=RMAP[id]; if(r) h+='<div class="rrow"><b style="color:'+TEAMC[r.team]+'">'+r.name+'</b> <span style="color:#b0402e">伪装</span><br>'+r.ab+'</div>'; }); }
-  } else {
+  {
     const inplay=new Set(meta.map(m=>m.role).filter(Boolean));
     const hasTeam=t=>meta.some(m=>m.role&&RMAP[m.role].team===t);
     const steps=NIGHT[night===1?"first":"other"].filter(s=> s.special ? hasTeam(s.special) : inplay.has(s.id));
