@@ -140,8 +140,8 @@
     border:1px dashed rgba(122,83,32,.45); background:rgba(255,250,235,.4); color:#6b4a1e; cursor:pointer; user-select:none; white-space:nowrap;}
   .ptag:hover{background:#6b4a1e; color:#f3e6c4;}
   .ptag.active{opacity:.4; cursor:default;}
-  .ptag.reg{border-style:solid; border-color:rgba(46,157,79,.6);}
-  .ptag .regdot{color:#2e9d4f; font-size:.75em; vertical-align:middle;}
+  .ptag.reg{border-style:solid; border-color:rgba(122,31,143,.55);}
+  .ptag .regdot{color:#7a1f8f; font-size:.75em; vertical-align:middle;}
   .ptag.active:hover{background:rgba(255,250,235,.4); color:#6b4a1e;}
   .ptag .del{margin-left:4px; color:#a5744a;} .ptag .del:hover{color:#b0402e;}
 
@@ -437,13 +437,13 @@
   .nbtabs{display:flex; gap:4px; flex:0 0 auto;}
   .nbtabs button{flex:1; padding:5px 2px; font-size:calc(.92 * var(--sw) / 100); font-weight:800; border-radius:6px; cursor:pointer;
     border:1px solid rgba(122,83,32,.4); background:rgba(255,250,235,.6); color:#6b4a1e;}
-  .nbtabs button.on{background:#b9a0d6; color:#2e1a47;}
+  .nbtabs button.on{background:var(--gold); color:#fff; border-color:var(--gold);}
   #notesPanel .nbcontent{flex:1; min-height:0; overflow:auto; padding-right:3px; font-size:calc(1 * var(--sw) / 100); color:#3a2a12;}
   #notesPanel .nbcontent::-webkit-scrollbar{width:6px;} #notesPanel .nbcontent::-webkit-scrollbar-thumb{background:rgba(74,43,107,.35); border-radius:3px;}
   .nb-sec{font-weight:800; color:#6b4a1e; margin:8px 0 4px; letter-spacing:.5px;}
   .nbtok{display:inline-flex; align-items:center; gap:4px; font-size:calc(1 * var(--sw) / 100); padding:4px 9px; border-radius:14px; margin:0 4px 4px 0;
     border:1px solid rgba(122,83,32,.4); background:rgba(255,252,244,.85); color:#3a2a12; cursor:pointer; user-select:none;}
-  .nbtok.on{background:#b9a0d6; color:#2e1a47; box-shadow:0 0 6px rgba(150,110,200,.5);}
+  .nbtok.on{background:var(--gold); color:#fff; border-color:var(--gold); box-shadow:0 0 6px rgba(184,134,11,.5);}
   .nbtok.used{opacity:.4;}
   .nb-note{padding:4px 2px; border-bottom:1px solid rgba(122,83,32,.14); line-height:1.35;}
   .nb-nom{border:1px solid rgba(74,43,107,.22); border-radius:8px; padding:6px 8px; margin:6px 0; background:rgba(255,252,244,.6);}
@@ -612,7 +612,7 @@
       <button class="fsbtn" id="setBtn" onclick="openSettings()" title="设置">⚙</button>
       <button class="fsbtn" id="muteBtn" onclick="toggleMute()" title="静音/取消静音"><svg viewBox="0 0 24 24" width="60%" height="60%" fill="currentColor" style="display:block"><path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="M15.5 8.5a4.5 4.5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
       <div id="stBadge">说书人<span id="stName"></span>已登录 <button onclick="_logout()">退出</button></div>
-      <div id="playerBadge">🖋 玩家<span id="pbName"></span>已登录 <button onclick="_logout()">退出</button></div>
+      <div id="playerBadge">玩家<span id="pbName"></span>已登录 <button onclick="_logout()">退出</button></div>
     </div>
     <div class="banner-title" id="bannerTitle">暗流涌动</div>
     <div class="inkhotspot" onclick="openPlayerGate()">
@@ -671,9 +671,9 @@
     <!-- LEFT · 玩家笔记（访客） -->
     <div class="vpanel" id="notesPanel">
       <div class="nbtabs">
-        <button id="nb-mark" class="on" onclick="_nbTab('mark')">身份/状态</button>
+        <button id="nb-mark" class="on" onclick="_nbTab('mark')">标记</button>
         <button id="nb-nom" onclick="_nbTab('nom')">提名</button>
-        <button id="nb-ref" onclick="_nbTab('ref')">剧本/本局</button>
+        <button id="nb-ref" onclick="_nbTab('ref')">概览</button>
       </div>
       <div class="nbcontent" id="nbContent"></div>
     </div>
@@ -883,6 +883,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.3.0', d:'2026-08-09', items:['玩家角标去掉笔图标；阵营合计满员显示为紫色主题色','说书人名册已注册账号的圆点改为紫色','玩家笔记标签重命名为 标记/提名/概览，标签与标记选中态改为金色','删除笔记里的操作提示文字','玩家大厅客人名单固定只显示座号+名字（不随死亡/状态变化，无结算横幅）','接入猎人射杀恶魔动画 slayer.mp4']},
   {v:'v2.2.0', d:'2026-08-09', items:['玩家笔记字体改为深金色（与大厅一致），不再是魔典紫色','举手改为整座位金色圆形手掌图标：谁举手谁的座位背景就变成它（保留座号）']},
   {v:'v2.1.0', d:'2026-08-09', items:['静音按钮改为金色图标（与其它按钮统一）','新增猎人射杀恶魔动画（assets/slayer.mp4）：命中即播放（红唇女郎继任也播），若因此获胜则接胜利动画']},
   {v:'v2.0.3', d:'2026-08-09', items:['左上角设置右侧新增静音按钮：静音后处决视频等不再出声（设置本地记住）']},
@@ -1821,7 +1822,7 @@ function renderGrim(){
       });
       h+='</div>';
     });
-    h+='<div class="rrow" style="border:none;font-size:.9em;color:'+(total===N?'#2e7d32':'#b0402e')+'">阵营合计 '+total+'/'+N
+    h+='<div class="rrow" style="border:none;font-size:.9em;color:'+(total===N?'#7a1f8f':'#b0402e')+'">阵营合计 '+total+'/'+N
       +(customDist?' <span class="regbtn" onclick="resetDist()">恢复默认</span>':'')+'</div>';
     /* ===== 设置（原“设置”标签内容并入，置于阵营合计下方）===== */
     h+='<div class="gsec" style="color:#43286b;margin-top:12px;border-top:1px solid rgba(122,83,32,.25);padding-top:8px">⚙ 设置</div>';
@@ -2509,10 +2510,10 @@ load(); render();
 
   /* ---------- 大厅 ---------- */
   function renderHall(){ const nl=document.getElementById('hallNames'), lg=document.getElementById('hallLog'); if(!nl) return;
-    document.getElementById('hallTitle').textContent = pub?('客人名单 · '+(pub.name||'本局')+' · 第'+(pub.day||1)+'天'):'客人名单';
+    document.getElementById('hallTitle').textContent = '客人名单';
     if(!pub||!pub.count){ nl.innerHTML='<div style="color:#9a7c4a;font-size:12px;padding:6px">🕯️ 说书人还没开局</div>'; if(lg) lg.innerHTML=''; return; }
-    const seats=pub.seats||[];
-    nl.innerHTML=resultBadgeHTML()+seats.map((s,i)=>'<div class="nameitem'+(s.dead?' dead':'')+'"><span class="no">'+(i+1)+'</span>'+(E(s.name)||'—')+(s.dead&&CAUSE[s.cause]?'<span class="cz">'+CAUSE[s.cause].g+'</span>':'')+'</div>').join('');
+    const seats=pub.seats||[];   // 客人名单：仅显示座号+名字，不随状态变化、无结算横幅
+    nl.innerHTML=seats.map((s,i)=>'<div class="nameitem"><span class="no">'+(i+1)+'</span>'+(E(s.name)||'—')+'</div>').join('');
     if(lg) lg.innerHTML=nomLogHTML();
   }
   function nomLogHTML(){ const noms=(pub&&pub.noms)||[], seats=(pub&&pub.seats)||[], days={}; noms.forEach(n=>{(days[n.day]=days[n.day]||[]).push(n);});
@@ -2548,7 +2549,6 @@ load(); render();
     h+='<div class="nb-sec">我的座位备注</div>';
     let any=false; (S.seats||[]).forEach((st,i)=>{ if(st&&st.note){ any=true; h+='<div class="nb-note"><b>'+(i+1)+' '+E(pname(i))+'</b>：'+E(st.note)+'</div>'; } });
     if(!any) h+='<div style="font-size:11px;color:#8a6b3a">还没有备注</div>';
-    h+='<div style="font-size:11px;color:#6a4e8f;margin-top:8px;line-height:1.5">提示：直接点座位=写备注；先点上面标记/角色，再点座位=贴上或取消。</div>';
     return h;
   }
   function refHTML(){ const locked=new Set(pub.locked||[]); const d=pub.dist||DIST[pub.count]||[0,0,0,0];
