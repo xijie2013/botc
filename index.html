@@ -93,6 +93,12 @@
   #setModal .fs-seg button.on{background:#e9c46a; color:#1a1226; border-color:#e9c46a;}
   #setModal .fs-seg button.s1{font-size:13px;} #setModal .fs-seg button.s2{font-size:15px;} #setModal .fs-seg button.s3{font-size:17px;}
   #setModal .set-hint{font-size:11.5px; color:#8f82ab; margin-top:6px; line-height:1.5;}
+  #setModal .rp-open{width:100%; padding:9px 0; border-radius:10px; border:1px solid rgba(233,196,106,.4); background:rgba(255,252,244,.08); color:#e9c46a; font-weight:700; cursor:pointer;}
+  #setModal .rp-open:hover{background:rgba(233,196,106,.16);}
+  #setModal #rpForm{margin-top:9px; display:flex; flex-direction:column; gap:7px;}
+  #setModal #rpForm input, #setModal #rpForm select{width:100%; padding:8px; border-radius:8px; border:1px solid #3a2d4e; background:#2c2340; color:#efe6d2; font-size:14px; font-family:inherit;}
+  #setModal .rp-err{font-size:12px; color:#f0a89e; min-height:14px;}
+  #setModal .rp-go{padding:9px 0; border-radius:10px; border:none; background:var(--gold); color:#fff; font-weight:800; cursor:pointer;}
   #setModal .set-log{font-size:12.5px; line-height:1.55; color:#d8cee8;}
   #setModal .cl-item{margin-bottom:9px;}
   #setModal .cl-v{font-weight:800; color:#ffd76b;} #setModal .cl-d{color:#8f82ab; font-size:11px; margin-left:6px;}
@@ -358,7 +364,8 @@
     background:radial-gradient(circle at 50% 42%, #f3d98c, #cf9f33 82%); box-shadow:inset 0 0 0 2px rgba(255,243,207,.9);}
   .seat .handfill svg{width:64%; height:64%; fill:#3a2410; filter:drop-shadow(0 1px 1px rgba(0,0,0,.25));}
   .seat.raised{opacity:1!important; filter:none!important; border-color:#fff3cf; box-shadow:0 0 0 3px rgba(233,196,106,.65), 0 3px 8px rgba(0,0,0,.5);}
-  .seat.raised .nm, .seat.raised .vrole, .seat.raised .role, .seat.raised .deathcause{visibility:hidden;}
+  /* 举手图标只作背景：编号/姓名/角色仍显示在其之上 */
+  .seat.raised .num, .seat.raised .nm, .seat.raised .role, .seat.raised .vrole, .seat.raised .deathcause{position:relative; z-index:2;}
   .seat .role{line-height:1.05; font-weight:800; margin-top:1px; text-shadow:0 1px 2px rgba(0,0,0,.6); white-space:nowrap;}
   .seat .st{position:absolute; bottom:-7%; right:-7%; display:flex; gap:2px; z-index:2;}
   .seat .st span{background:#1a1220; border:1px solid rgba(233,196,106,.6); border-radius:7px; font-size:10px; padding:0 3px; color:#e9c46a;}
@@ -883,6 +890,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.5.0', d:'2026-08-09', items:['举手图标改为纯背景层：不再遮挡座号/姓名/角色','设置里新增“重置我的密码”（需当前已登录该账号）','设置“字号”改为“平台”（移动端/PC端，暂时一致，后续单独优化移动端）','开局后预取处决/射杀视频，减少首次播放卡顿']},
   {v:'v2.4.0', d:'2026-08-09', items:['登录改为按标签页独立（一个页面登录不再影响其它页面）；勾选记住后各页面用本地凭据各自自动登录','密码可用任意长度（含留空）；不足6位自动补齐以满足服务端要求（老账号不受影响）','阵营合计满员改为深紫色（同“角色设置”）、加粗、字号与“镇民”一致','玩家笔记标签字色恒为深金，选中仅加深底色（不再金底白字）']},
   {v:'v2.3.0', d:'2026-08-09', items:['玩家角标去掉笔图标；阵营合计满员显示为紫色主题色','说书人名册已注册账号的圆点改为紫色','玩家笔记标签重命名为 标记/提名/概览，标签与标记选中态改为金色','删除笔记里的操作提示文字','玩家大厅客人名单固定只显示座号+名字（不随死亡/状态变化，无结算横幅）','接入猎人射杀恶魔动画 slayer.mp4']},
   {v:'v2.2.0', d:'2026-08-09', items:['玩家笔记字体改为深金色（与大厅一致），不再是魔典紫色','举手改为整座位金色圆形手掌图标：谁举手谁的座位背景就变成它（保留座号）']},
@@ -918,16 +926,23 @@ const CHANGELOG=[
   {v:'v1.3.0', d:'2026-08-07', items:['中央时钟走时动画、提名指针转动','结算特效自动弹出并同步到大厅 / 笔记']},
 ];
 const APP_VERSION=CHANGELOG[0].v;
-function _fsCur(){ let n=1; try{ n=parseInt(localStorage.getItem('botc_fs')||'1',10); }catch(e){} return (n===2||n===3)?n:1; }
-function applyFontScale(n){ document.body.classList.remove('fs-1','fs-2','fs-3'); document.body.classList.add('fs-'+n); }
-function _fsSync(){ const n=_fsCur(); const seg=document.getElementById('fsSeg'); if(seg){ seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', parseInt(b.dataset.fs,10)===n)); } }
-window.setFontScale=function(n){ try{ localStorage.setItem('botc_fs',n); }catch(e){} applyFontScale(n); _fsSync(); };
+/* 平台选择（移动端 / PC端）：目前两者一致，后续针对移动端单独优化 */
+function _platCur(){ let p=''; try{ p=localStorage.getItem('botc_platform')||''; }catch(e){}
+  if(p!=='mobile'&&p!=='pc'){ p=(window.matchMedia&&window.matchMedia('(pointer:coarse)').matches)?'mobile':'pc'; } return p; }
+function applyPlatform(p){ document.body.classList.remove('plat-mobile','plat-pc'); document.body.classList.add('plat-'+p); }
+function _platSync(){ const p=_platCur(); const seg=document.getElementById('platSeg'); if(seg){ seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.plat===p)); } }
+window.setPlatform=function(p){ try{ localStorage.setItem('botc_platform',p); }catch(e){} applyPlatform(p); _platSync(); };
+/* 处决/射杀视频预取：开局后提前把视频缓存好，避免首次处决时才现下载而卡顿 */
+let _execPrefetched=false;
+window._prefetchExec=function(){ if(_execPrefetched) return; _execPrefetched=true;
+  try{ ['assets/exec1.mp4','assets/exec2.mp4','assets/exec3.mp4','assets/slayer.mp4'].forEach(u=>{
+    const l=document.createElement('link'); l.rel='prefetch'; l.as='video'; l.href=u; document.head.appendChild(l); }); }catch(e){} };
 window.openSettings=function(){ document.getElementById('setVer').textContent=APP_VERSION;
   const log=document.getElementById('setLog'); const c=CHANGELOG[0];
   log.innerHTML='<div class="cl-item"><span class="cl-v">'+c.v+'</span><span class="cl-d">'+c.d+'</span><ul>'+c.items.map(i=>'<li>'+i+'</li>').join('')+'</ul></div>';
-  _fsSync(); document.getElementById('setModal').classList.add('on'); };
+  _platSync(); const rf=document.getElementById('rpForm'); if(rf) rf.style.display='none'; document.getElementById('setModal').classList.add('on'); };
 window.closeSettings=function(){ document.getElementById('setModal').classList.remove('on'); };
-try{ applyFontScale(_fsCur()); }catch(e){}
+try{ applyPlatform(_platCur()); }catch(e){}
 
 /* ---------- seat-view guest ops ---------- */
 function addGuest(){
@@ -2170,13 +2185,21 @@ load(); render();
 <div id="setModal" onclick="if(event.target.id==='setModal')closeSettings()"><div class="setbox">
   <h3><span>⚙ 设置</span><span class="cX" onclick="closeSettings()">✕</span></h3>
   <div class="set-ver">当前版本 <b id="setVer">—</b></div>
-  <div class="set-sec">字号（笔记 / 大厅文字）</div>
-  <div class="fs-seg" id="fsSeg">
-    <button class="s1" data-fs="1" onclick="setFontScale(1)">标准</button>
-    <button class="s2" data-fs="2" onclick="setFontScale(2)">大</button>
-    <button class="s3" data-fs="3" onclick="setFontScale(3)">超大</button>
+  <div class="set-sec">平台</div>
+  <div class="fs-seg" id="platSeg">
+    <button data-plat="mobile" onclick="setPlatform('mobile')">移动端</button>
+    <button data-plat="pc" onclick="setPlatform('pc')">PC端</button>
   </div>
-  <div class="set-hint">标准＝电脑大小；大＝2倍；超大＝4倍。会连同笔记/大厅里的框一起放大（内容超出面板时可上下滑动）。座位圈与时钟为等比布局不随此缩放。</div>
+  <div class="set-hint">选择你的设备类型。目前两者显示一致，后续会根据移动端表现单独优化部分画面。</div>
+  <div class="set-sec">账号</div>
+  <button class="rp-open" onclick="_openResetPw()">重置我的密码</button>
+  <div id="rpForm" style="display:none">
+    <select id="rpRole"><option value="player">玩家账号</option><option value="st">说书人账号</option></select>
+    <input id="rpId" type="text" placeholder="你的 ID" autocomplete="off">
+    <input id="rpPw" type="password" placeholder="新密码（可留空）">
+    <div class="rp-err" id="rpErr"></div>
+    <button class="rp-go" onclick="_doResetPw()">确认重置</button>
+  </div>
   <div class="set-sec">更新内容</div>
   <div class="set-log" id="setLog"></div>
 </div></div>
@@ -2319,6 +2342,26 @@ load(); render();
 
   window._logout=function(){ try{ localStorage.removeItem('botc_ppw'); localStorage.removeItem('botc_stpw'); localStorage.removeItem('botc_lastrole'); localStorage.setItem('botc_remember',''); }catch(e){} auth.signOut(); };
 
+  /* 重置我的密码：仅能重置“当前已登录的账号”的密码（Firebase 需登录态；忘记密码无法在客户端重置） */
+  window._openResetPw=function(){ const f=document.getElementById('rpForm'); if(!f) return;
+    f.style.display = f.style.display==='none' ? 'flex' : 'none';
+    if(f.style.display!=='none'){ const u=auth.currentUser, err=document.getElementById('rpErr'); err.textContent='';
+      if(u){ document.getElementById('rpId').value=u.displayName||''; document.getElementById('rpRole').value=(u.email||'').endsWith(ST_DOM)?'st':'player'; }
+      else err.textContent='请先登录你的账号，再重置密码'; } };
+  window._doResetPw=async function(){ const err=document.getElementById('rpErr'); err.textContent='';
+    const id=(document.getElementById('rpId').value||'').trim().toLowerCase(), npw=document.getElementById('rpPw').value;
+    const wantRole=document.getElementById('rpRole').value;
+    if(!id){ err.textContent='请输入 ID'; return; }
+    const u=auth.currentUser;
+    if(!u){ err.textContent='请先登录该账号（用旧密码），再来重置'; return; }
+    const curRole=(u.email||'').endsWith(ST_DOM)?'st':'player', curId=(u.displayName||'').toLowerCase();
+    if(curRole!==wantRole || (curId&&curId!==id)){ err.textContent='只能重置当前登录的账号：'+(curRole==='st'?'说书人':'玩家')+' '+(u.displayName||''); return; }
+    err.textContent='重置中…';
+    try{ await u.updatePassword(fbPw(npw));
+      try{ if(_remembered()){ if(curRole==='st') localStorage.setItem('botc_stpw',npw); else localStorage.setItem('botc_ppw',npw); } }catch(e){}
+      err.textContent=''; document.getElementById('rpPw').value=''; document.getElementById('rpForm').style.display='none'; toast('✅ 密码已重置');
+    }catch(e){ err.textContent=(e.code||'').includes('requires-recent-login') ? '为安全起见，请退出后用旧密码重新登录，再来重置' : ('重置失败：'+(e.code||e.message||'')); } };
+
   /* 记住登录：本标签页若未登录，用本地保存的凭据自动登录（各标签页独立，互不影响） */
   async function _autoLogin(){ try{ if(!_remembered()||auth.currentUser) return;
     const role=localStorage.getItem('botc_lastrole')||'';
@@ -2358,6 +2401,7 @@ load(); render();
       if(mode!=='st') renderView(); return; }
     pubBound=db.ref('games/'+curGid+'/public'); pubBound.on('value',s=>{ pub=s.val(); ensureS();
       window.__pubHasGame=!!(pub&&pub.count); window.__pubCount=(pub&&pub.count)||0;
+      if(pub&&pub.count&&window._prefetchExec) window._prefetchExec();   // 开局后预取处决/射杀视频，避免首次卡顿
       if(window.clockApplyState) window.clockApplyState(pub&&pub.clock);
       if(window._clockVoteState) window._clockVoteState(pub&&pub.vote);
       if(window._applyExec) window._applyExec(pub&&pub.exec);   // 处决动画（先于胜利判定处理，便于把胜利延后到视频结束）
