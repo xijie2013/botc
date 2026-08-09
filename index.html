@@ -47,6 +47,7 @@
   /* dark layer over the tavern (right side) for grimoire mode */
   /* 魔典视图：整张换成暗色实景背景 */
   .stage.grim{background-image:url("assets/tavern-bg-dark.jpg"); background-position:center; background-size:100% 100%;}
+  body.anon .stage{background-image:url("assets/tavern-bg-dim.jpg");}   /* 未登录初始界面 */
   .darklayer{position:absolute; left:36%; top:0; width:64%; height:100%;
     background:rgba(6,3,14,.45); opacity:0; transition:opacity .25s; pointer-events:none;}
   .stage.grim .darklayer{opacity:0;}
@@ -922,6 +923,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.8.0', d:'2026-08-09', items:['未登录初始界面改用暗色酒馆背景 tavern-bg-dim','新增背景音乐：未登录=空酒馆、玩家=烛影、说书人=八音盒；切换时淡入淡出、循环用交叉淡化更自然','静音按钮同时控制背景音乐；处决动画播放时自动压低背景音乐','（浏览器限制，音乐需首次点击/交互后开始播放）']},
   {v:'v2.7.2', d:'2026-08-09', items:['修复：右上角卡背过大——卡内图片未按容器缩放，现已正确显示为小卡片']},
   {v:'v2.7.1', d:'2026-08-09', items:['修复：角色牌点击后未归位到右上角（卡背归位/显示逻辑修正）','正式卡背素材上线（钟楼之眼，四周深蓝已抠成镂空）']},
   {v:'v2.7.0', d:'2026-08-09', items:['玩家登录后右上角不再显示魔典图标；开始新的一局后，会先展示你本局的角色牌，点击任意处后卡牌翻到背面归位到右上角','点击右上角卡背可像掀牌一样翻开查看本局角色','说书人开局时按座位名字自动把角色私密下发到对应玩家账号（仅本人与说书人可见，酒鬼显示其自以为的镇民牌）','新增22张角色卡图（已抠图）到 assets/roles']},
@@ -1466,7 +1468,7 @@ const EXEC_HOLD_MS=3000;   // 截断/结尾后：定格最后一帧并在这段�
 var EXEC={_seenTs:0};
 window.__execPlaying=false; window.__pendingResult=null;
 function _finalizeExec(){ const v=document.getElementById('execVideo'); if(v){ v.classList.remove('show'); v.style.display='none'; v.style.filter=''; v.style.transition=''; v._ending=false; clearTimeout(v._hold); try{ v.removeAttribute('src'); v.load(); }catch(e){} }
-  window.__execPlaying=false;
+  window.__execPlaying=false; try{ if(window._bgDuck) _bgDuck(false); }catch(e){}   // 处决结束：恢复背景音乐音量
   if(window.__pendingResult){ const pr=window.__pendingResult; window.__pendingResult=null; showResult(pr.w, pr.r); }   // 恶魔被处决：画面全黑后再放胜利
 }
 function endExec(mode){ const v=document.getElementById('execVideo'); if(!v){ window.__execPlaying=false; if(window.__pendingResult){ const pr=window.__pendingResult; window.__pendingResult=null; showResult(pr.w,pr.r); } return; }
@@ -1485,7 +1487,7 @@ function playExec(idx, full, srcOverride){ const v=document.getElementById('exec
   const src = srcOverride || EXEC_VIDEOS[idx];
   const cut = full ? Infinity : (EXEC_CUT[idx]||7);
   clearTimeout(v._hold); v._ending=false;
-  window.__execPlaying=true;
+  window.__execPlaying=true; try{ if(window._bgDuck) _bgDuck(true); }catch(e){}   // 处决期间压低背景音乐
   try{ v.src=src; }catch(e){}
   v.style.filter=''; v.style.transition='';   // 清除上一次的“变黑”，恢复初始
   v.style.display='block'; v.currentTime=0; v.muted=!!window.__muted;   // 全局静音时不出声
@@ -1510,6 +1512,7 @@ window.toggleMute=function(){ window.__muted=!window.__muted;
   try{ localStorage.setItem('botc_muted', window.__muted?'1':''); }catch(e){}
   const el=document.getElementById('muteBtn'); if(el) el.innerHTML=window.__muted?_MUTE_OFF:_MUTE_ON;
   const v=document.getElementById('execVideo'); if(v) v.muted=!!window.__muted;   // 立即应用到正在播放的视频
+  try{ if(window._applyBgmMute) _applyBgmMute(); }catch(e){}   // 同步应用到背景音乐
 };
 (function(){ try{ window.__muted = localStorage.getItem('botc_muted')==='1'; }catch(e){}
   const el=document.getElementById('muteBtn'); if(el) el.innerHTML=window.__muted?_MUTE_OFF:_MUTE_ON; })();
@@ -2318,7 +2321,9 @@ load(); render();
     document.body.classList.toggle('mode-hall', m==='hall');
     document.body.classList.toggle('mode-notes', m==='notes');
     document.body.classList.toggle('st-mode', m==='st');
+    document.body.classList.toggle('anon', role==='anon');   // 未登录：用暗色初始酒馆背景
     window.BOTC_VIEWER = (m!=='st');
+    try{ if(window.updateBgm) updateBgm(); }catch(e){}   // 按登录状态切换背景音乐
     if(m==='st'){ try{ if(typeof render==='function') render(); }catch(e){} }
     else { const vt=document.getElementById('viewToggle');
       if(role==='player'){ if(vt) vt.style.display='none'; try{ updateRoleCard(curGid, window.__myRole||''); }catch(e){} }   // 玩家：右上角改为本局角色卡（无卡则空），不再显示魔典图标
@@ -2474,6 +2479,38 @@ load(); render();
   }
   window._clearRoleCard=function(){ const {layer,card,cc}=_rcEls(); if(layer) layer.classList.remove('on'); if(cc) cc.style.display='none';
     if(card){ card.style.transition='none'; card.style.transform=''; card.classList.remove('flip'); card.style.opacity=''; } _rcState=''; window.__myRole=''; };
+
+  /* ===== 背景音乐（未登录=空酒馆 / 玩家=烛影 / 说书人=八音盒；淡入淡出 + 交叉淡化循环，避免生硬接缝） ===== */
+  const BGM={ anon:'assets/bg_musics_Empty Tavern.mp3', player:'assets/bg_musics_Candlelit Shadows.mp3', st:'assets/bg_musics_The Broken Music Box.mp3' };
+  const BGM_VOL=0.5, BGM_CF=2.2;   // 目标音量 / 交叉淡化秒数
+  let _bgA=null,_bgB=null,_bgCur=null,_bgSrc='',_bgWant='',_bgUnlocked=false,_bgDuckF=1;
+  function _bgMuted(){ return !!window.__muted; }
+  function _bgTargetVol(){ return (_bgMuted()?0:BGM_VOL)*_bgDuckF; }
+  function _bgFade(el,to,ms){ if(!el) return; if(el._fr) cancelAnimationFrame(el._fr); const from=el.volume||0, t0=performance.now();
+    const step=t=>{ const k=ms<=0?1:Math.min(1,(t-t0)/ms); el.volume=Math.max(0,Math.min(1,from+(to-from)*k));
+      if(k<1){ el._fr=requestAnimationFrame(step); } else { el._fr=0; if(to<=0){ try{ el.pause(); }catch(e){} } } };
+    el._fr=requestAnimationFrame(step); }
+  function _bgEnsure(){ if(_bgA) return; _bgA=new Audio(); _bgB=new Audio();
+    [_bgA,_bgB].forEach(a=>{ a.preload='auto'; a.loop=false; a.volume=0;
+      a.addEventListener('timeupdate',()=>{ if(a!==_bgCur||_bgMuted()) return; const d=a.duration; if(!d||isNaN(d)) return;
+        if(a.currentTime>=d-BGM_CF && !a._looping){ a._looping=true; _bgCross(_bgSrc,true); } }); }); }
+  function _bgCross(src,force){ _bgEnsure(); if(!src) return;
+    if(!force && _bgCur && _bgSrc===src && !_bgCur.paused) return;
+    const from=_bgCur, to=(_bgCur===_bgA?_bgB:_bgA); to._looping=false;
+    try{ if(to.getAttribute('src')!==encodeURI(src)) to.src=encodeURI(src); }catch(e){}
+    try{ to.currentTime=0; }catch(e){} to.volume=0;
+    const pr=to.play(); if(pr&&pr.catch) pr.catch(()=>{});
+    _bgFade(to,_bgTargetVol(),BGM_CF*1000);
+    if(from && from!==to && !from.paused) _bgFade(from,0,BGM_CF*1000);
+    _bgCur=to; _bgSrc=src; }
+  window.updateBgm=function(){ _bgWant = role==='st'?BGM.st : (role==='player'?BGM.player : BGM.anon);
+    if(_bgUnlocked && !_bgMuted()) _bgCross(_bgWant); };
+  window._applyBgmMute=function(){ if(!_bgA) return;
+    if(_bgMuted()){ if(_bgCur) _bgFade(_bgCur,0,500); }
+    else if(_bgUnlocked){ _bgCross(_bgWant||BGM.anon,true); } };
+  window._bgDuck=function(on){ _bgDuckF = on?0.16:1; if(_bgCur && !_bgCur.paused && !_bgMuted()) _bgFade(_bgCur,_bgTargetVol(),450); };
+  (function(){ function unlock(){ if(_bgUnlocked) return; _bgUnlocked=true; try{ updateBgm(); }catch(e){} }
+    ['pointerdown','keydown','touchstart'].forEach(ev=>window.addEventListener(ev,unlock,{passive:true})); })();
 
   /* ---------- 软刷新：重新同步 + 重绘，不重载页面（保留全屏） ---------- */
   window._softRefresh=function(){
