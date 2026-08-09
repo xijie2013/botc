@@ -353,6 +353,12 @@
     font-size:17px; line-height:1; padding:1px 5px; border-radius:11px; font-weight:800;}
   .seat .votehand.up{color:#eafff0; background:rgba(30,120,60,.92); box-shadow:0 0 8px rgba(46,190,90,.8), 0 1px 3px rgba(0,0,0,.5);}
   .seat .votehand.no{color:#f0e6d6; background:rgba(70,55,90,.9); box-shadow:0 1px 3px rgba(0,0,0,.5);}
+  /* 举手：整座位金色圆底+手掌，铺满座位背景 */
+  .seat .handfill{position:absolute; inset:0; border-radius:50%; z-index:1; display:flex; align-items:center; justify-content:center; pointer-events:none;
+    background:radial-gradient(circle at 50% 42%, #f3d98c, #cf9f33 82%); box-shadow:inset 0 0 0 2px rgba(255,243,207,.9);}
+  .seat .handfill svg{width:64%; height:64%; fill:#3a2410; filter:drop-shadow(0 1px 1px rgba(0,0,0,.25));}
+  .seat.raised{opacity:1!important; filter:none!important; border-color:#fff3cf; box-shadow:0 0 0 3px rgba(233,196,106,.65), 0 3px 8px rgba(0,0,0,.5);}
+  .seat.raised .nm, .seat.raised .vrole, .seat.raised .role, .seat.raised .deathcause{visibility:hidden;}
   .seat .role{line-height:1.05; font-weight:800; margin-top:1px; text-shadow:0 1px 2px rgba(0,0,0,.6); white-space:nowrap;}
   .seat .st{position:absolute; bottom:-7%; right:-7%; display:flex; gap:2px; z-index:2;}
   .seat .st span{background:#1a1220; border:1px solid rgba(233,196,106,.6); border-radius:7px; font-size:10px; padding:0 3px; color:#e9c46a;}
@@ -430,18 +436,18 @@
   /* 玩家书本 3 个 tab */
   .nbtabs{display:flex; gap:4px; flex:0 0 auto;}
   .nbtabs button{flex:1; padding:5px 2px; font-size:calc(.92 * var(--sw) / 100); font-weight:800; border-radius:6px; cursor:pointer;
-    border:1px solid rgba(74,43,107,.4); background:rgba(240,235,250,.6); color:#43286b;}
+    border:1px solid rgba(122,83,32,.4); background:rgba(255,250,235,.6); color:#6b4a1e;}
   .nbtabs button.on{background:#b9a0d6; color:#2e1a47;}
-  #notesPanel .nbcontent{flex:1; min-height:0; overflow:auto; padding-right:3px; font-size:calc(1 * var(--sw) / 100); color:#43286b;}
+  #notesPanel .nbcontent{flex:1; min-height:0; overflow:auto; padding-right:3px; font-size:calc(1 * var(--sw) / 100); color:#3a2a12;}
   #notesPanel .nbcontent::-webkit-scrollbar{width:6px;} #notesPanel .nbcontent::-webkit-scrollbar-thumb{background:rgba(74,43,107,.35); border-radius:3px;}
-  .nb-sec{font-weight:800; color:#43286b; margin:8px 0 4px; letter-spacing:.5px;}
+  .nb-sec{font-weight:800; color:#6b4a1e; margin:8px 0 4px; letter-spacing:.5px;}
   .nbtok{display:inline-flex; align-items:center; gap:4px; font-size:calc(1 * var(--sw) / 100); padding:4px 9px; border-radius:14px; margin:0 4px 4px 0;
-    border:1px solid rgba(74,43,107,.4); background:rgba(255,252,244,.85); color:#43286b; cursor:pointer; user-select:none;}
+    border:1px solid rgba(122,83,32,.4); background:rgba(255,252,244,.85); color:#3a2a12; cursor:pointer; user-select:none;}
   .nbtok.on{background:#b9a0d6; color:#2e1a47; box-shadow:0 0 6px rgba(150,110,200,.5);}
   .nbtok.used{opacity:.4;}
   .nb-note{padding:4px 2px; border-bottom:1px solid rgba(122,83,32,.14); line-height:1.35;}
   .nb-nom{border:1px solid rgba(74,43,107,.22); border-radius:8px; padding:6px 8px; margin:6px 0; background:rgba(255,252,244,.6);}
-  .nb-nomhead{font-weight:700; color:#43286b;}
+  .nb-nomhead{font-weight:700; color:#6b4a1e;}
   .nb-nomhead .arw{color:#8a5f28;}
   .nb-exec{color:#b0402e; font-weight:800;}
   .nb-vsub{margin-top:3px; line-height:1.4;}
@@ -877,6 +883,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.2.0', d:'2026-08-09', items:['玩家笔记字体改为深金色（与大厅一致），不再是魔典紫色','举手改为整座位金色圆形手掌图标：谁举手谁的座位背景就变成它（保留座号）']},
   {v:'v2.1.0', d:'2026-08-09', items:['静音按钮改为金色图标（与其它按钮统一）','新增猎人射杀恶魔动画（assets/slayer.mp4）：命中即播放（红唇女郎继任也播），若因此获胜则接胜利动画']},
   {v:'v2.0.3', d:'2026-08-09', items:['左上角设置右侧新增静音按钮：静音后处决视频等不再出声（设置本地记住）']},
   {v:'v2.0.2', d:'2026-08-09', items:['恶魔处决：去掉最后一帧定格3秒与变黑，仅保留淡入淡出，随后接胜利；非恶魔仍为定格并逐渐变黑']},
@@ -1394,6 +1401,8 @@ window.applyResult=function(res){
 /* ---------- 处决动画（三选一随机；非恶魔只播前半段，恶魔播完整→随后胜利动画） ---------- */
 const EXEC_VIDEOS=['assets/exec1.mp4','assets/exec2.mp4','assets/exec3.mp4'];
 const SLAYER_VIDEO='assets/slayer.mp4';   // 猎人成功射杀恶魔时播放（完整播放→淡出→若胜利则接胜利动画）
+/* 举手图标：金色圆底 + 手掌，铺满座位背景 */
+const HAND_SVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23 5.5V20c0 2.2-1.8 4-4 4h-7.3c-1.08 0-2.1-.43-2.85-1.19L1 14.83s1.26-1.23 1.3-1.25c.22-.19.49-.29.79-.29.22 0 .42.06.6.16.04.01 4.31 2.46 4.31 2.46V4c0-.83.67-1.5 1.5-1.5S12 3.17 12 4v7h1V1.5c0-.83.67-1.5 1.5-1.5S16 .67 16 1.5V11h1V2.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5V11h1V5.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5z"/></svg>';
 /* 各视频「变身（变成恶魔）」开始的秒数：非恶魔被处决时播到此处即停。三个视频可不同，按需修改。 */
 const EXEC_CUT=[6.2, 7, 7];
 const EXEC_HOLD_MS=3000;   // 截断/结尾后：定格最后一帧并在这段时间内逐渐变黑
@@ -2489,7 +2498,7 @@ load(); render();
       const vv=pub.vote;
       if(vv&&vv.open){ let raised=!!(vv.hands&&vv.hands[i]);
         if(mode==='notes'&&i===myVoteSeat()&&myHandOn()) raised=true;   // 本人举手即时显示
-        if(raised) s.insertAdjacentHTML('beforeend','<div class="votehand up" title="举手">✋</div>'); }
+        if(raised){ s.classList.add('raised'); s.insertAdjacentHTML('beforeend','<div class="handfill" title="举手">'+HAND_SVG+'</div>'); } }
       if(mode==='notes'){ s.style.cursor='pointer'; const sx=zoneLeft+x, sy=zoneTop+y, sd=seatD;
         s.addEventListener('click',e=>{ e.stopPropagation(); seatTap(i,sx,sy,sd); });
         s.addEventListener('mouseenter',()=>showSeatNote(i));
