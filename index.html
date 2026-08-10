@@ -114,13 +114,19 @@
   .spyg-close img{width:100%; height:100%; object-fit:contain; display:block;}
   .spyg-close:hover{transform:scale(1.08);}
   .spyg-banner{color:#43286b !important; text-shadow:0 1px 0 rgba(255,255,255,.35);}
-  /* 左侧面板：复用 .grimoire 定位/样式，仅放标题 + 夜切换（间谍不看日志） */
+  /* 左侧面板：复用 .grimoire 定位/样式，放夜切换 + 座位一览表（玩家/身份/状态；间谍不看日志） */
   .spyg-grim{z-index:4; justify-content:flex-start;}
-  .spyg-lt{font-weight:800; color:#43286b; letter-spacing:1px; text-align:center; flex:0 0 auto;
-    font-size:calc(1.35 * var(--sw) / 100); text-shadow:0 1px 0 rgba(255,255,255,.5);}
-  #spyGrimTabs{flex-wrap:wrap;}
+  #spyGrimTabs{flex-wrap:wrap; flex:0 0 auto;}
   #spyGrimTabs button{flex:0 0 auto; padding:5px 12px;}
-  .spyg-hint{color:#5a4326; font-size:calc(.92 * var(--sw) / 100); line-height:1.5; opacity:.8; flex:0 0 auto;}
+  .spyg-list{flex:1; min-height:0; overflow:auto; margin-top:6px; padding-right:3px; color:#43286b; font-size:calc(1 * var(--sw) / 100);}
+  .spyg-list::-webkit-scrollbar{width:6px;} .spyg-list::-webkit-scrollbar-thumb{background:rgba(74,43,107,.35); border-radius:3px;}
+  .spyg-lrow{display:flex; align-items:baseline; gap:7px; padding:4px 2px; border-bottom:1px solid rgba(122,83,32,.16);}
+  .spyg-lrow .c1{flex:1.25; min-width:0; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .spyg-lrow .c2{flex:1; min-width:0; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .spyg-lrow .c3{flex:1.15; min-width:0; font-size:.9em; color:#8a4a2a; line-height:1.3;}
+  .spyg-lhead{font-weight:800; color:#5a3d16; border-bottom:1.5px solid rgba(122,83,32,.4);}
+  .spyg-lhead .c1,.spyg-lhead .c2,.spyg-lhead .c3{color:#5a3d16; font-weight:800;}
+  .spyg-lrow.dead .c1,.spyg-lrow.dead .c2{opacity:.5;}
   /* 右侧座位圈：复用 .table-zone 定位，座位复用 .seat 类，位置/外观与说书人 1:1 */
   #spyGrimSeats{z-index:4;}
   #spyGrimSeats .seat{cursor:default;}
@@ -790,9 +796,8 @@
       <div class="spyg-stage">
         <div class="banner-title spyg-banner">间谍魔典</div>
         <div class="grimoire spyg-grim">
-          <div class="spyg-lt">间谍魔典</div>
           <div class="gtabs" id="spyGrimTabs"></div>
-          <div class="spyg-hint">你能看到座位图上的身份与标记（当夜定格）。<br>切换上方按钮查看已获取的其它夜晚。</div>
+          <div class="spyg-list" id="spyGrimList"></div>
         </div>
         <div class="table-zone" id="spyGrimSeats"></div>
         <div id="spyGrimClock"></div>
@@ -1094,6 +1099,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.39.2', d:'2026-08-10', items:['间谍魔典左侧不再空着：加入「座位一览」表——玩家（座位号＋名字）／身份／状态三列，与右侧座位图信息一致，只是列表更好扫读；随夜晚切换、与座位图同步定格']},
   {v:'v2.39.1', d:'2026-08-10', items:['修正间谍魔典：移除左侧「说书人日志」——日志记录了所有玩家的夜间行动与所得信息，间谍不应看到。间谍现在只看座位图上的信息（各座位身份、酒鬼、中毒/醉酒/守护/出局及死因、管家主人、红鲱鱼等标记，皆为魔典上本就可见的提示物）＋中央时钟，各夜为发送时定格。日志内容也不再写入间谍的数据节点（杜绝从后台/开发者工具读取）。左侧改为标题＋夜晚切换']},
   {v:'v2.39.0', d:'2026-08-10', items:['间谍看魔典改造：①现在作为标准「信息步」自动化——说书人在间谍夜晚步点「发送给玩家」，间谍屏幕底部像普通夜间信息一样弹出提示框，点「确认收到」后才解锁查看；说书人须收到确认（或用「代确认/跳过」）方可结束本夜。②间谍魔典界面改为 1:1 复刻说书人魔典：同一张暗背景、右侧座位圈在完全相同的位置（含中央时钟，时钟冻结在发送时刻），左侧是与说书人日志完全一致的排版（只显示当夜），不再是「换背景＋浮一层贴图」。③打开/收起有淡入淡出（比登录更快），点右下角魔典图标打开、再点一次即收起；多夜可在左侧切换，每夜为发送时定格。修复措辞：随机发牌（此前注释误写「大排灯」）']},
   {v:'v2.38.0', d:'2026-08-10', items:['夜晚信息自动化拓展：间谍看魔典接入自动下发。说书人在间谍的夜晚步骤点「发送第 N 夜魔典给间谍」，即把当前座位图（每个座位的真实身份、酒鬼、中毒/醉酒/守护/出局及死因、管家主人、红鲱鱼等）与本夜说书人日志打成快照下发到间谍玩家端——发出即锁定、不可更改。间谍屏幕右下角出现魔典图标（说书人同款书本图标 + 翻书/合书音效），可随时点开进入只读魔典界面：左侧为夜晚切换与本夜日志、右侧为当夜座位图；若获取了多夜魔典，可在各夜间切换查看，每一夜都是当夜下发时的定格。至此暗流涌动全部夜间角色均已接入自动化']},
@@ -3328,6 +3334,14 @@ load(); render();
   function _spyRender(){ if(!_spyG) return; const snap=_spyG[_spySel]; if(!snap) return;
     const tb=document.getElementById('spyGrimTabs');   // 夜切换标签（复用 .gtabs 样式）
     if(tb){ tb.innerHTML=_spyNights.map(function(n){ return '<button class="'+(n===_spySel?'on':'')+'" onclick="window._spyPickNight&&_spyPickNight('+n+')">第 '+n+' 夜</button>'; }).join(''); }
+    const lst=document.getElementById('spyGrimList');   // 左侧座位一览：玩家 / 身份 / 状态（与座位图信息一致，只是列表更好看）
+    if(lst){ let h='<div class="spyg-lrow spyg-lhead"><span class="c1">玩家</span><span class="c2">身份</span><span class="c3">状态</span></div>';
+      (snap.seats||[]).forEach(function(o){
+        const stArr=[]; if(o.dead)stArr.push('出局'); if(o.bPoison)stArr.push('中毒'); if(o.bDrunk)stArr.push('醉酒'); if(o.bShield)stArr.push('守护'); if(o.bShot)stArr.push('已开枪'); if(o.master)stArr.push('主人'); if(o.herring)stArr.push('红鲱鱼');
+        const nm=o.name?_nbEsc(o.name):'空';
+        const role=o.label?('<b style="color:'+(o.col||'#43286b')+'">'+_nbEsc(o.label)+'</b>'):'<span style="opacity:.5">—</span>';
+        h+='<div class="spyg-lrow'+(o.dead?' dead':'')+'"><span class="c1">'+(o.i+1)+'　'+nm+'</span><span class="c2">'+role+'</span><span class="c3">'+(stArr.length?_nbEsc(stArr.join('·')):'—')+'</span></div>'; });
+      lst.innerHTML=h; lst.scrollTop=0; }
     _spyDrawSeats(snap); _spyDrawClock(snap); }   // 间谍只看座位图（不含说书人日志）
   /* 复刻 renderSeats 魔典分支：同一几何(cx=SW*0.71 等)、同一 .seat 类/徽标，位置与说书人 1:1 */
   function _spyDrawSeats(snap){ const zone=document.getElementById('spyGrimSeats'); if(!zone) return; zone.innerHTML='';
