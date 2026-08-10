@@ -999,6 +999,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.19.0', d:'2026-08-10', items:['修复：说书人「重置角色」后，大厅与玩家笔记里的公开状态（座位死亡、处决、恶魔击杀、胜负横幅、提名、举手等）也会一并清零，不再残留上一局的状态']},
   {v:'v2.18.0', d:'2026-08-10', items:['同一账号（玩家或说书人）同一时间只在一个页面活动：在新页面/设备登录后，会自动继承云端最新进度，旧页面则显示「已在其他页面登录」的遮罩并停用（点「切回本页继续」可把控制权夺回本页）；彻底避免多设备同时操作互相冲突/抢控制']},
   {v:'v2.17.0', d:'2026-08-10', items:['说书人整局存档改为「实时双向同步」：同一账号在多台设备上会实时保持一致，任一台的改动会立刻同步到另一台（谁最后操作以谁为准），不再各看各的、也不再互相覆盖抢控制；本机当前所在的标签/视图不会被强制跳转','（提示：需要所有设备都刷新到最新版本才能生效）']},
   {v:'v2.16.0', d:'2026-08-10', items:['同一时间只允许一个说书人在线：已有说书人登录时，其他人尝试登录会看到「说书人XX已登录」并被登出，需等在线说书人退出后才能登录（关闭页面/断线会自动释放）','说书人日志页标题从「说书人魔典」改为「说书人日志」；每次打开魔典都默认进入「说书人魔典」页，不再停留在日志页']},
@@ -1145,7 +1146,7 @@ async function dealRoles(){
 async function resetRoles(){ if(!await uiConfirm("重置所有身份、状态、备注、伪装？（保留名字与座位）")) return;
   meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
   Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); overviewDecoys=[]; tokens.forEach(t=>t.dead=false); render();
-  try{ if(window._stClearPlayerRoles) _stClearPlayerRoles(); }catch(e){} try{ if(window._histNewRound) _histNewRound(); }catch(e){} }   // 重置角色：清空玩家角色卡；胜负另记一条
+  try{ if(window._stClearPlayerRoles) _stClearPlayerRoles(); }catch(e){} try{ if(window._stResetPublic) _stResetPublic(); }catch(e){} try{ if(window._histNewRound) _histNewRound(); }catch(e){} }   // 重置角色：清空玩家角色卡 + 公开状态（大厅/笔记的死亡/处决/胜负等一并清零）；胜负另记一条
 function setBluff(k,v){ bluffs[k]=v; refreshOverviewDecoys(); render(); }
 
 /* ---------- 夜晚信息自动计算 ---------- */
@@ -2731,6 +2732,14 @@ load(); render();
       Object.keys(v).forEach(uid=>{ up['games/'+curGid+'/players/'+uid+'/role']=null; });
       if(Object.keys(up).length) db.ref().update(up).catch(()=>{});
     }).catch(()=>{}); };
+  /* 说书人重置角色：把公开状态（座位死亡/死因、胜负横幅、提名、处决/击杀动画、举手、指针）一并清零，让大厅与玩家笔记同步复位 */
+  window._stResetPublic=function(){ if(role!=='st'||!curGid) return;
+    try{ _lastResultSig=null; }catch(e){}
+    try{ const p=(typeof buildPublic==='function')?buildPublic():null;
+      const upd={ result:null, vote:null, exec:null, clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null} };
+      if(p){ upd.seats=p.seats; upd.noms=(p.noms&&p.noms.length)?p.noms:null; upd.day=p.day; upd.count=p.count; }
+      db.ref('games/'+curGid+'/public').update(upd).catch(()=>{});
+    }catch(e){} };
 
   /* ===== 说书人：旧局记录（对局列表 / 统计 / 积分榜） ===== */
   let _histOn=false, _histTabCur='list';
