@@ -1049,6 +1049,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.30.4', d:'2026-08-10', items:['修复：投毒者的毒此前会一直保留、只在投毒者下次行动换目标时才转移，导致投毒者死亡后被毒的人永远中毒。现在毒只在施放的那一夜及当天有效，进入下一夜（傍晚·白天处决公布后）自动失效，与投毒者是否存活无关；说书人前后翻查各夜时，中毒标记也会按当夜正确显示']},
   {v:'v2.30.3', d:'2026-08-10', items:['夜晚信息自动化调整：① 恶魔自杀（星传）改回由说书人指定继任的爪牙（红唇女郎存活且5人以上则自动继任她），恶魔弹窗不再让恶魔自己选。② 投毒者对恶魔下毒后，恶魔当晚的击杀能力失效——恶魔仍照常收到提示并选择目标，但无人死亡（魔典记为「击杀无效」）；这是通用规则，手动流程也一并生效']},
   {v:'v2.30.2', d:'2026-08-10', items:['夜晚信息自动化优化：① 恶魔选择「自杀」时，弹窗新增下拉，由恶魔自己指定传位给哪名存活爪牙（红唇女郎存活且5人以上则只能传她），不再由说书人代选。② 爪牙相认等群发信息现在要等所有爪牙都点确认才算完成（说书人面板显示「已确认 X/Y」）。③ 说书人「代确认」投毒/占卜/夜杀等选目标步骤时，现在会展开手动选择器，让说书人自己选毒谁/占谁/杀谁（含恶魔自杀继任、镇长弹刀）']},
   {v:'v2.30.1', d:'2026-08-10', items:['修复：夜晚信息自动化中，恶魔选择「自杀」（星传）且没有红唇女郎自动继任时，此前会直接判好人胜利、说书人来不及指定继任爪牙。现在恶魔自杀且尚有存活爪牙时先不判负，进入「复核」子步让说书人指定一名爪牙继任为新恶魔（或确认无人继任才真死）；胜负判定也加了同样护栏（手动流程一并修复）。恶魔普通击杀命中镇长（弹刀）也会进入复核，确认实际死亡']},
@@ -1421,7 +1422,11 @@ function nightPanel(id, active){
     +'<button class="nf-skip" onclick="nightSkip(\''+id+'\')">代确认/跳过</button></div>';
   return h+'</div>';
 }
-function stepNight(d){ night=Math.max(1,night+d); render(); }
+function syncPoisonToNight(){   // 投毒者的毒只在施放的那一夜(含当天)有效：进入新的一夜自动失效（与投毒者是否存活无关，也不随其换目标而改变旧毒）
+  Object.keys(poisonPicks).forEach(function(k){ const s=poisonPicks[k]; if(s!=null && meta[s]) meta[s].poison=false; });   // 先清掉所有投毒者施加过的毒
+  const cur=poisonPicks[night]; if(cur!=null && meta[cur]) meta[cur].poison=true;   // 只点亮当前夜的中毒目标
+}
+function stepNight(d){ night=Math.max(1,night+d); syncPoisonToNight(); render(); }
 
 /* ---------- 小恶魔夜间击杀 / 自杀转移 ---------- */
 function isDeadSeat(i){ const t=seatToken(i); return t?!!t.dead:!!(meta[i]&&meta[i].dead); }
