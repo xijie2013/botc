@@ -1051,6 +1051,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.36.1', d:'2026-08-10', items:['守鸦人夜晚步骤的头部提示区分死因：本夜被恶魔击杀时显示绿色「被恶魔击杀 · 开始行动（选1人得知其角色）」；因处决等其他原因出局时仍显示「已出局，不再行动」（这种情况本就该跳过）']},
   {v:'v2.36.0', d:'2026-08-10', items:['夜晚信息自动化拓展（第四批）：守鸦人接入自动下发。守鸦人本夜被恶魔杀死才触发——说书人发「请选择一名玩家查看其角色」给该（已死）玩家，玩家选1人（不能选自己）提交，说书人审核通过后回一条结果（得知其真实角色），玩家确认后记入局内信息。中毒/醉酒时说书人可先设定要告知的假角色再发。守鸦人未死亡的夜晚该步自动标记为「无需行动」，不阻塞结束本夜。至此暗流涌动全部夜间角色均已接入自动化（间谍看魔典除外）']},
   {v:'v2.35.0', d:'2026-08-10', items:['夜晚信息自动化拓展（第三批）：僧侣、管家接入自动下发。说书人一键把「请选择守护目标 / 请选择主人」发给对应玩家，玩家在弹窗里下拉选目标提交（不能选自己），说书人审核通过后写入魔典并生效（守护免疫恶魔攻击、管家主人投票限制）。玩家离线可由说书人「代确认」手动代选。选择会记入该玩家的局内信息']},
   {v:'v2.34.1', d:'2026-08-10', items:['开新局清理补全：新的一局现在会一并清空说书人日志（此前只清了玩家局内信息、漏了说书人的夜间日志）。「重置角色」与「随机发牌（大排灯）」也统一清空玩家的局内信息、座位备注、所有标记与说书人日志——新的一局开始，上一局的痕迹全部清零']},
@@ -1265,6 +1266,11 @@ function computeNightInfo(id){
   const seats=[]; meta.forEach((m,i)=>{ if(m.role===id) seats.push(i); }); if(!seats.length) return "";
   let i=seats[0]; for(let _k=0;_k<seats.length;_k++){ if(!isDeadSeat(seats[_k])){ i=seats[_k]; break; } }   // 传位后可能有两个恶魔：优先取存活的那个
   const m=meta[i];
+  if(id==='ravenkeeper' && isDeadSeat(i)){   // 守鸦人：本夜被恶魔击杀才行动；其他原因出局（如处决）仍不行动
+    return (typeof ravenActive==='function' && ravenActive())
+      ? '<span style="color:#3f9d5a;font-weight:800">被恶魔击杀 · 开始行动（选1人得知其角色）</span>'
+      : '<span class="ninfo-warn">✝ 已出局，不再行动</span>';
+  }
   if(isDeadSeat(i)) return '<span class="ninfo-warn">✝ 已出局，不再行动</span>';
   const warn=(m.poison||m.drunk)?'<span class="ninfo-warn">⚠中毒/醉酒 · 信息不可靠（可真可假，由你定）</span>':'';
   const label=(team)=>teamSeats(team).map(j=>nameAt(j)+'＝'+RMAP[meta[j].role].name);
