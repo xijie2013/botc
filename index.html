@@ -1051,6 +1051,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.35.0', d:'2026-08-10', items:['夜晚信息自动化拓展（第三批）：僧侣、管家接入自动下发。说书人一键把「请选择守护目标 / 请选择主人」发给对应玩家，玩家在弹窗里下拉选目标提交（不能选自己），说书人审核通过后写入魔典并生效（守护免疫恶魔攻击、管家主人投票限制）。玩家离线可由说书人「代确认」手动代选。选择会记入该玩家的局内信息']},
   {v:'v2.34.1', d:'2026-08-10', items:['开新局清理补全：新的一局现在会一并清空说书人日志（此前只清了玩家局内信息、漏了说书人的夜间日志）。「重置角色」与「随机发牌（大排灯）」也统一清空玩家的局内信息、座位备注、所有标记与说书人日志——新的一局开始，上一局的痕迹全部清零']},
   {v:'v2.34.0', d:'2026-08-10', items:['夜晚信息自动化拓展（第二批）：洗衣妇、图书管理员、调查员接入自动下发。说书人在夜晚面板先用「揭示选择器」选好要告知的两张牌（真身角色所在玩家 + 一名幌子玩家；图书管理员无外来者时自动为「没有外来者」），发送框随之显示要告知玩家的内容，一键发送、玩家确认收到后记入其局内信息与魔典。中毒/醉酒时可自由选两人并自定角色给假信息。未选好揭示内容前不可发送/代确认，避免误发空信息']},
   {v:'v2.33.8', d:'2026-08-10', items:['中毒/醉酒占卜师「设定结果」环节的「有恶魔/无恶魔」按钮加了颜色提示：选中项若与真实情况一致显示绿色（给的是真话），不一致显示红色（给的是假话），方便说书人一眼判断自己发出的是真是假']},
@@ -1325,7 +1326,7 @@ function recordSpecial(sid,on){
    每步：说书人「发送」私密信息 → 玩家底部弹窗确认(或选目标提交) → 选目标类由说书人「审核通过」写入魔典 → 占卜再回一条结果 → 玩家确认。
    流程状态存 nightFlow[`${night}:${id}`]，随魔典存档同步。完成即置 nightChecks 令「结束本夜」门控自动生效。 */
 const NIGHT_AUTO_INFO=new Set(['_minion','_demon','chef','empath','undertaker','washerwoman','librarian','investigator']);
-const NIGHT_AUTO_PICK1=new Set(['poisoner','imp']);
+const NIGHT_AUTO_PICK1=new Set(['poisoner','imp','monk','butler']);
 const NIGHT_AUTO_PICK2=new Set(['fortuneteller']);
 function stepKind(id){ if(NIGHT_AUTO_INFO.has(id)) return 'info'; if(NIGHT_AUTO_PICK1.has(id)) return 'pick1'; if(NIGHT_AUTO_PICK2.has(id)) return 'pick2info'; return null; }
 function stepAutomated(s){ const id=s.id; if(id==='imp') return night>=2; return !!stepKind(id); }   // 首夜恶魔是「恶魔信息(_demon)」而非击杀
@@ -1334,7 +1335,9 @@ function nfGet(id){ const k=nfKey(id); return nightFlow[k]||(nightFlow[k]={stage
 function _demSeat(){ let dead=-1; for(let i=0;i<N;i++){ const m=meta[i]; if(m&&m.role&&RMAP[m.role]&&RMAP[m.role].team==='dem'){ if(!isDeadSeat(i)) return i; dead=i; } } return dead; }   // 传位后优先返回存活的恶魔
 function _minSeats(){ const a=[]; meta.forEach((m,i)=>{ if(m&&m.role&&RMAP[m.role]&&RMAP[m.role].team==='min') a.push(i); }); return a; }
 function nightSendSeats(id){ if(id==='_minion') return _minSeats(); if(id==='_demon'){ const d=_demSeat(); return d>=0?[d]:[]; } if(id==='imp'){ const s=impSeat(); return s>=0?[s]:[]; } const s=meta.findIndex(m=>m&&m.role===id); return s>=0?[s]:[]; }
-function nightSeatOptions(){ const a=[]; for(let i=0;i<N;i++){ a.push({seat:i, name:(i+1)+'号 '+nameAt(i)+(isDeadSeat(i)?'（已出局）':'')}); } return a; }
+function nightSeatOptions(exclude){ const a=[]; for(let i=0;i<N;i++){ if(exclude!=null && i===exclude) continue; a.push({seat:i, name:(i+1)+'号 '+nameAt(i)+(isDeadSeat(i)?'（已出局）':'')}); } return a; }
+/* 僧侣/管家不能选自己：从玩家的可选目标里排除该角色自身座位 */
+function _pickOptionsFor(id){ const ex=(id==='monk'||id==='butler')?((nightSendSeats(id)||[])[0]):null; return nightSeatOptions(ex==null?undefined:ex); }
 function impSuccessorOptions(){ const sw=meta.findIndex(m=>m&&m.role==='scarletwoman'); const swAlive=sw>=0 && !isDeadSeat(sw) && healthy(sw); const aliveNow=countAlive();
   if(swAlive && aliveNow>=5) return [{seat:sw, name:(sw+1)+'号 '+nameAt(sw)+'（红唇女郎·强制继任）'}];   // 红唇女郎存活且5人以上 → 只能传她
   return _minSeats().filter(i=>!isDeadSeat(i)).map(i=>({seat:i, name:(i+1)+'号 '+nameAt(i)})); }
@@ -1343,6 +1346,8 @@ function nightAutoText(id){
   if(id==='_demon'){ const ms=_minSeats().map(i=>(i+1)+'号 '+nameAt(i)); const bl=(bluffs||[]).filter(Boolean).map(x=>RMAP[x]?RMAP[x].name:x); return '【恶魔信息】你的爪牙：'+(ms.join('、')||'无')+'。可伪装的身份（不在场好人）：'+(bl.join('、')||'（说书人未设置）')+'。'; }
   if(id==='poisoner') return '【投毒者】请选择今晚要下毒的一名玩家（当晚及次日中毒）。';
   if(id==='imp') return '【恶魔】请选择今晚要击杀的目标。';
+  if(id==='monk') return '【僧侣】请选择今晚要守护的一名玩家（当晚免疫恶魔攻击，不能选自己）。';
+  if(id==='butler') return '【管家】请选择今晚的主人（仅当你的主人投票时，你才能投票；不能选自己）。';
   if(id==='fortuneteller') return '【占卜师】请选择今晚要占卜的两名玩家。';
   if(id==='chef'){ const s=meta.findIndex(m=>m&&m.role==='chef'); const sick=s>=0&&!healthy(s); const sv=sickAns[night+':chef'];   // 中毒/醉酒且已设假值→用假值，否则真值
     const c=(sick&&sv!=null&&sv!=='')?sv:chefPairs(); return '【厨师】相邻而坐的邪恶玩家共有 '+c+' 对。'; }
@@ -1369,7 +1374,7 @@ function nightSend(id){ const kind=stepKind(id); if(!kind) return; const f=nfGet
   const text=(f.text!=null&&f.text!=='')?f.text:nightAutoText(id);
   if(kind==='info' && (!text||!text.trim())){ try{toast('请先在上方选择/设定要告知的信息');}catch(e){} return; }   // 洗衣妇等：未选好揭示内容不发送
   f.text=text;
-  let phase='info', pick=null; if(kind!=='info'){ phase='pick'; pick={count:kind==='pick2info'?2:1, options:nightSeatOptions()}; }
+  let phase='info', pick=null; if(kind!=='info'){ phase='pick'; pick={count:kind==='pick2info'?2:1, options:_pickOptionsFor(id)}; }
   f.stage='sent'; f.phase=phase; f.sid=(f.sid||0)+1; f.pick=null;
   if(window.stNightSend) window.stNightSend(id, phase, text, pick, seats, f.sid);
   save(); render(); }
@@ -1377,6 +1382,8 @@ function nightEditText(id,val){ nfGet(id).text=val; }
 function nightEditResult(id,val){ nfGet(id).resultText=val; }
 function nightApprove(id){ const f=nfGet(id); if(!f.pick||!f.pick.length){ try{toast('玩家还没提交选择');}catch(e){} return; }
   if(id==='poisoner'){ poisonPick(String(f.pick[0])); nfDone(id); }
+  else if(id==='monk'){ monkPick(String(f.pick[0])); nfDone(id); }
+  else if(id==='butler'){ butlerPick(String(f.pick[0])); nfDone(id); }
   else if(id==='imp'){ impKill(String(f.pick[0]));
     const rec=impKills[night]||{};
     const needReview = (rec.type==='starpass' && rec.newImp==null && _minSeats().some(i=>!isDeadSeat(i)))   // 恶魔自杀·无红唇自动继任 → 说书人指定继任爪牙
@@ -1393,7 +1400,7 @@ function nightImpReviewDone(id){ const rec=impKills[night]||{};
   if(rec.type==='starpass' && rec.newImp==null && _minSeats().some(i=>!isDeadSeat(i))){ try{toast('恶魔自杀：请先指定一名存活爪牙继任为新恶魔');}catch(e){} return; }
   _impDone(id); }
 function nightRetract(id){ const f=nfGet(id); const kind=stepKind(id); f.pick=null; f.stage='sent'; f.phase='pick'; f.sid=(f.sid||0)+1;
-  const seats=nightSendSeats(id); const pick={count:kind==='pick2info'?2:1, options:nightSeatOptions()};
+  const seats=nightSendSeats(id); const pick={count:kind==='pick2info'?2:1, options:_pickOptionsFor(id)};
   if(window.stNightSend) window.stNightSend(id,'pick',(f.text||nightAutoText(id)),pick,seats,f.sid); save(); render(); }
 function nightResend(id){ const f=nfGet(id);
   if(f.stage==='result'){ f.sid=(f.sid||0)+1; const seats=nightSendSeats(id); if(window.stNightSend) window.stNightSend(id,'result',(f.resultText||ftResultText()),null,seats,f.sid); save(); render(); }
@@ -1441,6 +1448,12 @@ function _nfRecordChoice(id){ if(!window.stRecordGameInfo) return;
   if(id==='fortuneteller'){ const cur=ftPicks[night]; if(!cur||cur[0]==null||cur[1]==null) return;
     const seat=(nightSendSeats('fortuneteller')||[])[0]; if(seat==null) return;
     window.stRecordGameInfo(seat,'choice:ft:n'+night,'【占卜师】你选择占卜 '+(cur[0]+1)+'号 '+nameAt(cur[0])+' 和 '+(cur[1]+1)+'号 '+nameAt(cur[1])+'。',night,1); return; }
+  if(id==='monk'){ const t=monkPicks[night]; if(t==null) return;
+    const seat=(nightSendSeats('monk')||[])[0]; if(seat==null) return;
+    window.stRecordGameInfo(seat,'choice:monk:n'+night,'【僧侣】你选择守护 '+(t+1)+'号 '+nameAt(t)+'（当晚免疫恶魔攻击）。',night,1); return; }
+  if(id==='butler'){ const t=butlerPicks[night]; if(t==null) return;
+    const seat=(nightSendSeats('butler')||[])[0]; if(seat==null) return;
+    window.stRecordGameInfo(seat,'choice:butler:n'+night,'【管家】你选择 '+(t+1)+'号 '+nameAt(t)+' 作为你的主人（仅当主人投票你才能投票）。',night,1); return; }
 }
 /* 传位通知文本 & 排序权重：ord=3 让它排在新恶魔当晚的爪牙行动（如投毒 ord=1）之后——夜晚顺序里投毒在先、恶魔自刀传位在后 */
 const NEWIMP_TEXT='【恶魔】原小恶魔自杀传位，你已成为新的小恶魔（恶魔阵营）。从此刻起你的身份是小恶魔，之后每晚由你选择击杀目标。';
@@ -1517,7 +1530,7 @@ function nightPanel(id, active){
     return h+'</div>';
   }
   if(stage==='manual'){   // 代玩家操作：说书人手动选目标（复用现有选择器）
-    let w=''; if(id==='poisoner') w=poisonUI(); else if(id==='fortuneteller') w=ftUI(); else if(id==='imp') w=impKillUI();
+    let w=''; if(id==='poisoner') w=poisonUI(); else if(id==='fortuneteller') w=ftUI(); else if(id==='imp') w=impKillUI(); else if(id==='monk') w=monkUI(); else if(id==='butler') w=butlerUI();
     h+='<div class="nf-status">代玩家操作：请在下方手动选择目标。</div>';
     h+='<div class="nf-imp">'+w+'</div>';
     h+='<div class="nf-btns"><button class="nf-ok" onclick="nightManualDone(\''+id+'\')">✓ 完成本步</button>'
