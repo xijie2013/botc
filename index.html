@@ -707,6 +707,8 @@
   </div>
   <script>
     function _introEnter(){ var il=document.getElementById('introLayer'); if(!il||il._e) return; il._e=1;
+      try{ var ev=document.getElementById('execVideo'); if(ev&&!ev._primed){ ev._primed=1; ev.muted=true; ev.src='assets/exec1.mp4';
+        var pp=ev.play&&ev.play(); if(pp&&pp.then) pp.then(function(){ try{ if(!window.__execPlaying){ ev.pause(); ev.currentTime=0; ev.removeAttribute('src'); ev.load(); } }catch(e){} }).catch(function(){}); } }catch(e){}   /* 在“点击进入”这个用户手势里预先解锁处决视频元素：后续由 Firebase 事件触发的带声音播放更不易被拦（若期间真的开播则不打断） */
       il.classList.add('dim');                                   /* 画面先完全黑下来 */
       setTimeout(function(){ il.classList.add('hide');           /* 再把黑场淡出、露出新背景 */
         setTimeout(function(){ il.style.display='none'; var v=document.getElementById('introVid'); if(v){try{v.pause();}catch(e){}} }, 1650);
@@ -1017,6 +1019,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.29.7', d:'2026-08-10', items:['修复：处决/猎人视频有时没有声音——改为等视频数据就绪(canplay)后再播放，且只在浏览器真正拦截自动播放时才退回静音（此前任何瞬时加载中断都会被误判成"要静音"，导致该次播放永久没声，表现为"有的能出声、有的不行"）；并在"点击进入"时预先解锁视频元素，提升带声音播放成功率','背景音乐在动画时的淡入淡出改用缓动曲线并略微加长，过渡更柔和不突兀']},
   {v:'v2.29.6', d:'2026-08-10', items:['背景音乐改为「播 5 分钟 → 静默 5 分钟」循环播放，避免全程有音乐略显吵闹；每次开始/停止都用 6 秒长淡入淡出，柔和不突兀。静音按钮、三档音量、动画期间静音等原有行为不变']},
   {v:'v2.29.5', d:'2026-08-10', items:['修复：播放处决/猎人射杀视频与胜负结算动画时，背景音乐现在完全静音（此前只压低到约 8%，仍隐约可闻），动画结束后自动从原处续播并淡回原音量；视频播放期间也不再叠加零碎的界面音效（结算的胜负音效在视频结束后触发，不受影响）。提名转盘不受影响']},
   {v:'v2.29.4', d:'2026-08-10', items:['修复：旧局记录·对局列表/统计/积分榜里早期存成小写的名字（如「cooler」）现在统一显示为客人名册里的原始大小写「Cooler」，并与「Cooler」合并计分/统计（同一人不再拆成两行）。以客人名册登记为准，名册里没有的名字则采用历史记录中出现过的带大写写法；中文名不受影响']},
@@ -1619,14 +1622,21 @@ function playExec(idx, full, srcOverride){ const v=document.getElementById('exec
   const cut = full ? Infinity : (EXEC_CUT[idx]||7);
   clearTimeout(v._hold); v._ending=false;
   window.__execPlaying=true; try{ if(window._bgDuck) _bgDuck(true); }catch(e){}   // 处决期间压低背景音乐
-  try{ v.src=src; }catch(e){}
   v.style.filter=''; v.style.transition='';   // 清除上一次的“变黑”，恢复初始
-  v.style.display='block'; v.currentTime=0; v.muted=!!window.__muted;   // 全局静音时不出声
+  v.style.display='block'; v.muted=!!window.__muted;   // 全局静音时不出声
   try{ v.volume=Math.max(0,Math.min(1,(window.__vol&&typeof window.__vol.anim==='number')?window.__vol.anim:1)); }catch(e){}   // 动画音量档位
   void v.offsetWidth; v.classList.add('show');   // 触发淡入（透明度）
   v.ontimeupdate=function(){ if(cut!==Infinity && v.currentTime>=cut) endExec('dark'); };   // 非恶魔：截断→定格并逐渐变黑
   v.onended=function(){ endExec('fade'); };                                                 // 恶魔：播完→仅淡出→接胜利
-  const p=v.play(); if(p&&p.catch) p.catch(()=>{ v.muted=true; const p2=v.play(); if(p2&&p2.catch) p2.catch(()=>endExec('now')); });   // 有声被拦→退回静音播放
+  const tok=(v._playTok=(v._playTok||0)+1);   // 播放令牌：只让最新一次播放生效，忽略被打断的旧 promise
+  const kick=function(){ if(v._playTok!==tok) return; try{ v.currentTime=0; }catch(e){}
+    const p=v.play();
+    if(p&&p.catch) p.catch(function(err){ if(v._playTok!==tok) return;
+      if(err&&err.name==='NotAllowedError'&&!v.muted){ v.muted=true; const p2=v.play(); if(p2&&p2.catch) p2.catch(function(){ endExec('now'); }); }   // 仅“自动播放被拦”才退回静音；AbortError 等瞬时中断不再误静音
+    }); };
+  v.onerror=function(){ if(v._playTok===tok) endExec('now'); };   // 加载失败兜底，避免卡在 __execPlaying
+  try{ v.src=src; v.load(); }catch(e){}   // 显式 load 让加载确定化
+  if(v.readyState>=3){ kick(); } else { v.oncanplay=function(){ v.oncanplay=null; kick(); }; }   // 等数据就绪(canplay)再播，避免 play() 被加载打断而误判静音
 }
 window.playExec=playExec;
 /* 所有端订阅公开的处决事件，同步播放同一个视频（刷新时若事件过旧则不重播） */
@@ -1806,7 +1816,9 @@ function removeNomination(day,idx){ if(nominations[day]){ const nom=nominations[
 function toggleVote(day,nomIdx,seat){ const nom=nominations[day][nomIdx]; const at=nom.voters.indexOf(seat);
   if(at>=0){ nom.voters.splice(at,1); if(nom.ghostVoters){ const gi=nom.ghostVoters.indexOf(seat); if(gi>=0) nom.ghostVoters.splice(gi,1); } }
   else { nom.voters.push(seat); if(isDeadSeat(seat)){ nom.ghostVoters=nom.ghostVoters||[]; if(!nom.ghostVoters.includes(seat)) nom.ghostVoters.push(seat); } }   // 已出局也可自由投票；死亡=鬼票
-  enforceButler(); if(window._syncNoms) window._syncNoms(); render(); }
+  enforceButler(); if(window._syncNoms) window._syncNoms();
+  if(window._stBroadcastHands) window._stBroadcastHands();   // 说书人手动勾选也实时同步为座位举手背景图
+  render(); }
 /* ---------- 猎人：每局一次，白天指认，命中恶魔则其死 ---------- */
 function registersDemon(i){ const m=meta[i]; if(!m||!m.role) return false; if(RMAP[m.role].team==="dem") return true; if(m.role==="recluse"&&effReg(i)==="evil") return true; return false; }
 function slayerFire(v){ if(v===""||slayerShot) return; const t=+v; const sl=meta.findIndex(m=>m&&m.role==="slayer"); if(sl<0) return;
@@ -2792,7 +2804,7 @@ load(); render();
   function _bgMuted(){ return !!window.__muted; }
   function _bgTargetVol(){ const mul=(window.__vol&&typeof window.__vol.bgm==='number')?window.__vol.bgm:1; return (_bgMuted()?0:BGM_VOL*mul)*_bgDuckF*_bgCycleF; }   // 三重系数：静音 / 动画压制 / 播放周期
   function _bgFade(el,to,ms){ if(!el) return; if(el._fr) cancelAnimationFrame(el._fr); const from=el.volume||0, t0=performance.now();
-    const step=t=>{ const k=ms<=0?1:Math.min(1,(t-t0)/ms); el.volume=Math.max(0,Math.min(1,from+(to-from)*k));
+    const step=t=>{ const k=ms<=0?1:Math.min(1,(t-t0)/ms); const e=k*k*(3-2*k); el.volume=Math.max(0,Math.min(1,from+(to-from)*e));   // smoothstep 缓动，淡变更顺滑不突兀
       if(k<1){ el._fr=requestAnimationFrame(step); } else { el._fr=0; if(to<=0){ try{ el.pause(); }catch(e){} } } };
     el._fr=requestAnimationFrame(step); }
   function _bgEnsure(){ if(_bgA) return; _bgA=new Audio(); _bgB=new Audio();
@@ -2817,7 +2829,7 @@ load(); render();
   function _bgApply(fadeMs){ if(!_bgCur || _bgMuted()) return; const t=_bgTargetVol();
     if(t>0 && _bgUnlocked && _bgCur.paused){ const pr=_bgCur.play(); if(pr&&pr.catch) pr.catch(()=>{}); }   // 需要发声却曾被淡到0而暂停 → 先从暂停处续播（不从头重放）
     _bgFade(_bgCur, t, fadeMs); }   // 淡到当前应有音量；淡到0时 _bgFade 会自动 pause
-  window._bgDuck=function(on){ _bgDuckF = on?0:1; _bgApply(on?450:600); };   // 动画期间背景音乐完全静音，结束后续播淡回
+  window._bgDuck=function(on){ _bgDuckF = on?0:1; _bgApply(on?650:850); };   // 动画期间背景音乐完全静音，结束后续播淡回（加长+缓动，过渡更柔和）
   /* 背景音乐播放周期：播 BGM_ON_MS 后静默 BGM_OFF_MS，循环往复，避免一直有音乐吵人；切换用 BGM_CYCLE_FADE 长淡入淡出，柔和 */
   function _bgCycleTick(){ _bgCycleOn=!_bgCycleOn; _bgCycleF=_bgCycleOn?1:0; _bgApply(BGM_CYCLE_FADE);
     _bgCycleTid=setTimeout(_bgCycleTick, _bgCycleOn?BGM_ON_MS:BGM_OFF_MS); }
@@ -3059,6 +3071,18 @@ load(); render();
   let stPlayersRef=null;
   function bindStPlayers(){ if(stPlayersRef){stPlayersRef.off();stPlayersRef=null;} window.__playerHands={};
     if(role==='st'&&curGid){ stPlayersRef=db.ref('games/'+curGid+'/players'); stPlayersRef.on('value',s=>recomputeHands(s.val())); } }
+  /* 当前进行中的提名（by/to/day 与公开 vote 匹配） */
+  function stActiveNom(){ const v=pub&&pub.vote; if(!v||!v.open) return null;
+    const list=nominations[v.day]||[];
+    for(let i=0;i<list.length;i++){ const n=list[i]; if(n&&n.nominator===v.by&&n.nominee===v.to) return n; }
+    return null; }
+  /* 说书人转播举手：玩家App举手(__playerHands) ∪ 说书人在进行中提名里手动勾选的 voters → public/vote/hands
+     （让说书人替玩家标记的举手也在大厅/玩家笔记里显示手掌背景图） */
+  function stBroadcastHands(){ if(role!=='st'||!curGid) return; const v=pub&&pub.vote; if(!v||!v.open) return;
+    const hands=Object.assign({}, window.__playerHands||{});
+    const nom=stActiveNom(); if(nom){ (nom.voters||[]).forEach(s=>{ hands[s]=true; }); }
+    db.ref('games/'+curGid+'/public/vote/hands').set(hands).catch(()=>{}); }
+  window._stBroadcastHands=stBroadcastHands;
   function recomputeHands(all){ const hands={}; const v=pub&&pub.vote; all=all||{};
     if(v){ Object.keys(all).forEach(uid=>{ const nd=all[uid]; if(!nd||!nd.vote||!nd.vote.hand) return;
       const vt=nd.vote; if(vt.day!==v.day||vt.by!==v.by||vt.to!==v.to) return;
@@ -3067,8 +3091,8 @@ load(); render();
       if(seat<0 || !(pub.seats&&pub.seats[seat]&&norm(pub.seats[seat].name)===nm)) seat=findSeatByName(nm);
       if(seat>=0) hands[seat]=true; }); }
     window.__playerHands=hands;
-    /* 说书人转播：把实时举手写进公开数据，让大厅/所有玩家实时看到 */
-    if(role==='st'&&curGid&&v&&v.open){ db.ref('games/'+curGid+'/public/vote/hands').set(hands).catch(()=>{}); }
+    /* 说书人转播：玩家App举手 ∪ 说书人手动勾选，一并写进公开数据，让大厅/所有玩家实时看到 */
+    stBroadcastHands();
     if(role==='st'&&mode==='st'&&typeof render==='function'){ try{ render(); }catch(e){} } }
   /* 说书人：停止计票（把当前举手记入该提名 → 结束本轮，指针恢复） */
   window._voteTally=function(day,idx){ if(role!=='st'||!curGid) return;
