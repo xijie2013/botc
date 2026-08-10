@@ -1051,6 +1051,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.33.7', d:'2026-08-10', items:['修复：中毒/醉酒的占卜师由玩家提交两名目标、说书人「审核通过」后，此前会直接把真实结果发出去，说书人没有给假信息的机会。现在中毒/醉酒占卜师审核通过后先进入「设定结果」环节——说书人选择要告知的「有恶魔/无恶魔」（可给假信息），确认后再发送；未选择前「发送结果」按钮不可点，避免误发真结果']},
   {v:'v2.33.6', d:'2026-08-10', items:['小恶魔自杀传位后，自杀的旧恶魔不再得知是谁继任——其局内信息只显示「你的一名爪牙已成为新的小恶魔（你不会得知是谁）」，无存活爪牙时显示「没有存活的爪牙可以继任，不再有新的小恶魔」。夜晚面板对中毒/醉酒角色的排列调整为：中毒标识 → 假值下拉菜单（先生成错误信息）→ 发送框（发送错误信息），避免在设定假值前误把正确信息发出去']},
   {v:'v2.33.5', d:'2026-08-10', items:['小恶魔自杀传位现在是一个「必须确认」的环节：传位后恶魔步进入「等待新恶魔确认」状态，需新恶魔点确认或说书人代确认才算完成、才放行下一步（此前会自动跳过，新恶魔可能漏看传位通知）。修复：新恶魔当晚若还是投毒者等爪牙，其局内信息里传位通知的顺序改到自身夜间行动（如投毒）之后——夜晚顺序里投毒在先、恶魔自刀传位在后']},
   {v:'v2.33.4', d:'2026-08-10', items:['修复：说书人代确认小恶魔「自杀」传位后，自杀那名恶魔端的「请选择击杀目标」弹窗不消失（传位后系统去清了新恶魔的节点、漏了自杀者）——现在按实际做出击杀选择的那名恶魔清弹窗。修复：说书人代确认占卜师时，占卜师局内信息只记了选择、没记结果——现在代占卜也会把结果一并记入其局内信息']},
@@ -1352,7 +1353,11 @@ function nightAutoText(id){
     return '【送葬者】昨日被处决的 '+nameAt(ex)+' 的真实角色是：'+rn+'。'; }
   return '';
 }
-function ftResultText(){ const cur=ftPicks[night]; if(!cur||cur[0]==null||cur[1]==null) return '【占卜结果】（尚未选定两名玩家）'; const has=readsDemon(cur[0])||readsDemon(cur[1]); return '【占卜结果】你所占卜的 '+nameAt(cur[0])+'、'+nameAt(cur[1])+' 之中'+(has?'有':'没有')+'恶魔。'; }
+function ftResultText(){ const cur=ftPicks[night]; if(!cur||cur[0]==null||cur[1]==null) return '【占卜结果】（尚未选定两名玩家）';
+  let has=readsDemon(cur[0])||readsDemon(cur[1]);   // 真值
+  const ft=meta.findIndex(m=>m&&m.role==='fortuneteller');
+  if(ft>=0 && !healthy(ft)){ const c=sickAns[night+':fortuneteller']; if(c==='yes') has=true; else if(c==='no') has=false; }   // 中毒/醉酒：用说书人设定的（可假）答案
+  return '【占卜结果】你所占卜的 '+nameAt(cur[0])+'、'+nameAt(cur[1])+' 之中'+(has?'有':'没有')+'恶魔。'; }
 /* 说书人操作：发送 / 编辑文本 / 审核通过 / 退回重选 / 代确认跳过 / 重发 */
 function nightSend(id){ const kind=stepKind(id); if(!kind) return; const f=nfGet(id);
   const seats=nightSendSeats(id); if(!seats.length){ try{toast('没找到该角色对应的已登录玩家，可用「代确认/跳过」');}catch(e){} }
@@ -1372,6 +1377,8 @@ function nightApprove(id){ const f=nfGet(id); if(!f.pick||!f.pick.length){ try{t
     if(needReview){ f.stage='review'; save(); render(); return; }
     _impDone(id); return; }
   else if(id==='fortuneteller'){ ftPick(0,String(f.pick[0])); ftPick(1,String(f.pick[1])); if(typeof recordFt==='function') recordFt();
+    const ft=meta.findIndex(m=>m&&m.role==='fortuneteller');
+    if(ft>=0 && !healthy(ft)){ f.stage='ftsick'; save(); render(); return; }   // 中毒/醉酒：先让说书人设定要告知的（可假）结果再发送，避免直接发出真结果
     const rtext=(f.resultText!=null&&f.resultText!=='')?f.resultText:ftResultText(); f.resultText=rtext; f.stage='result'; f.phase='result'; f.sid=(f.sid||0)+1;
     const seats=nightSendSeats(id); if(window.stNightSend) window.stNightSend(id,'result',rtext,null,seats,f.sid); }
   save(); render(); }
@@ -1394,6 +1401,9 @@ function nightProxyConfirmResult(id){ const f=nfGet(id);
     const key='info:'+night+':'+id+':result:'+(f.sid||0);
     (nightSendSeats(id)||[]).forEach(function(seat){ window.stRecordGameInfo(seat,key,rtxt,night,2); }); }
   nfDone(id); save(); render(); }
+/* 中毒/醉酒占卜师：说书人在 ftsick 阶段设定好（可假）结果后发送给玩家 */
+function nightSendFtResult(id){ const f=nfGet(id); const rtext=ftResultText(); f.resultText=rtext; f.stage='result'; f.phase='result'; f.sid=(f.sid||0)+1;
+  const seats=nightSendSeats(id); if(window.stNightSend) window.stNightSend(id,'result',rtext,null,seats,f.sid); save(); render(); }
 /* 把信息步文本记入相关玩家局内信息（代确认时用；key 与玩家自己确认写入的一致，幂等，ord=0） */
 function _nfRecordInfoToPlayers(id){ if(!window.stRecordGameInfo || stepKind(id)!=='info') return;
   const f=nfGet(id); const text=(f.text!=null&&f.text!=='')?f.text:nightAutoText(id); if(!text) return;
@@ -1503,6 +1513,18 @@ function nightPanel(id, active){
     h+='<div class="nf-imp">'+w+'</div>';
     h+='<div class="nf-btns"><button class="nf-ok" onclick="nightManualDone(\''+id+'\')">✓ 完成本步</button>'
       +'<button class="nf-skip" onclick="nightForceSkip(\''+id+'\')">无行动 · 跳过</button></div>';
+    return h+'</div>';
+  }
+  if(id==='fortuneteller' && stage==='ftsick'){   // 中毒/醉酒占卜师：说书人先设定要告知的（可假）结果再发送
+    const cur=ftPicks[night]||[]; const c=sickAns[night+':fortuneteller'];
+    h+='<div class="nf-status">占卜师中毒/醉酒——请设定要告知玩家的结果（可给假信息），再发送：</div>';
+    h+='<div class="nf-imp">占卜 <b>'+nameAt(cur[0])+'</b>、<b>'+nameAt(cur[1])+'</b> → 告知：'
+      +'<span class="regbtn'+(c==='yes'?' on':'')+'" onclick="sickSet(\'fortuneteller\',\'yes\')">有恶魔</span>'
+      +'<span class="regbtn'+(c==='no'?' on':'')+'" onclick="sickSet(\'fortuneteller\',\'no\')">无恶魔</span></div>';
+    h+='<div class="nf-status" style="opacity:.85">将发送：'+ftResultText()+'</div>';
+    h+='<div class="nf-btns"><button class="nf-ok"'+(c?'':' disabled')+' onclick="nightSendFtResult(\''+id+'\')">发送结果</button>'
+      +'<button class="nf-re" onclick="nightRetract(\''+id+'\')">退回重选</button>'
+      +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button></div>';
     return h+'</div>';
   }
   if(stage==='result'){
