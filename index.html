@@ -1051,6 +1051,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.33.4', d:'2026-08-10', items:['修复：说书人代确认小恶魔「自杀」传位后，自杀那名恶魔端的「请选择击杀目标」弹窗不消失（传位后系统去清了新恶魔的节点、漏了自杀者）——现在按实际做出击杀选择的那名恶魔清弹窗。修复：说书人代确认占卜师时，占卜师局内信息只记了选择、没记结果——现在代占卜也会把结果一并记入其局内信息']},
   {v:'v2.33.3', d:'2026-08-10', items:['小恶魔自杀传位：新恶魔现在会收到「你已成为新的小恶魔」的弹窗通知，需点确认，并记入其局内信息（离线也由说书人保底记录）。修复：传位后场上有两个「小恶魔」座位（死的旧恶魔+存活新恶魔）时，之后夜晚的恶魔信息/夜杀以及说书人魔典的恶魔状态都误取到已出局的旧恶魔（显示「恶魔已出局，不再行动」）——现在恶魔相关判定一律优先取存活的那个恶魔']},
   {v:'v2.33.2', d:'2026-08-10', items:['修复：跳过某个夜晚步骤后「结束本夜」仍点不动——门控改用步骤完成状态判定（跳过=已完成放行），不再依赖是否记录魔典。新增：角色已出局时，其夜晚步骤面板里除「跳过」外的按钮（发送/代确认）自动变灰，并提示「该角色已出局，本夜无行动，请点跳过」——出局角色当夜本就只能跳过']},
   {v:'v2.33.1', d:'2026-08-10', items:['夜晚面板把「代确认」与「跳过」拆成两个按钮，语义区分：「代确认」表示这一步确实发生（说书人替离线玩家确认信息或代为选择），会记入该玩家的局内信息与魔典；「跳过」表示这一步没有发生，不记入玩家局内信息、也不记魔典（仅标记完成以放行「结束本夜」）。修复：此前信息类角色（爪牙相认/厨师/共情者/送葬者等）被「代确认」时并未写入玩家局内信息，现已一并记录，与选择类角色行为一致']},
@@ -1399,7 +1400,9 @@ function _nfRecordInfoToPlayers(id){ if(!window.stRecordGameInfo || stepKind(id)
 /* 跳过：这一步「没有发生」→ 不记入玩家局内信息、不记魔典，仅标记完成以放行「结束本夜」 */
 function nightSkipStep(id){ nfDone(id,true); save(); render(); }
 function nightManualDone(id){ if(id==='imp'){ const rec=impKills[night]||{}; if(rec.type==='starpass' && rec.newImp==null && _minSeats().some(i=>!isDeadSeat(i))){ try{toast('恶魔自杀：请先在下方指定继任爪牙');}catch(e){} return; } }
-  if(id==='fortuneteller'){ try{ if(typeof recordFt==='function') recordFt(); }catch(e){} }   // 代占卜：把结果记入魔典日志
+  if(id==='fortuneteller'){ try{ if(typeof recordFt==='function') recordFt(); }catch(e){}   // 代占卜：把结果记入魔典日志
+    try{ const cur=ftPicks[night]; if(window.stRecordGameInfo && cur && cur[0]!=null && cur[1]!=null){ const seat=(nightSendSeats('fortuneteller')||[])[0]; if(seat!=null&&seat>=0) window.stRecordGameInfo(seat,'info:'+night+':fortuneteller:result:1',ftResultText(),night,2); } }catch(e){}   // 代占卜也把结果记入占卜师局内信息（否则只有选择没有结果）
+  }
   nfDone(id); save(); render(); }
 function nightForceSkip(id){ nfDone(id,true); save(); render(); }   // 无行动·跳过：标记完成但不记录（未发生）
 /* 把投毒者/恶魔/占卜师做出的选择（含说书人代操作）记入该玩家的「局内信息」。在 nfDone 统一触发，玩家提交或 ST 代确认/代选都会走到。 */
@@ -1430,7 +1433,12 @@ function nfDone(id,skip){ const f=nfGet(id); f.stage='done';
     try{ _nfRecordChoice(id); }catch(e){}   // 把玩家/说书人做出的选择记入该玩家的局内信息
     if(id==='imp'){ const rec=impKills[night]; if(rec&&rec.type==='starpass'&&rec.newImp!=null){ try{ _notifyNewImp(rec.newImp); }catch(e){} } }   // 传位：通知新恶魔并记录
   }
-  try{ if(window.stNightClear) window.stNightClear(id); }catch(e){} }   // 完成后清掉该玩家的夜晚弹窗与回复
+  if(id==='imp'){                                   // 恶魔步单独清弹窗：清「做出击杀选择的恶魔（含自杀者）」，而非 impSeat（传位后已是新恶魔，且不能误清刚发给新恶魔的通知）
+    const rec=impKills[night]; let chooser=(rec&&rec.type==='starpass')?rec.target:(rec&&rec.imp!=null?rec.imp:impSeat());
+    try{ if(window._stClearSeatNight && chooser!=null && chooser>=0) window._stClearSeatNight(chooser); }catch(e){}
+  } else {
+    try{ if(window.stNightClear) window.stNightClear(id); }catch(e){}   // 完成后清掉该玩家的夜晚弹窗与回复
+  } }
 function _nfEscA(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 function stepDone(s){ if(stepAutomated(s)){ const f=nightFlow[night+':'+s.id]; return !!(f&&f.stage==='done'); } return !!nightChecks[night+':'+s.id]; }
 /* 该步对应角色是否已出局（全部座位都死→本夜无行动，只能跳过） */
@@ -3354,6 +3362,9 @@ load(); render();
     }); };
   window.stNightClear=function(id){ if(role!=='st'||!curGid) return; try{ (nightSendSeats(id)||[]).forEach(function(i){ const uid=_seatUid(i); if(!uid) return;
     db.ref('games/'+curGid+'/players/'+uid+'/night').remove().catch(function(){}); db.ref('games/'+curGid+'/players/'+uid+'/nightReply').remove().catch(function(){}); }); }catch(e){} };
+  /* 清掉指定座位的夜晚弹窗（用于传位后清旧恶魔弹窗——此时 impSeat 已指向新恶魔，nightSendSeats 会漏掉旧恶魔） */
+  window._stClearSeatNight=function(seat){ if(role!=='st'||!curGid) return; const uid=_seatUid(seat); if(!uid) return;
+    db.ref('games/'+curGid+'/players/'+uid+'/night').remove().catch(function(){}); db.ref('games/'+curGid+'/players/'+uid+'/nightReply').remove().catch(function(){}); };
   /* 说书人把某座位玩家做出的「选择」记入其局内信息（按 key 子节点写，玩家端订阅自身节点即时可见）。含玩家离线时说书人代操作。 */
   window.stRecordGameInfo=function(seat, key, text, n, ord){ if(role!=='st'||!curGid) return;
     if(seat==null || seat<0) return; const uid=_seatUid(seat); if(!uid) return;
