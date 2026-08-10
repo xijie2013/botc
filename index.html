@@ -1017,6 +1017,8 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.29.6', d:'2026-08-10', items:['背景音乐改为「播 5 分钟 → 静默 5 分钟」循环播放，避免全程有音乐略显吵闹；每次开始/停止都用 6 秒长淡入淡出，柔和不突兀。静音按钮、三档音量、动画期间静音等原有行为不变']},
+  {v:'v2.29.5', d:'2026-08-10', items:['修复：播放处决/猎人射杀视频与胜负结算动画时，背景音乐现在完全静音（此前只压低到约 8%，仍隐约可闻），动画结束后自动从原处续播并淡回原音量；视频播放期间也不再叠加零碎的界面音效（结算的胜负音效在视频结束后触发，不受影响）。提名转盘不受影响']},
   {v:'v2.29.4', d:'2026-08-10', items:['修复：旧局记录·对局列表/统计/积分榜里早期存成小写的名字（如「cooler」）现在统一显示为客人名册里的原始大小写「Cooler」，并与「Cooler」合并计分/统计（同一人不再拆成两行）。以客人名册登记为准，名册里没有的名字则采用历史记录中出现过的带大写写法；中文名不受影响']},
   {v:'v2.29.3', d:'2026-08-10', items:['修复：名字大小写分裂——说书人把「Cooler」加入客人名册后，玩家用「Cooler」登录却被强制变成小写「cooler」，导致显示名、记录与座位上的「Cooler」对不上、像是两个人。现在登录后统一采用客人名册里说书人登记的原始大小写作为显示名（名册里没有则保留你输入的原样）；每次登录都会校正一次，之前已存成小写的老账号下次登录会自动改回正确大小写。账号本身仍不区分大小写，Cooler/cooler 登录的是同一个账号']},
   {v:'v2.29.2', d:'2026-08-10', items:['修复：开局发牌后角色卡入场时会先闪一下上一局的旧卡面，再切到本局正确角色——改为等新角色图加载完成后再播放入场动画（带 1.5s 兜底），不再闪旧图']},
@@ -2785,9 +2787,10 @@ load(); render();
   /* ===== 背景音乐（未登录=空酒馆 / 玩家=烛影 / 说书人=八音盒；淡入淡出 + 交叉淡化循环，避免生硬接缝） ===== */
   const BGM={ anon:'assets/bgm-tavern-empty.mp3', player:'assets/bgm-tavern-player.mp3', st:'assets/bgm-tavern-storyteller.mp3' };
   const BGM_VOL=0.5, BGM_CF=2.4, BGM_LOOP_CF=10;   // 目标音量 / 切换交叉淡化秒数 / 循环交叉淡化秒数（提前10s开始，接缝更自然）
-  let _bgA=null,_bgB=null,_bgCur=null,_bgSrc='',_bgWant='',_bgUnlocked=false,_bgDuckF=1;
+  const BGM_ON_MS=5*60*1000, BGM_OFF_MS=5*60*1000, BGM_CYCLE_FADE=6000;   // 播放周期：播5分钟 / 静默5分钟 / 切换淡入淡出6秒（柔和不突兀）
+  let _bgA=null,_bgB=null,_bgCur=null,_bgSrc='',_bgWant='',_bgUnlocked=false,_bgDuckF=1,_bgCycleF=1,_bgCycleTid=0,_bgCycleOn=true;
   function _bgMuted(){ return !!window.__muted; }
-  function _bgTargetVol(){ const mul=(window.__vol&&typeof window.__vol.bgm==='number')?window.__vol.bgm:1; return (_bgMuted()?0:BGM_VOL*mul)*_bgDuckF; }
+  function _bgTargetVol(){ const mul=(window.__vol&&typeof window.__vol.bgm==='number')?window.__vol.bgm:1; return (_bgMuted()?0:BGM_VOL*mul)*_bgDuckF*_bgCycleF; }   // 三重系数：静音 / 动画压制 / 播放周期
   function _bgFade(el,to,ms){ if(!el) return; if(el._fr) cancelAnimationFrame(el._fr); const from=el.volume||0, t0=performance.now();
     const step=t=>{ const k=ms<=0?1:Math.min(1,(t-t0)/ms); el.volume=Math.max(0,Math.min(1,from+(to-from)*k));
       if(k<1){ el._fr=requestAnimationFrame(step); } else { el._fr=0; if(to<=0){ try{ el.pause(); }catch(e){} } } };
@@ -2811,13 +2814,21 @@ load(); render();
     if(_bgMuted()){ if(_bgCur) _bgFade(_bgCur,0,500); }
     else if(_bgUnlocked){ _bgCross(_bgWant||BGM.anon,true); } };
   window._applyBgmVol=function(){ if(!_bgCur) return; if(!_bgCur.paused && !_bgMuted()) _bgFade(_bgCur,_bgTargetVol(),300); };   // 拖动背景音乐音量时即时应用
-  window._bgDuck=function(on){ _bgDuckF = on?0.16:1; if(_bgCur && !_bgCur.paused && !_bgMuted()) _bgFade(_bgCur,_bgTargetVol(),450); };
-  (function(){ function unlock(){ if(_bgUnlocked) return; _bgUnlocked=true; try{ updateBgm(); }catch(e){} }
+  function _bgApply(fadeMs){ if(!_bgCur || _bgMuted()) return; const t=_bgTargetVol();
+    if(t>0 && _bgUnlocked && _bgCur.paused){ const pr=_bgCur.play(); if(pr&&pr.catch) pr.catch(()=>{}); }   // 需要发声却曾被淡到0而暂停 → 先从暂停处续播（不从头重放）
+    _bgFade(_bgCur, t, fadeMs); }   // 淡到当前应有音量；淡到0时 _bgFade 会自动 pause
+  window._bgDuck=function(on){ _bgDuckF = on?0:1; _bgApply(on?450:600); };   // 动画期间背景音乐完全静音，结束后续播淡回
+  /* 背景音乐播放周期：播 BGM_ON_MS 后静默 BGM_OFF_MS，循环往复，避免一直有音乐吵人；切换用 BGM_CYCLE_FADE 长淡入淡出，柔和 */
+  function _bgCycleTick(){ _bgCycleOn=!_bgCycleOn; _bgCycleF=_bgCycleOn?1:0; _bgApply(BGM_CYCLE_FADE);
+    _bgCycleTid=setTimeout(_bgCycleTick, _bgCycleOn?BGM_ON_MS:BGM_OFF_MS); }
+  function _bgCycleStart(){ if(_bgCycleTid) return; _bgCycleOn=true; _bgCycleF=1; _bgCycleTid=setTimeout(_bgCycleTick, BGM_ON_MS); }   // 解锁后先播满一个 5 分钟再进入静默
+  (function(){ function unlock(){ if(_bgUnlocked) return; _bgUnlocked=true; try{ updateBgm(); }catch(e){} try{ _bgCycleStart(); }catch(e){} }
     ['pointerdown','keydown','touchstart'].forEach(ev=>window.addEventListener(ev,unlock,{passive:true})); })();
 
   /* ===== 一次性事件音效（尊重静音；播放在背景音乐之上） ===== */
   let _sfxSpinEl=null, _sfxWinEl=null;
-  function _sfxPlay(file, vol){ if(window.__muted) return null; try{ const mul=(window.__vol&&typeof window.__vol.sfx==='number')?window.__vol.sfx:1; if(mul<=0) return null; const a=new Audio(encodeURI('assets/'+file)); a.volume=Math.max(0,Math.min(1,(vol==null?0.8:vol)*mul)); const p=a.play(); if(p&&p.catch)p.catch(()=>{}); return a; }catch(e){ return null; } }
+  /* __execPlaying 时（处决/猎人视频播放中）不叠加零碎 UI 音效；胜负音效在视频结束后触发，不受影响 */
+  function _sfxPlay(file, vol){ if(window.__muted||window.__execPlaying) return null; try{ const mul=(window.__vol&&typeof window.__vol.sfx==='number')?window.__vol.sfx:1; if(mul<=0) return null; const a=new Audio(encodeURI('assets/'+file)); a.volume=Math.max(0,Math.min(1,(vol==null?0.8:vol)*mul)); const p=a.play(); if(p&&p.catch)p.catch(()=>{}); return a; }catch(e){ return null; } }
   window._sfx=function(kind){
     if(kind==='inkwell') _sfxPlay('sfx-inkwell.mp3',0.7);
     else if(kind==='pen-return') _sfxPlay('sfx-pen-return.mp3',0.7);
