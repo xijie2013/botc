@@ -1051,6 +1051,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.34.0', d:'2026-08-10', items:['夜晚信息自动化拓展（第二批）：洗衣妇、图书管理员、调查员接入自动下发。说书人在夜晚面板先用「揭示选择器」选好要告知的两张牌（真身角色所在玩家 + 一名幌子玩家；图书管理员无外来者时自动为「没有外来者」），发送框随之显示要告知玩家的内容，一键发送、玩家确认收到后记入其局内信息与魔典。中毒/醉酒时可自由选两人并自定角色给假信息。未选好揭示内容前不可发送/代确认，避免误发空信息']},
   {v:'v2.33.8', d:'2026-08-10', items:['中毒/醉酒占卜师「设定结果」环节的「有恶魔/无恶魔」按钮加了颜色提示：选中项若与真实情况一致显示绿色（给的是真话），不一致显示红色（给的是假话），方便说书人一眼判断自己发出的是真是假']},
   {v:'v2.33.7', d:'2026-08-10', items:['修复：中毒/醉酒的占卜师由玩家提交两名目标、说书人「审核通过」后，此前会直接把真实结果发出去，说书人没有给假信息的机会。现在中毒/醉酒占卜师审核通过后先进入「设定结果」环节——说书人选择要告知的「有恶魔/无恶魔」（可给假信息），确认后再发送；未选择前「发送结果」按钮不可点，避免误发真结果']},
   {v:'v2.33.6', d:'2026-08-10', items:['小恶魔自杀传位后，自杀的旧恶魔不再得知是谁继任——其局内信息只显示「你的一名爪牙已成为新的小恶魔（你不会得知是谁）」，无存活爪牙时显示「没有存活的爪牙可以继任，不再有新的小恶魔」。夜晚面板对中毒/醉酒角色的排列调整为：中毒标识 → 假值下拉菜单（先生成错误信息）→ 发送框（发送错误信息），避免在设定假值前误把正确信息发出去']},
@@ -1321,7 +1322,7 @@ function recordSpecial(sid,on){
    支持角色：爪牙相认(_minion)/恶魔信息(_demon)=纯信息；投毒者(poisoner)/恶魔夜杀(imp)=选1目标；占卜师(fortuneteller)=选2+回结果。
    每步：说书人「发送」私密信息 → 玩家底部弹窗确认(或选目标提交) → 选目标类由说书人「审核通过」写入魔典 → 占卜再回一条结果 → 玩家确认。
    流程状态存 nightFlow[`${night}:${id}`]，随魔典存档同步。完成即置 nightChecks 令「结束本夜」门控自动生效。 */
-const NIGHT_AUTO_INFO=new Set(['_minion','_demon','chef','empath','undertaker']);
+const NIGHT_AUTO_INFO=new Set(['_minion','_demon','chef','empath','undertaker','washerwoman','librarian','investigator']);
 const NIGHT_AUTO_PICK1=new Set(['poisoner','imp']);
 const NIGHT_AUTO_PICK2=new Set(['fortuneteller']);
 function stepKind(id){ if(NIGHT_AUTO_INFO.has(id)) return 'info'; if(NIGHT_AUTO_PICK1.has(id)) return 'pick1'; if(NIGHT_AUTO_PICK2.has(id)) return 'pick2info'; return null; }
@@ -1352,6 +1353,7 @@ function nightAutoText(id){
     const shown=(sick&&undertakerPicks[night])?undertakerPicks[night]:trueRole;
     const rn=(shown&&RMAP[shown])?RMAP[shown].name:'（未知）';
     return '【送葬者】昨日被处决的 '+nameAt(ex)+' 的真实角色是：'+rn+'。'; }
+  if(id==='washerwoman'||id==='librarian'||id==='investigator') return pingPlayerText(id);
   return '';
 }
 function ftResultText(){ const cur=ftPicks[night]; if(!cur||cur[0]==null||cur[1]==null) return '【占卜结果】（尚未选定两名玩家）';
@@ -1362,7 +1364,9 @@ function ftResultText(){ const cur=ftPicks[night]; if(!cur||cur[0]==null||cur[1]
 /* 说书人操作：发送 / 编辑文本 / 审核通过 / 退回重选 / 代确认跳过 / 重发 */
 function nightSend(id){ const kind=stepKind(id); if(!kind) return; const f=nfGet(id);
   const seats=nightSendSeats(id); if(!seats.length){ try{toast('没找到该角色对应的已登录玩家，可用「代确认/跳过」');}catch(e){} }
-  const text=(f.text!=null&&f.text!=='')?f.text:nightAutoText(id); f.text=text;
+  const text=(f.text!=null&&f.text!=='')?f.text:nightAutoText(id);
+  if(kind==='info' && (!text||!text.trim())){ try{toast('请先在上方选择/设定要告知的信息');}catch(e){} return; }   // 洗衣妇等：未选好揭示内容不发送
+  f.text=text;
   let phase='info', pick=null; if(kind!=='info'){ phase='pick'; pick={count:kind==='pick2info'?2:1, options:nightSeatOptions()}; }
   f.stage='sent'; f.phase=phase; f.sid=(f.sid||0)+1; f.pick=null;
   if(window.stNightSend) window.stNightSend(id, phase, text, pick, seats, f.sid);
@@ -1394,7 +1398,9 @@ function nightResend(id){ const f=nfGet(id);
   else nightSend(id); }
 /* 代确认：这一步「确实发生了」（说书人替离线玩家确认/操作）→ 记入玩家局内信息。信息步直接记录+完成；选择步进入代选择器由说书人替玩家选。 */
 function nightProxyConfirm(id){ const kind=stepKind(id);
-  if(kind==='info'){ _nfRecordInfoToPlayers(id); nfDone(id); save(); render(); return; }
+  if(kind==='info'){ const f=nfGet(id); const text=(f.text!=null&&f.text!=='')?f.text:nightAutoText(id);
+    if(!text||!text.trim()){ try{toast('请先在上方选择/设定要告知的信息');}catch(e){} return; }   // 洗衣妇等：未选好揭示内容不代确认
+    _nfRecordInfoToPlayers(id); nfDone(id); save(); render(); return; }
   nfGet(id).stage='manual'; save(); render(); }                // 选目标步：代玩家操作 → 说书人手动选目标
 /* 代确认结果（占卜结果）：把结果记入玩家局内信息并完成（nfDone 里会一并记录占卜选择） */
 function nightProxyConfirmResult(id){ const f=nfGet(id);
@@ -1771,6 +1777,11 @@ function pingResult(roleId){
     return mk(nameAt(rec.a)+'、'+nameAt(rec.b)+' 中有一个是 '+RMAP[rec.role].name, real);
   }
 }
+/* 洗衣妇/图书管理员/调查员：给玩家看的干净文本（去掉说书人端的「· 真/假」标注）；未选好则返回'' */
+function pingPlayerText(roleId){ const r=pingResult(roleId); if(!r||!r.text) return '';
+  const label={washerwoman:'洗衣妇',librarian:'图书管理员',investigator:'调查员'}[roleId]||'';
+  let core=r.text; const i=core.lastIndexOf(' · '); if(i>=0) core=core.slice(0,i);   // 剥掉末尾「· 真/假」
+  return '【'+label+'】你所知：'+core+'。'; }
 function pingSet(roleId,field,v){ if(!pingPicks[roleId]) pingPicks[roleId]={}; const rec=pingPicks[roleId];
   if(field==="role") rec.role = v===""?null:v; else rec[field] = v===""?null:+v;
   const seat=meta.findIndex(m=>m&&m.role===roleId); const r=pingResult(roleId); histSet(seat,'info', r?r.text:null); render(); }
@@ -2487,6 +2498,7 @@ function renderGrim(){
         if(s.id==="undertaker") h+=undertakerUI();
         if(s.id==="chef") h+=numUI("chef","相邻邪恶对数",Math.max(2,meta.filter((m,i)=>regEvil(i)).length));
         if(s.id==="empath") h+=numUI("empath","两侧存活邻座邪恶数",2);
+        if(s.id==="washerwoman"||s.id==="librarian"||s.id==="investigator") h+=pingUI(s.id);   // 揭示选择器：说书人先选「真身+幌子」两张牌，发送框随之显示要告知的内容
         h+=nightPanel(s.id, active);
         return;
       }
