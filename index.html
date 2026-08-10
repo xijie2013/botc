@@ -484,6 +484,14 @@
   .nbtok.used{opacity:.4;}
   .nbtok{cursor:grab;}
   .nbtok.crossed{opacity:.45; text-decoration:line-through;}
+  /* 防止拖拽时误选中文字/图片 */
+  #tableZone, #tableZone *, #notesPanel .nbcontent, #notesPanel .nbcontent *{ -webkit-user-select:none; -moz-user-select:none; user-select:none; }
+  #tableZone img, #notesPanel img{ -webkit-user-drag:none; user-drag:none; -webkit-touch-callout:none; }
+  #notesPanel textarea, #notesPanel input{ -webkit-user-select:text; user-select:text; }
+  /* 清除所有标记按钮 */
+  .nb-clearall{display:block; width:100%; margin:16px 0 6px; padding:8px 10px; font-size:calc(1 * var(--sw) / 100); font-weight:800;
+    border-radius:8px; cursor:pointer; border:1px solid rgba(176,64,46,.5); background:rgba(176,64,46,.1); color:#b0402e; user-select:none;}
+  .nb-clearall.confirm{background:#b0402e; color:#fff; border-color:#b0402e;}
   .nb-note{padding:4px 2px; border-bottom:1px solid rgba(122,83,32,.14); line-height:1.35;}
   .nb-nom{border:1px solid rgba(74,43,107,.22); border-radius:8px; padding:6px 8px; margin:6px 0; background:rgba(255,252,244,.6);}
   .nb-nomhead{font-weight:700; color:#6b4a1e;}
@@ -1001,6 +1009,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.23.0', d:'2026-08-10', items:['玩家笔记「标记」页面最下方新增「清除所有标记」按钮（一次点击进入确认、再点一次执行，清空所有座位的身份与状态标记，保留座位备注）','拖拽删除身份时只显示身份标记本身作为虚影跟随鼠标（不再拖动整个座位+玩家），且鼠标一离开原座位范围即生效','拖拽时不再误选中画面中的图片或文字（座位圈与笔记面板禁用文本/图片选择，输入框仍可正常选择）']},
   {v:'v2.22.0', d:'2026-08-10', items:['修复管家投票规则：玩家笔记里管家现在也受主人限制——主人当前未举手时管家不能投（投票开始时说书人会把管家的主人座位私密下发到管家端校验）','出局的管家不再受主人限制，可自由投票（鬼票）——魔典与玩家笔记均已修正（此前魔典里出局管家仍被主人未投票卡住）']},
   {v:'v2.21.0', d:'2026-08-10', items:['角色锁定去掉锁形图标，锁定时只变灰+划线','玩家笔记「标记」tab 改为与魔典一致的拖拽：把状态/角色标签拖到座位上即可标注；单击标签可划掉（变灰+划线）再点恢复','玩家笔记：把座位上的身份拖出座位圈即可删除该身份；点击自己加的状态标记可移除该标记（死亡标记除外，由说书人给出）','（拖拽与魔典一样使用鼠标拖放，触屏设备可能不支持拖拽）']},
   {v:'v2.20.0', d:'2026-08-10', items:['玩家笔记举手按钮去掉手掌图标（「举手」「放下」前不再有✋）','说书人魔典里有人举手时的高亮由绿色改为魔典深紫色（座位号高亮＋「N 人举手中」文字同色）','去掉「N 人举手中」与「停止计票」前的小图标','说明：座位死亡/处决/恶魔击杀/中毒/守护等状态本就使用你提供的 PNG 素材（魔典、大厅、玩家笔记均是），未发现别处用表情替代素材']},
@@ -3006,7 +3015,15 @@ load(); render();
         s.addEventListener('mouseleave',hideSeatNote);
         /* 拖标记/角色到座位 → 添加；把座位身份拖出座位范围 → 删除 */
         s.setAttribute('draggable','true');
-        s.addEventListener('dragstart',e=>{ if(mine&&mine.role){ try{ e.dataTransfer.setData('text','seatrole:'+i); e.dataTransfer.effectAllowed='move'; }catch(_){} } else { e.preventDefault(); } });
+        s.addEventListener('dragstart',e=>{ if(mine&&mine.role&&RMAP[mine.role]){ try{ e.dataTransfer.setData('text','seatrole:'+i); e.dataTransfer.effectAllowed='move';
+            const rr=RMAP[mine.role]; const g=document.createElement('div'); g.textContent=rr.name;   // 仅身份标记作为拖拽虚影
+            g.style.cssText='position:fixed;left:-1000px;top:-1000px;padding:3px 9px;border-radius:12px;font-size:13px;font-weight:800;white-space:nowrap;background:#fff;border:1.5px solid '+TEAMC[rr.team]+';color:'+TEAMC[rr.team]+';box-shadow:0 2px 6px rgba(0,0,0,.35);z-index:99999';
+            document.body.appendChild(g); e.dataTransfer.setDragImage(g, g.offsetWidth/2, g.offsetHeight/2); setTimeout(function(){ try{g.remove();}catch(_){}} ,0);
+            s._dragRect=s.getBoundingClientRect();
+          }catch(_){} } else { e.preventDefault(); } });
+        s.addEventListener('dragend',e=>{ const rc=s._dragRect; s._dragRect=null; if(!rc) return;   // 鼠标离开原座位范围即删除身份
+          const out=(e.clientX<rc.left||e.clientX>rc.right||e.clientY<rc.top||e.clientY>rc.bottom);
+          if(out){ ensureS(); if(S.seats[i]&&S.seats[i].role){ S.seats[i].role=''; saveNotes(); drawSeats(); } } });
         s.addEventListener('dragover',e=>{ e.preventDefault(); e.stopPropagation(); s.classList.add('over'); });
         s.addEventListener('dragleave',()=>s.classList.remove('over'));
         s.addEventListener('drop',e=>{ e.preventDefault(); e.stopPropagation(); s.classList.remove('over');
@@ -3019,9 +3036,7 @@ load(); render();
       }
       zone.appendChild(s);
     }
-    if(mode==='notes'){ zone.ondragover=function(e){ e.preventDefault(); };   // 座位身份拖出到座位圈空白处 → 删除
-      zone.ondrop=function(e){ e.preventDefault(); const d=(e.dataTransfer.getData('text')||''); if(d.indexOf('seatrole:')===0){ const i=+d.slice(9); ensureS(); if(S.seats[i]){ S.seats[i].role=''; saveNotes(); drawSeats(); } } }; }
-    else { zone.ondragover=null; zone.ondrop=null; }
+    zone.ondragover=null; zone.ondrop=null;   // 身份拖出座位删除已改由座位 dragend 判定（鼠标离开原座位即生效）
   }
 
   /* ---------- 大厅 ---------- */
@@ -3066,6 +3081,7 @@ load(); render();
     const locked=new Set(pub.locked||[]); const rs=ROLES.filter(r=>!locked.has(r.id)).map(r=>r.id);
     h+=rs.map(id=>{ const r=RMAP[id]; if(!r) return '';
       return '<span class="nbtok'+(crossed.has('role:'+id)?' crossed':'')+'" draggable="true" ondragstart="_nbDragStart(event,\'prole:'+id+'\')" onclick="_nbCross(\'role:'+id+'\')" style="color:'+TEAMC[r.team]+'">'+r.name+'</span>'; }).join('')+'</div>';
+    h+='<button class="nb-clearall" onclick="_nbClearAll(this)">清除所有标记</button>';
     return h;
   }
   /* 我的座位备注（独立页，点墨水瓶进入） */
@@ -3085,6 +3101,11 @@ load(); render();
   }
   window._nbDragStart=function(ev, payload){ try{ ev.dataTransfer.setData('text', payload); ev.dataTransfer.effectAllowed='copy'; }catch(e){} };   // 拖动标记/角色到座位
   window._nbCross=function(tok){ ensureS(); if(!Array.isArray(S.crossed)) S.crossed=[]; const ix=S.crossed.indexOf(tok); if(ix>=0) S.crossed.splice(ix,1); else S.crossed.push(tok); saveNotes(); renderNotes(); };   // 单击划掉/恢复
+  window._nbClearAll=function(btn){ ensureS();
+    if(btn && !btn.classList.contains('confirm')){ btn.classList.add('confirm'); btn.textContent='确认清除？再点一次'; setTimeout(function(){ try{ btn.classList.remove('confirm'); btn.textContent='清除所有标记'; }catch(_){}} ,2500); return; }
+    (S.seats||[]).forEach(st=>{ if(st){ st.role=''; st.status=[]; } });   // 清除所有座位的身份与状态标记（保留座位备注）
+    S.crossed=[]; saveNotes(); renderNotes();
+  };
   let _pnoteSeat=-1, _noteSaveT=null;
   function seatTap(i, sx, sy, sd){
     if(_pnoteSeat===i){ closePnote(); return; }             // 再次点击同一座位 → 关闭
