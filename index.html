@@ -1051,6 +1051,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.33.6', d:'2026-08-10', items:['小恶魔自杀传位后，自杀的旧恶魔不再得知是谁继任——其局内信息只显示「你的一名爪牙已成为新的小恶魔（你不会得知是谁）」，无存活爪牙时显示「没有存活的爪牙可以继任，不再有新的小恶魔」。夜晚面板对中毒/醉酒角色的排列调整为：中毒标识 → 假值下拉菜单（先生成错误信息）→ 发送框（发送错误信息），避免在设定假值前误把正确信息发出去']},
   {v:'v2.33.5', d:'2026-08-10', items:['小恶魔自杀传位现在是一个「必须确认」的环节：传位后恶魔步进入「等待新恶魔确认」状态，需新恶魔点确认或说书人代确认才算完成、才放行下一步（此前会自动跳过，新恶魔可能漏看传位通知）。修复：新恶魔当晚若还是投毒者等爪牙，其局内信息里传位通知的顺序改到自身夜间行动（如投毒）之后——夜晚顺序里投毒在先、恶魔自刀传位在后']},
   {v:'v2.33.4', d:'2026-08-10', items:['修复：说书人代确认小恶魔「自杀」传位后，自杀那名恶魔端的「请选择击杀目标」弹窗不消失（传位后系统去清了新恶魔的节点、漏了自杀者）——现在按实际做出击杀选择的那名恶魔清弹窗。修复：说书人代确认占卜师时，占卜师局内信息只记了选择、没记结果——现在代占卜也会把结果一并记入其局内信息']},
   {v:'v2.33.3', d:'2026-08-10', items:['小恶魔自杀传位：新恶魔现在会收到「你已成为新的小恶魔」的弹窗通知，需点确认，并记入其局内信息（离线也由说书人保底记录）。修复：传位后场上有两个「小恶魔」座位（死的旧恶魔+存活新恶魔）时，之后夜晚的恶魔信息/夜杀以及说书人魔典的恶魔状态都误取到已出局的旧恶魔（显示「恶魔已出局，不再行动」）——现在恶魔相关判定一律优先取存活的那个恶魔']},
@@ -1415,7 +1416,7 @@ function _nfRecordChoice(id){ if(!window.stRecordGameInfo) return;
   if(id==='imp'){ const rec=impKills[night]; if(!rec) return;
     const chooser=(rec.type==='starpass')?rec.target:rec.imp; if(chooser==null) return;   // 传刀时 target=恶魔自己，即做出选择的玩家
     const txt=(rec.type==='starpass')
-      ? ('【恶魔】你选择自杀传位'+(rec.newImp!=null?('，由 '+(rec.newImp+1)+'号 '+nameAt(rec.newImp)+' 继任为新恶魔。'):'（由说书人指定继任爪牙）。'))
+      ? ('【恶魔】你选择自杀。'+(rec.newImp!=null?'你的一名爪牙已成为新的小恶魔（你不会得知是谁）。':'没有存活的爪牙可以继任，不再有新的小恶魔。'))
       : ('【恶魔】你选择击杀 '+(rec.target+1)+'号 '+nameAt(rec.target)+'。');
     window.stRecordGameInfo(chooser,'choice:imp:n'+night,txt,night,1); return; }
   if(id==='fortuneteller'){ const cur=ftPicks[night]; if(!cur||cur[0]==null||cur[1]==null) return;
@@ -2456,11 +2457,11 @@ function renderGrim(){
       if(stepAutomated(s)){   // 自动化步骤：改用信息流程面板（发送/确认/审核），并按顺序门控
         const done=stepDone(s), active=(si===firstUndone);
         h+='<div class="nstep nauto"><span><b style="color:'+color+'">'+(done?'✓ ':'')+name+'</b> <span class="nn">'+s.note+'</span>'+(info?'<div class="ninfo">'+info+'</div>':'')+'</span></div>';
-        h+=nightPanel(s.id, active);
-        /* 中毒/醉酒的信息角色：仍显示假值选择器（只在病态时返回内容），让说书人设定告知的假值——同时影响下发文本与魔典日志 */
+        /* 中毒/醉酒的信息角色：假值选择器放在发送框「之前」（标识→下拉菜单先生成假值→确认框发送），避免在设假值前误发正确信息（只在病态时返回内容） */
         if(s.id==="undertaker") h+=undertakerUI();
         if(s.id==="chef") h+=numUI("chef","相邻邪恶对数",Math.max(2,meta.filter((m,i)=>regEvil(i)).length));
         if(s.id==="empath") h+=numUI("empath","两侧存活邻座邪恶数",2);
+        h+=nightPanel(s.id, active);
         return;
       }
       const ck=nightChecks[night+":"+s.id]?" checked":"";
