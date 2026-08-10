@@ -1051,6 +1051,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.34.1', d:'2026-08-10', items:['开新局清理补全：新的一局现在会一并清空说书人日志（此前只清了玩家局内信息、漏了说书人的夜间日志）。「重置角色」与「随机发牌（大排灯）」也统一清空玩家的局内信息、座位备注、所有标记与说书人日志——新的一局开始，上一局的痕迹全部清零']},
   {v:'v2.34.0', d:'2026-08-10', items:['夜晚信息自动化拓展（第二批）：洗衣妇、图书管理员、调查员接入自动下发。说书人在夜晚面板先用「揭示选择器」选好要告知的两张牌（真身角色所在玩家 + 一名幌子玩家；图书管理员无外来者时自动为「没有外来者」），发送框随之显示要告知玩家的内容，一键发送、玩家确认收到后记入其局内信息与魔典。中毒/醉酒时可自由选两人并自定角色给假信息。未选好揭示内容前不可发送/代确认，避免误发空信息']},
   {v:'v2.33.8', d:'2026-08-10', items:['中毒/醉酒占卜师「设定结果」环节的「有恶魔/无恶魔」按钮加了颜色提示：选中项若与真实情况一致显示绿色（给的是真话），不一致显示红色（给的是假话），方便说书人一眼判断自己发出的是真是假']},
   {v:'v2.33.7', d:'2026-08-10', items:['修复：中毒/醉酒的占卜师由玩家提交两名目标、说书人「审核通过」后，此前会直接把真实结果发出去，说书人没有给假信息的机会。现在中毒/醉酒占卜师审核通过后先进入「设定结果」环节——说书人选择要告知的「有恶魔/无恶魔」（可给假信息），确认后再发送；未选择前「发送结果」按钮不可点，避免误发真结果']},
@@ -1232,12 +1233,13 @@ async function dealRoles(){
     const goodSeats=[]; meta.forEach((m,i)=>{ if(m.role && !isEvil(RMAP[m.role].team) && m.role!=="fortuneteller") goodSeats.push(i); });
     if(goodSeats.length) redHerring=goodSeats[Math.floor(Math.random()*goodSeats.length)];
   }
+  try{ if(window._stClearPlayerNotes) _stClearPlayerNotes(); }catch(e){}   // 随机大排灯：清空玩家局内信息/座位备注/标记（说书人日志已随 m.hist={} 清空）
   render();
 }
 async function resetRoles(){ if(!await uiConfirm("重置所有身份、状态、备注、伪装？（保留名字与座位）")) return;
   meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
   Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); Object.keys(dayFlow).forEach(k=>delete dayFlow[k]); overviewDecoys=[]; tokens.forEach(t=>t.dead=false); render();
-  try{ if(window._stClearPlayerRoles) _stClearPlayerRoles(); }catch(e){} try{ if(window._stResetPublic) _stResetPublic(); }catch(e){} try{ if(window._histNewRound) _histNewRound(); }catch(e){} }   // 重置角色：清空玩家角色卡 + 公开状态（大厅/笔记的死亡/处决/胜负等一并清零）；胜负另记一条
+  try{ if(window._stClearPlayerRoles) _stClearPlayerRoles(); }catch(e){} try{ if(window._stClearPlayerNotes) _stClearPlayerNotes(); }catch(e){} try{ if(window._stResetPublic) _stResetPublic(); }catch(e){} try{ if(window._histNewRound) _histNewRound(); }catch(e){} }   // 重置角色：清空玩家角色卡 + 局内信息/座位备注/标记 + 公开状态（大厅/笔记的死亡/处决/胜负等一并清零）；胜负另记一条
 function setBluff(k,v){ bluffs[k]=v; refreshOverviewDecoys(); render(); }
 
 /* ---------- 夜晚信息自动计算 ---------- */
@@ -3185,6 +3187,13 @@ load(); render();
       Object.keys(v).forEach(uid=>{ up['games/'+curGid+'/players/'+uid+'/role']=null; up['games/'+curGid+'/players/'+uid+'/master']=null; });
       if(Object.keys(up).length) db.ref().update(up).catch(()=>{});
     }).catch(()=>{}); };
+  /* 说书人开新局/重置：清空所有玩家的个人笔记数据——局内信息、座位备注与标记、划线、夜晚弹窗（新的一局开始，玩家笔记应清零） */
+  window._stClearPlayerNotes=function(){ if(role!=='st'||!curGid) return;
+    db.ref('games/'+curGid+'/players').once('value').then(s=>{ const v=s.val()||{}; const up={};
+      Object.keys(v).forEach(uid=>{ const b='games/'+curGid+'/players/'+uid+'/';
+        up[b+'gameInfo']=null; up[b+'seats']=null; up[b+'crossed']=null; up[b+'night']=null; up[b+'nightReply']=null; });
+      if(Object.keys(up).length) db.ref().update(up).catch(()=>{});
+    }).catch(()=>{}); };
   /* 说书人重置角色：把公开状态（座位死亡/死因、胜负横幅、提名、处决/击杀动画、举手、指针）一并清零，让大厅与玩家笔记同步复位 */
   window._stResetPublic=function(){ if(role!=='st'||!curGid) return;
     try{ _lastResultSig=null; }catch(e){}
@@ -3716,7 +3725,7 @@ load(); render();
       if(typeof nightFlow==='object') Object.keys(nightFlow).forEach(k=>delete nightFlow[k]);
       if(typeof dayFlow==='object') Object.keys(dayFlow).forEach(k=>delete dayFlow[k]);
       if(Array.isArray(tokens)) tokens.forEach(t=>{ if(t) t.dead=false; });
-      if(Array.isArray(meta)) meta.forEach(m=>{ if(m){ m.dead=false; m.poison=false; m.drunk=false; } });
+      if(Array.isArray(meta)) meta.forEach(m=>{ if(m){ m.dead=false; m.poison=false; m.drunk=false; m.hist={}; m.info=''; } });   // 新的一局：清空说书人日志（每座位的夜间记录）
       try{ save(); }catch(e){} try{ if(typeof render==='function') render(); }catch(e){}
     }catch(e){}
     const gid='t'+Date.now();
