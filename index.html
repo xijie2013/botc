@@ -482,6 +482,8 @@
     border:1px solid rgba(122,83,32,.4); background:rgba(255,252,244,.85); color:#3a2a12; cursor:pointer; user-select:none;}
   .nbtok.on{background:var(--gold); color:#fff; border-color:var(--gold); box-shadow:0 0 6px rgba(184,134,11,.5);}
   .nbtok.used{opacity:.4;}
+  .nbtok{cursor:grab;}
+  .nbtok.crossed{opacity:.45; text-decoration:line-through;}
   .nb-note{padding:4px 2px; border-bottom:1px solid rgba(122,83,32,.14); line-height:1.35;}
   .nb-nom{border:1px solid rgba(74,43,107,.22); border-radius:8px; padding:6px 8px; margin:6px 0; background:rgba(255,252,244,.6);}
   .nb-nomhead{font-weight:700; color:#6b4a1e;}
@@ -999,6 +1001,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.21.0', d:'2026-08-10', items:['角色锁定去掉锁形图标，锁定时只变灰+划线','玩家笔记「标记」tab 改为与魔典一致的拖拽：把状态/角色标签拖到座位上即可标注；单击标签可划掉（变灰+划线）再点恢复','玩家笔记：把座位上的身份拖出座位圈即可删除该身份；点击自己加的状态标记可移除该标记（死亡标记除外，由说书人给出）','（拖拽与魔典一样使用鼠标拖放，触屏设备可能不支持拖拽）']},
   {v:'v2.20.0', d:'2026-08-10', items:['玩家笔记举手按钮去掉手掌图标（「举手」「放下」前不再有✋）','说书人魔典里有人举手时的高亮由绿色改为魔典深紫色（座位号高亮＋「N 人举手中」文字同色）','去掉「N 人举手中」与「停止计票」前的小图标','说明：座位死亡/处决/恶魔击杀/中毒/守护等状态本就使用你提供的 PNG 素材（魔典、大厅、玩家笔记均是），未发现别处用表情替代素材']},
   {v:'v2.19.0', d:'2026-08-10', items:['修复：说书人「重置角色」后，大厅与玩家笔记里的公开状态（座位死亡、处决、恶魔击杀、胜负横幅、提名、举手等）也会一并清零，不再残留上一局的状态']},
   {v:'v2.18.0', d:'2026-08-10', items:['同一账号（玩家或说书人）同一时间只在一个页面活动：在新页面/设备登录后，会自动继承云端最新进度，旧页面则显示「已在其他页面登录」的遮罩并停用（点「切回本页继续」可把控制权夺回本页）；彻底避免多设备同时操作互相冲突/抢控制']},
@@ -1981,7 +1984,7 @@ function renderGrim(){
       ROLES.filter(r=>r.team===team).forEach(r=>{
         const used=meta.some(m=>m.role===r.id), locked=lockedRoles.has(r.id);
         h+='<div class="rchip'+(used?' used':'')+(locked?' locked':'')+'" draggable="true" data-role="'+r.id+'" title="单击锁定/解锁 · '+esc(r.ab)+
-           '" style="border-color:'+TEAMC[r.team]+';color:'+TEAMC[r.team]+'">'+(locked?'🔒':'')+r.name+'</div>';
+           '" style="border-color:'+TEAMC[r.team]+';color:'+TEAMC[r.team]+'">'+r.name+'</div>';
       });
       h+='</div>';
     });
@@ -2970,19 +2973,36 @@ load(); render();
       const r=seatD/2, bD=Math.max(18, seatD*0.24)*1.1, dist=r*1.3; let bhtml='';
       ['dead','poison','drunk','shield','crossbow','master','herring'].forEach(k=>{ if(marks.indexOf(k)<0) return; const m2=MARK[k]; if(!m2) return;
         const bd=bD*(m2[2]||1), a=m2[0]*Math.PI/180, bx=r+dist*Math.sin(a), by=r-dist*Math.cos(a);
-        bhtml+='<div class="shieldbadge" title="'+k+'" style="width:'+bd+'px;height:'+bd+'px;left:'+(bx-bd/2)+'px;top:'+(by-bd/2)+'px;filter:drop-shadow(0 0 2px '+m2[3]+') drop-shadow(0 0 4px '+m2[3]+');"><img src="'+m2[1]+'"></div>'; });
+        const rmv=(mode==='notes'&&k!=='dead');   // 玩家笔记：点自己加的状态标记可移除（死亡标记除外，那是说书人给的）
+        bhtml+='<div class="shieldbadge" data-mk="'+k+'" title="'+(rmv?'点按移除':k)+'" style="width:'+bd+'px;height:'+bd+'px;left:'+(bx-bd/2)+'px;top:'+(by-bd/2)+'px;filter:drop-shadow(0 0 2px '+m2[3]+') drop-shadow(0 0 4px '+m2[3]+');'+(rmv?'pointer-events:auto;cursor:pointer;':'')+'"><img src="'+m2[1]+'" draggable="false"></div>'; });
       if(bhtml) s.insertAdjacentHTML('beforeend', bhtml);
       /* 投票进行中：座位实时显示举手（所有人可见，无 X） */
       const vv=pub.vote;
       if(vv&&vv.open){ let raised=!!(vv.hands&&vv.hands[i]);
         if(mode==='notes'&&i===myVoteSeat()&&myHandOn()) raised=true;   // 本人举手即时显示
-        if(raised){ s.classList.add('raised'); const _hs=dead?'assets/hand-ghost.png':'assets/hand.png'; s.insertAdjacentHTML('beforeend','<div class="handfill" title="举手"><img src="'+_hs+'"></div>'); } }
+        if(raised){ s.classList.add('raised'); const _hs=dead?'assets/hand-ghost.png':'assets/hand.png'; s.insertAdjacentHTML('beforeend','<div class="handfill" title="举手"><img src="'+_hs+'" draggable="false"></div>'); } }
       if(mode==='notes'){ s.style.cursor='pointer'; const sx=zoneLeft+x, sy=zoneTop+y, sd=seatD;
         s.addEventListener('click',e=>{ e.stopPropagation(); seatTap(i,sx,sy,sd); });
         s.addEventListener('mouseenter',()=>showSeatNote(i));
-        s.addEventListener('mouseleave',hideSeatNote); }
+        s.addEventListener('mouseleave',hideSeatNote);
+        /* 拖标记/角色到座位 → 添加；把座位身份拖出座位范围 → 删除 */
+        s.setAttribute('draggable','true');
+        s.addEventListener('dragstart',e=>{ if(mine&&mine.role){ try{ e.dataTransfer.setData('text','seatrole:'+i); e.dataTransfer.effectAllowed='move'; }catch(_){} } else { e.preventDefault(); } });
+        s.addEventListener('dragover',e=>{ e.preventDefault(); e.stopPropagation(); s.classList.add('over'); });
+        s.addEventListener('dragleave',()=>s.classList.remove('over'));
+        s.addEventListener('drop',e=>{ e.preventDefault(); e.stopPropagation(); s.classList.remove('over');
+          const d=(e.dataTransfer.getData('text')||''); ensureS(); const st=S.seats[i]; if(!st) return;
+          if(d.indexOf('prole:')===0){ st.role=d.slice(6); saveNotes(); drawSeats(); }
+          else if(d.indexOf('pstat:')===0){ const k=d.slice(6); if(!st.status) st.status=[]; if(st.status.indexOf(k)<0){ st.status.push(k); saveNotes(); drawSeats(); } } });
+        /* 点自己加的状态标记 → 移除（死亡除外） */
+        s.querySelectorAll('.shieldbadge[data-mk]').forEach(bel=>{ const k=bel.dataset.mk; if(k==='dead') return;
+          bel.addEventListener('click',e=>{ e.stopPropagation(); ensureS(); const st=S.seats[i]; if(!st||!st.status) return; const ix=st.status.indexOf(k); if(ix>=0){ st.status.splice(ix,1); saveNotes(); drawSeats(); } }); });
+      }
       zone.appendChild(s);
     }
+    if(mode==='notes'){ zone.ondragover=function(e){ e.preventDefault(); };   // 座位身份拖出到座位圈空白处 → 删除
+      zone.ondrop=function(e){ e.preventDefault(); const d=(e.dataTransfer.getData('text')||''); if(d.indexOf('seatrole:')===0){ const i=+d.slice(9); ensureS(); if(S.seats[i]){ S.seats[i].role=''; saveNotes(); drawSeats(); } } }; }
+    else { zone.ondragover=null; zone.ondrop=null; }
   }
 
   /* ---------- 大厅 ---------- */
@@ -3019,12 +3039,14 @@ load(); render();
     if(_nbSeatPage){ c.innerHTML=_rb+seatNotesPageHTML(); return; }
     if(nbTab==='mark') c.innerHTML=_rb+markTabHTML(); else if(nbTab==='nom') c.innerHTML=_rb+nomLogHTML(); else c.innerHTML=_rb+refHTML();
   }
-  function markTabHTML(){ let h='<div class="nb-sec">状态标记 · 点标记再点座位</div><div>';
-    h+=STAT_ORDER.map(k=>{ const b=BADGE[k], on=sel&&sel.type==='stat'&&sel.val===k; const ic=MARK[k]?'<img src="'+MARK[k][1]+'" style="width:17px;height:17px;object-fit:contain;vertical-align:middle;margin-right:2px">':b.g; return '<span class="nbtok '+(on?'on':'')+'" onclick="_nbPick(\''+'stat'+'\',\''+k+'\')">'+ic+b.t+'</span>'; }).join('')+'</div>';
-    h+='<div class="nb-sec">在场角色 · 点角色再点座位记录猜测</div><div>';
-    const locked=new Set(pub.locked||[]); const rs=ROLES.filter(r=>!locked.has(r.id)).map(r=>r.id), used={}; (S.seats||[]).forEach(s=>{ if(s&&s.role) used[s.role]=true; });
-    h+=rs.map(id=>{ const r=RMAP[id]; if(!r) return ''; const on=sel&&sel.type==='role'&&sel.val===id;
-      return '<span class="nbtok '+(on?'on':'')+' '+(used[id]?'used':'')+'" style="color:'+(on?'':TEAMC[r.team])+'" onclick="_nbPick(\''+'role'+'\',\''+id+'\')">'+r.name+'</span>'; }).join('')+'</div>';
+  function markTabHTML(){ ensureS(); const crossed=new Set(S.crossed||[]);
+    let h='<div class="nb-sec">状态标记 · 拖到座位上添加；单击划掉</div><div>';
+    h+=STAT_ORDER.map(k=>{ const b=BADGE[k]; const ic=MARK[k]?'<img src="'+MARK[k][1]+'" draggable="false" style="width:17px;height:17px;object-fit:contain;vertical-align:middle;margin-right:2px">':'';
+      return '<span class="nbtok'+(crossed.has('stat:'+k)?' crossed':'')+'" draggable="true" ondragstart="_nbDragStart(event,\'pstat:'+k+'\')" onclick="_nbCross(\'stat:'+k+'\')">'+ic+b.t+'</span>'; }).join('')+'</div>';
+    h+='<div class="nb-sec">在场角色 · 拖到座位上记录猜测；单击划掉</div><div>';
+    const locked=new Set(pub.locked||[]); const rs=ROLES.filter(r=>!locked.has(r.id)).map(r=>r.id);
+    h+=rs.map(id=>{ const r=RMAP[id]; if(!r) return '';
+      return '<span class="nbtok'+(crossed.has('role:'+id)?' crossed':'')+'" draggable="true" ondragstart="_nbDragStart(event,\'prole:'+id+'\')" onclick="_nbCross(\'role:'+id+'\')" style="color:'+TEAMC[r.team]+'">'+r.name+'</span>'; }).join('')+'</div>';
     return h;
   }
   /* 我的座位备注（独立页，点墨水瓶进入） */
@@ -3042,13 +3064,10 @@ load(); render();
         h+='<div class="nb-role" style="'+(off?'opacity:.4;':'')+'"><b style="color:'+TEAMC[t]+'">'+r.name+(off?' · 未启用':'')+'</b><div style="color:#1c150e;margin-top:2px">'+E(r.ab||'')+'</div></div>'; }); });
     return h;
   }
-  window._nbPick=function(type,val){ if(sel&&sel.type===type&&sel.val===val) sel=null; else sel={type,val}; renderNotes(); drawSeats(); };
+  window._nbDragStart=function(ev, payload){ try{ ev.dataTransfer.setData('text', payload); ev.dataTransfer.effectAllowed='copy'; }catch(e){} };   // 拖动标记/角色到座位
+  window._nbCross=function(tok){ ensureS(); if(!Array.isArray(S.crossed)) S.crossed=[]; const ix=S.crossed.indexOf(tok); if(ix>=0) S.crossed.splice(ix,1); else S.crossed.push(tok); saveNotes(); renderNotes(); };   // 单击划掉/恢复
   let _pnoteSeat=-1, _noteSaveT=null;
   function seatTap(i, sx, sy, sd){
-    if(sel){ ensureS(); const s=S.seats[i];
-      if(sel.type==='role') s.role=(s.role===sel.val?'':sel.val);
-      else { const k=s.status.indexOf(sel.val); if(k<0) s.status.push(sel.val); else s.status.splice(k,1); }
-      sel=null; closePnote(); saveNotes(); renderNotes(); drawSeats(); return; }
     if(_pnoteSeat===i){ closePnote(); return; }             // 再次点击同一座位 → 关闭
     openPnote(i, sx, sy, sd);
   }
