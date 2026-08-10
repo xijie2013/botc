@@ -1051,6 +1051,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.33.8', d:'2026-08-10', items:['中毒/醉酒占卜师「设定结果」环节的「有恶魔/无恶魔」按钮加了颜色提示：选中项若与真实情况一致显示绿色（给的是真话），不一致显示红色（给的是假话），方便说书人一眼判断自己发出的是真是假']},
   {v:'v2.33.7', d:'2026-08-10', items:['修复：中毒/醉酒的占卜师由玩家提交两名目标、说书人「审核通过」后，此前会直接把真实结果发出去，说书人没有给假信息的机会。现在中毒/醉酒占卜师审核通过后先进入「设定结果」环节——说书人选择要告知的「有恶魔/无恶魔」（可给假信息），确认后再发送；未选择前「发送结果」按钮不可点，避免误发真结果']},
   {v:'v2.33.6', d:'2026-08-10', items:['小恶魔自杀传位后，自杀的旧恶魔不再得知是谁继任——其局内信息只显示「你的一名爪牙已成为新的小恶魔（你不会得知是谁）」，无存活爪牙时显示「没有存活的爪牙可以继任，不再有新的小恶魔」。夜晚面板对中毒/醉酒角色的排列调整为：中毒标识 → 假值下拉菜单（先生成错误信息）→ 发送框（发送错误信息），避免在设定假值前误把正确信息发出去']},
   {v:'v2.33.5', d:'2026-08-10', items:['小恶魔自杀传位现在是一个「必须确认」的环节：传位后恶魔步进入「等待新恶魔确认」状态，需新恶魔点确认或说书人代确认才算完成、才放行下一步（此前会自动跳过，新恶魔可能漏看传位通知）。修复：新恶魔当晚若还是投毒者等爪牙，其局内信息里传位通知的顺序改到自身夜间行动（如投毒）之后——夜晚顺序里投毒在先、恶魔自刀传位在后']},
@@ -1517,10 +1518,13 @@ function nightPanel(id, active){
   }
   if(id==='fortuneteller' && stage==='ftsick'){   // 中毒/醉酒占卜师：说书人先设定要告知的（可假）结果再发送
     const cur=ftPicks[night]||[]; const c=sickAns[night+':fortuneteller'];
-    h+='<div class="nf-status">占卜师中毒/醉酒——请设定要告知玩家的结果（可给假信息），再发送：</div>';
+    const _truth=ftAuto();   // 真实情况：true=有恶魔。选中项与真实一致→绿（给真话），不一致→红（给假话），帮助说书人快速判断
+    const _yesStyle=(c==='yes')?(' style="background:'+(_truth===true?'#2e7d43':'#b0402e')+';color:#fff;border-color:transparent"'):'';
+    const _noStyle=(c==='no')?(' style="background:'+(_truth===false?'#2e7d43':'#b0402e')+';color:#fff;border-color:transparent"'):'';
+    h+='<div class="nf-status">占卜师中毒/醉酒——请设定要告知玩家的结果（可给假信息），再发送。<span style="opacity:.8">按钮绿色=与真实一致，红色=假信息</span></div>';
     h+='<div class="nf-imp">占卜 <b>'+nameAt(cur[0])+'</b>、<b>'+nameAt(cur[1])+'</b> → 告知：'
-      +'<span class="regbtn'+(c==='yes'?' on':'')+'" onclick="sickSet(\'fortuneteller\',\'yes\')">有恶魔</span>'
-      +'<span class="regbtn'+(c==='no'?' on':'')+'" onclick="sickSet(\'fortuneteller\',\'no\')">无恶魔</span></div>';
+      +'<span class="regbtn'+(c==='yes'?' on':'')+'"'+_yesStyle+' onclick="sickSet(\'fortuneteller\',\'yes\')">有恶魔</span>'
+      +'<span class="regbtn'+(c==='no'?' on':'')+'"'+_noStyle+' onclick="sickSet(\'fortuneteller\',\'no\')">无恶魔</span></div>';
     h+='<div class="nf-status" style="opacity:.85">将发送：'+ftResultText()+'</div>';
     h+='<div class="nf-btns"><button class="nf-ok"'+(c?'':' disabled')+' onclick="nightSendFtResult(\''+id+'\')">发送结果</button>'
       +'<button class="nf-re" onclick="nightRetract(\''+id+'\')">退回重选</button>'
