@@ -1009,6 +1009,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.26.0', d:'2026-08-10', items:['说书人魔典改为「全体共用一套」：任意说书人账号、在任意设备登录，读写的都是同一份魔典（客人名单、座位、身份、公布记录等），实时双向同步','修复新设备登录会把魔典清空的问题：登录时一律以云端已保存的魔典为准，只有云端为空时才用本地初始化，避免空数据覆盖大家的进度']},
   {v:'v2.25.0', d:'2026-08-10', items:['修复说书人「占用锁」偶发锁死：异常关闭页面、断线、手机休眠或同一账号在两处登录时，旧的占用可能不会被自动释放，导致「明明已退出仍显示在线、别人登不进」。现在占用锁带心跳（在线时每 15 秒续期），超过约 40 秒无心跳即视为离线，任何说书人都可直接登录接管；正常点「退出」会立即释放']},
   {v:'v2.24.0', d:'2026-08-10', items:['「清除所有标记」按钮改用玩家笔记主题色（浅黄底 + 深金字/边），确认态为深金色','扩大防误选范围：整个界面（中间钟表表盘、左上角设置/全屏/刷新按钮、页面标题、下方标签等）都不再被误选中高亮，仅输入框内文字可正常选择']},
   {v:'v2.23.0', d:'2026-08-10', items:['玩家笔记「标记」页面最下方新增「清除所有标记」按钮（一次点击进入确认、再点一次执行，清空所有座位的身份与状态标记，保留座位备注）','拖拽删除身份时只显示身份标记本身作为虚影跟随鼠标（不再拖动整个座位+玩家），且鼠标一离开原座位范围即生效','拖拽时不再误选中画面中的图片或文字（座位圈与笔记面板禁用文本/图片选择，输入框仍可正常选择）']},
@@ -2596,13 +2597,14 @@ load(); render();
         try{ db.ref('storytellerUid').onDisconnect().remove(); }catch(e){}   // 断线/关闭页面自动释放，避免锁死
         _enterStUI(); })
       .catch(()=>{ _enterStUI(); }); }   // 出错兜底：仍进入，避免误锁
-  /* ===== 说书人整局存档：跨设备「实时双向同步」（本地 localStorage ↔ stState/{uid}，以 ts 取新，带回声保护） ===== */
+  /* ===== 说书人整局存档：全体说书人「共用一套魔典」的实时双向同步（本地 localStorage ↔ 云端共享节点 stState/shared，以 ts 取新，带回声保护） ===== */
+  var ST_SHARED='stState/shared';   // 单一共享节点：任意说书人、任意设备登录都读写同一份魔典
   let _stPushT=null, _stSyncTs=0, _stSyncRef=null;
   window._stCloudPush=function(){ if(role!=='st'||!me||!me.uid) return;
     clearTimeout(_stPushT); _stPushT=setTimeout(()=>{ try{ const str=localStorage.getItem(KEY)||''; if(!str) return;
       let ts=0; try{ ts=JSON.parse(str).ts||0; }catch(e){}
       _stSyncTs=ts;   // 记录我们已同步到这个 ts，忽略自己的回声
-      db.ref('stState/'+me.uid).set({data:str, ts:ts}).catch(()=>{}); }catch(e){} }, 1200); };
+      db.ref(ST_SHARED).set({data:str, ts:ts}).catch(()=>{}); }catch(e){} }, 1200); };
   function _stApplyRemote(cdata, cts){   // 应用远端同步过来的整局（不触发保存/上传，避免回声循环；保留本机当前视图/标签，不强制跳转）
     window.__stApplyingRemote=true;
     let _v=null,_g=null; try{ _v=(typeof view!=='undefined')?view:null; _g=(typeof gtab!=='undefined')?gtab:null; }catch(e){}
@@ -2612,17 +2614,16 @@ load(); render();
       if(typeof render==='function') render();
     }catch(e){}
     window.__stApplyingRemote=false; _stSyncTs=cts; }
-  window._stSyncStart=function(){ if(!me||!me.uid) return; try{ if(_stSyncRef) _stSyncRef.off(); }catch(e){} _stSyncRef=db.ref('stState/'+me.uid);
+  window._stSyncStart=function(){ if(!me||!me.uid) return; try{ if(_stSyncRef) _stSyncRef.off(); }catch(e){} _stSyncRef=db.ref(ST_SHARED);
     _stSyncRef.on('value', snap=>{ try{ const c=snap.val(); if(!c||!c.data) return; const cts=c.ts||0;
       if(cts<=_stSyncTs) return;                                   // 自己的回声或更旧 → 忽略
       if(localStorage.getItem(KEY)===c.data){ _stSyncTs=cts; return; }
       _stApplyRemote(c.data, cts); }catch(e){} }); };
   window._stSyncStop=function(){ try{ if(_stSyncRef){ _stSyncRef.off(); _stSyncRef=null; } }catch(e){} };
   window._stCloudLoad=function(){ if(role!=='st'||!me||!me.uid) return;
-    db.ref('stState/'+me.uid).once('value').then(snap=>{ const c=snap.val();
-      let localTs=0; try{ localTs=JSON.parse(localStorage.getItem(KEY)||'{}').ts||0; }catch(e){}
-      if(c && c.data && (c.ts||0) > localTs){ _stApplyRemote(c.data, c.ts||0); }   // 云端更新：应用
-      else { _stSyncTs=localTs; if(!c || !c.data || localTs>(c.ts||0)){ if(window._stCloudPush) _stCloudPush(); } }   // 本地更新或云端无：上传
+    db.ref(ST_SHARED).once('value').then(snap=>{ const c=snap.val();
+      if(c && c.data){ _stApplyRemote(c.data, c.ts||0); }   // 共用魔典：云端已有数据 → 一律以云端为准（避免新设备的空/旧数据覆盖大家的魔典）
+      else { let localTs=0; try{ localTs=JSON.parse(localStorage.getItem(KEY)||'{}').ts||0; }catch(e){} _stSyncTs=localTs; if(window._stCloudPush) _stCloudPush(); }   // 云端为空 → 用本地初始化
       if(window._stSyncStart) _stSyncStart();   // 开启实时监听
     }).catch(()=>{ if(window._stSyncStart) _stSyncStart(); }); };
 
