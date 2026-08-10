@@ -1001,6 +1001,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.22.0', d:'2026-08-10', items:['修复管家投票规则：玩家笔记里管家现在也受主人限制——主人当前未举手时管家不能投（投票开始时说书人会把管家的主人座位私密下发到管家端校验）','出局的管家不再受主人限制，可自由投票（鬼票）——魔典与玩家笔记均已修正（此前魔典里出局管家仍被主人未投票卡住）']},
   {v:'v2.21.0', d:'2026-08-10', items:['角色锁定去掉锁形图标，锁定时只变灰+划线','玩家笔记「标记」tab 改为与魔典一致的拖拽：把状态/角色标签拖到座位上即可标注；单击标签可划掉（变灰+划线）再点恢复','玩家笔记：把座位上的身份拖出座位圈即可删除该身份；点击自己加的状态标记可移除该标记（死亡标记除外，由说书人给出）','（拖拽与魔典一样使用鼠标拖放，触屏设备可能不支持拖拽）']},
   {v:'v2.20.0', d:'2026-08-10', items:['玩家笔记举手按钮去掉手掌图标（「举手」「放下」前不再有✋）','说书人魔典里有人举手时的高亮由绿色改为魔典深紫色（座位号高亮＋「N 人举手中」文字同色）','去掉「N 人举手中」与「停止计票」前的小图标','说明：座位死亡/处决/恶魔击杀/中毒/守护等状态本就使用你提供的 PNG 素材（魔典、大厅、玩家笔记均是），未发现别处用表情替代素材']},
   {v:'v2.19.0', d:'2026-08-10', items:['修复：说书人「重置角色」后，大厅与玩家笔记里的公开状态（座位死亡、处决、恶魔击杀、胜负横幅、提名、举手等）也会一并清零，不再残留上一局的状态']},
@@ -1376,7 +1377,7 @@ function butlerUI(){
   return '<div class="impkill">主人：<select onchange="butlerPick(this.value)">'+opts+'</select></div>';
 }
 function enforceButler(){
-  const b=butlerSeat(); if(b<0 || !healthy(b)) return;   // 管家中毒/醉酒时无限制
+  const b=butlerSeat(); if(b<0 || isDeadSeat(b) || !healthy(b)) return;   // 出局的管家没有主人限制（可自由投票/鬼票）；中毒/醉酒亦无限制
   const master=butlerPicks[night]; const noms=nominations[night]||[];
   noms.forEach(nom=>{ const bi=nom.voters.indexOf(b);
     if(bi>=0 && (master==null || !nom.voters.includes(master))) nom.voters.splice(bi,1); });   // 主人没投则移除管家票
@@ -2733,7 +2734,7 @@ load(); render();
   window._histReset=function(){ _histOn=false; document.body.classList.remove('hist-view'); const bt=document.getElementById('bannerTitle'); if(bt&&role==='st') bt.textContent='暗流涌动'; };
   window._stClearPlayerRoles=function(){ if(role!=='st'||!curGid) return;
     db.ref('games/'+curGid+'/players').once('value').then(s=>{ const v=s.val()||{}; const up={};
-      Object.keys(v).forEach(uid=>{ up['games/'+curGid+'/players/'+uid+'/role']=null; });
+      Object.keys(v).forEach(uid=>{ up['games/'+curGid+'/players/'+uid+'/role']=null; up['games/'+curGid+'/players/'+uid+'/master']=null; });
       if(Object.keys(up).length) db.ref().update(up).catch(()=>{});
     }).catch(()=>{}); };
   /* 说书人重置角色：把公开状态（座位死亡/死因、胜负横幅、提名、处决/击杀动画、举手、指针）一并清零，让大厅与玩家笔记同步复位 */
@@ -2871,10 +2872,16 @@ load(); render();
   /* 鬼票是否已用（从公开提名记录判断：座位出现在任一提名的 ghost 里即已用） */
   function ghostUsedPub(seat){ const noms=(pub&&pub.noms)||[]; return noms.some(n=>(n.ghost||[]).indexOf(seat)>=0); }
   /* 玩家：举手/放下（写进自己的笔记节点；说书人会实时转播给所有人） */
+  /* 管家：仅"活着且已设主人"时受限——主人当前未举手则不能投；出局的管家不受限制（自由鬼票） */
+  function _butlerBlocked(seat){ try{ if(!S || typeof S.master!=='number' || S.master<0) return false;
+    if(!!(pub&&pub.seats&&pub.seats[seat]&&pub.seats[seat].dead)) return false;   // 出局：自由投票
+    const hands=(pub&&pub.vote&&pub.vote.hands)||{}; return !hands[S.master];   // 主人没举手 → 受限
+  }catch(e){ return false; } }
   window._raiseHand=function(on){ const seat=myVoteSeat(); const v=pub&&pub.vote;
     if(seat<0||!v||!v.open) return;
     const dead=!!(pub.seats&&pub.seats[seat]&&pub.seats[seat].dead);
     if(dead && ghostUsedPub(seat) && on) return;   // 鬼票已用完，不能再举
+    if(on && _butlerBlocked(seat)){ try{ if(window.toast) toast('主人未投票，你现在不能投票'); }catch(e){} updateVoteBar(); return; }   // 管家：主人没投则不能投
     ensureS();
     S.vote={day:v.day,by:v.by,to:v.to,hand:!!on,seat:seat,name:(me.displayName||'')};
     saveNotes(); updateVoteBar(); drawSeats(); };
@@ -2897,10 +2904,21 @@ load(); render();
     const on=myHandOn(), dead=!!(pub.seats&&pub.seats[seat]&&pub.seats[seat].dead), used=dead&&ghostUsedPub(seat);
     const gtag=dead?'（鬼票）':'';   /* 鬼票只在按钮文字后加标记，不再另起描述 */
     if(used){ bar.innerHTML='<button class="vb-yes" disabled>举手（鬼票已用完）</button>'; return; }
+    if(!on && _butlerBlocked(seat)){ bar.innerHTML='<button class="vb-yes" disabled>主人未投票 · 暂不能投</button>'; return; }   // 管家：等主人先举手
     bar.innerHTML='<button class="vb-yes'+(on?' act':'')+'" onclick="_raiseHand('+(on?'false':'true')+')">'+(on?'放下':'举手')+gtag+'</button>'; }
 
   /* 说书人：开启一轮举手 */
+  /* 投票前把管家的主人座位私密下发到管家的玩家节点，供玩家端校验（活着且有主人才下发；出局→清空=自由投票） */
+  window._stPushButlerMaster=function(){ if(role!=='st'||!curGid) return;
+    try{ const b=(typeof butlerSeat==='function')?butlerSeat():-1; if(b<0) return;
+      const t=(typeof seatToken==='function')?seatToken(b):null; const nm=(t&&t.name)?t.name:((pub&&pub.seats&&pub.seats[b])?pub.seats[b].name:'');
+      const accs=window.__accounts||{}; const acc=nm?accs[rkey(nm)]:null; const uid=acc&&acc.uid; if(!uid) return;
+      let master=null;
+      if(typeof isDeadSeat==='function' && !isDeadSeat(b)){ const mp=(typeof butlerPicks==='object'&&butlerPicks)?butlerPicks[night]:null; if(mp!=null) master=+mp; }
+      db.ref('games/'+curGid+'/players/'+uid+'/master').set(master==null?null:master).catch(()=>{});
+    }catch(e){} };
   window._voteOpen=function(day,by,to){ if(role!=='st'||!curGid) return;
+    try{ if(window._stPushButlerMaster) _stPushButlerMaster(); }catch(e){}
     db.ref('games/'+curGid+'/public/vote').set({day:day,by:by,to:to,open:true,hands:null,ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); };
   /* 说书人：实时把提名列表推给所有端（不含死亡，避免夜杀泄露） */
   window._syncNoms=function(){ if(role!=='st'||!curGid) return;
@@ -2944,6 +2962,7 @@ load(); render();
     if(typeof render==='function') render(); };
   window._voteReopen=function(day,idx){ if(role!=='st'||!curGid) return;
     const nom=(nominations[day]||[])[idx]; if(nom) nom.tallied=false;
+    try{ if(window._stPushButlerMaster) _stPushButlerMaster(); }catch(e){}
     db.ref('games/'+curGid+'/public/vote').set({day:+day,by:(nom?nom.nominator:0),to:(nom?nom.nominee:0),open:true,hands:null,ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{});
     if(window._clockBroadcastNom&&nom) window._clockBroadcastNom(nom.nominator,nom.nominee);
     if(window._syncNoms) window._syncNoms(); if(typeof render==='function') render(); };
