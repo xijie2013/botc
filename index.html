@@ -1049,6 +1049,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.30.2', d:'2026-08-10', items:['夜晚信息自动化优化：① 恶魔选择「自杀」时，弹窗新增下拉，由恶魔自己指定传位给哪名存活爪牙（红唇女郎存活且5人以上则只能传她），不再由说书人代选。② 爪牙相认等群发信息现在要等所有爪牙都点确认才算完成（说书人面板显示「已确认 X/Y」）。③ 说书人「代确认」投毒/占卜/夜杀等选目标步骤时，现在会展开手动选择器，让说书人自己选毒谁/占谁/杀谁（含恶魔自杀继任、镇长弹刀）']},
   {v:'v2.30.1', d:'2026-08-10', items:['修复：夜晚信息自动化中，恶魔选择「自杀」（星传）且没有红唇女郎自动继任时，此前会直接判好人胜利、说书人来不及指定继任爪牙。现在恶魔自杀且尚有存活爪牙时先不判负，进入「复核」子步让说书人指定一名爪牙继任为新恶魔（或确认无人继任才真死）；胜负判定也加了同样护栏（手动流程一并修复）。恶魔普通击杀命中镇长（弹刀）也会进入复核，确认实际死亡']},
   {v:'v2.30.0', d:'2026-08-10', items:['【新功能·夜晚信息自动化（第一版）】说书人魔典的夜晚步骤中，「爪牙相认 / 恶魔信息 / 投毒者 / 占卜师 / 恶魔夜杀」现在可一键把信息私密发送给对应玩家；玩家会在屏幕底部收到弹窗并点「确认」。需要选目标的（投毒、夜杀选1人；占卜选2人）由玩家在弹窗里下拉选择、提交，说书人「审核通过」后写入魔典；占卜会自动算出结果再发一条给玩家确认。信息内容自动生成、发送前说书人可修改（照顾中毒/醉酒给假信息）。按夜晚顺序逐步推进：前一步完成才解锁下一步，全部完成才能「结束本夜」。玩家掉线可由说书人「代确认/跳过」。其余角色暂沿用原有勾选方式']},
   {v:'v2.29.7', d:'2026-08-10', items:['修复：处决/猎人视频有时没有声音——改为等视频数据就绪(canplay)后再播放，且只在浏览器真正拦截自动播放时才退回静音（此前任何瞬时加载中断都会被误判成"要静音"，导致该次播放永久没声，表现为"有的能出声、有的不行"）；并在"点击进入"时预先解锁视频元素，提升带声音播放成功率','背景音乐在动画时的淡入淡出改用缓动曲线并略微加长，过渡更柔和不突兀']},
@@ -1313,6 +1314,9 @@ function _demSeat(){ return meta.findIndex(m=>m&&m.role&&RMAP[m.role]&&RMAP[m.ro
 function _minSeats(){ const a=[]; meta.forEach((m,i)=>{ if(m&&m.role&&RMAP[m.role]&&RMAP[m.role].team==='min') a.push(i); }); return a; }
 function nightSendSeats(id){ if(id==='_minion') return _minSeats(); if(id==='_demon'){ const d=_demSeat(); return d>=0?[d]:[]; } if(id==='imp'){ const s=impSeat(); return s>=0?[s]:[]; } const s=meta.findIndex(m=>m&&m.role===id); return s>=0?[s]:[]; }
 function nightSeatOptions(){ const a=[]; for(let i=0;i<N;i++){ a.push({seat:i, name:(i+1)+'号 '+nameAt(i)+(isDeadSeat(i)?'（已出局）':'')}); } return a; }
+function impSuccessorOptions(){ const sw=meta.findIndex(m=>m&&m.role==='scarletwoman'); const swAlive=sw>=0 && !isDeadSeat(sw) && healthy(sw); const aliveNow=countAlive();
+  if(swAlive && aliveNow>=5) return [{seat:sw, name:(sw+1)+'号 '+nameAt(sw)+'（红唇女郎·强制继任）'}];   // 红唇女郎存活且5人以上 → 只能传她
+  return _minSeats().filter(i=>!isDeadSeat(i)).map(i=>({seat:i, name:(i+1)+'号 '+nameAt(i)})); }
 function nightAutoText(id){
   if(id==='_minion'){ const d=_demSeat(); const dn=d>=0?((d+1)+'号 '+nameAt(d)):'（未定）'; const ms=_minSeats().map(i=>(i+1)+'号 '+nameAt(i)); return '【爪牙信息】你的恶魔是：'+dn+'。同伙爪牙：'+(ms.join('、')||'无其他爪牙')+'。'; }
   if(id==='_demon'){ const ms=_minSeats().map(i=>(i+1)+'号 '+nameAt(i)); const bl=(bluffs||[]).filter(Boolean).map(x=>RMAP[x]?RMAP[x].name:x); return '【恶魔信息】你的爪牙：'+(ms.join('、')||'无')+'。可伪装的身份（不在场好人）：'+(bl.join('、')||'（说书人未设置）')+'。'; }
@@ -1326,7 +1330,8 @@ function ftResultText(){ const cur=ftPicks[night]; if(!cur||cur[0]==null||cur[1]
 function nightSend(id){ const kind=stepKind(id); if(!kind) return; const f=nfGet(id);
   const seats=nightSendSeats(id); if(!seats.length){ try{toast('没找到该角色对应的已登录玩家，可用「代确认/跳过」');}catch(e){} }
   const text=(f.text!=null&&f.text!=='')?f.text:nightAutoText(id); f.text=text;
-  let phase='info', pick=null; if(kind!=='info'){ phase='pick'; pick={count:kind==='pick2info'?2:1, options:nightSeatOptions()}; }
+  let phase='info', pick=null; if(kind!=='info'){ phase='pick'; pick={count:kind==='pick2info'?2:1, options:nightSeatOptions()};
+    if(id==='imp'){ pick.selfSeat=impSeat(); pick.succ=impSuccessorOptions(); } }   // 恶魔：附带「自杀继任」信息，选自己时可传位
   f.stage='sent'; f.phase=phase; f.sid=(f.sid||0)+1; f.pick=null;
   if(window.stNightSend) window.stNightSend(id, phase, text, pick, seats, f.sid);
   save(); render(); }
@@ -1335,9 +1340,10 @@ function nightEditResult(id,val){ nfGet(id).resultText=val; }
 function nightApprove(id){ const f=nfGet(id); if(!f.pick||!f.pick.length){ try{toast('玩家还没提交选择');}catch(e){} return; }
   if(id==='poisoner'){ poisonPick(String(f.pick[0])); nfDone(id); }
   else if(id==='imp'){ impKill(String(f.pick[0]));
-    const rec=impKills[night]||{};
-    const needReview = (rec.type==='starpass' && rec.newImp==null && _minSeats().some(i=>!isDeadSeat(i)))   // 自杀星传·无自动继任·有存活爪牙 → 需说书人指定继任
-                    || (rec.type==='normal' && rec.mayor);                                                    // 镇长弹刀 → 需确认实际死亡
+    let rec=impKills[night]||{};
+    if(rec.type==='starpass' && rec.newImp==null && f.pick[1]!=null){ chooseNewImp(String(f.pick[1])); rec=impKills[night]||{}; }   // 恶魔自选的继任爪牙 → 直接写入
+    const needReview = (rec.type==='starpass' && rec.newImp==null && _minSeats().some(i=>!isDeadSeat(i)))   // 未指定继任（异常兜底）→ 说书人补选
+                    || (rec.type==='normal' && rec.mayor);                                                    // 镇长弹刀 → 确认实际死亡
     if(needReview){ f.stage='review'; save(); render(); return; }
     nfDone(id); }
   else if(id==='fortuneteller'){ ftPick(0,String(f.pick[0])); ftPick(1,String(f.pick[1])); if(typeof recordFt==='function') recordFt();
@@ -1353,7 +1359,13 @@ function nightRetract(id){ const f=nfGet(id); const kind=stepKind(id); f.pick=nu
 function nightResend(id){ const f=nfGet(id);
   if(f.stage==='result'){ f.sid=(f.sid||0)+1; const seats=nightSendSeats(id); if(window.stNightSend) window.stNightSend(id,'result',(f.resultText||ftResultText()),null,seats,f.sid); save(); render(); }
   else nightSend(id); }
-function nightSkip(id){ nfDone(id); save(); render(); }   // 掉线/代确认：直接标记完成（不写选目标，说书人如需可另行处理）
+function nightSkip(id){ const kind=stepKind(id);
+  if(kind==='info'){ nfDone(id); save(); render(); return; }   // 信息步：代确认=直接完成
+  nfGet(id).stage='manual'; save(); render(); }                // 选目标步：代玩家操作 → 说书人手动选目标
+function nightManualDone(id){ if(id==='imp'){ const rec=impKills[night]||{}; if(rec.type==='starpass' && rec.newImp==null && _minSeats().some(i=>!isDeadSeat(i))){ try{toast('恶魔自杀：请先在下方指定继任爪牙');}catch(e){} return; } }
+  if(id==='fortuneteller'){ try{ if(typeof recordFt==='function') recordFt(); }catch(e){} }   // 代占卜：把结果记入魔典日志
+  nfDone(id); save(); render(); }
+function nightForceSkip(id){ nfDone(id); save(); render(); }   // 无行动：直接完成本步
 function nfDone(id){ const f=nfGet(id); f.stage='done'; nightChecks[nfKey(id)]=true;
   if(id==='_minion'||id==='_demon'){ try{ recordSpecial(id,true); }catch(e){} }   // 纯信息步：完成时把「已告知」记入魔典日志
   try{ if(window.stNightClear) window.stNightClear(id); }catch(e){} }   // 完成后清掉该玩家的夜晚弹窗与回复
@@ -1386,6 +1398,14 @@ function nightPanel(id, active){
     h+='<div class="nf-btns"><button class="nf-ok" onclick="nightImpReviewDone(\''+id+'\')">✓ 完成本步</button></div>';
     return h+'</div>';
   }
+  if(stage==='manual'){   // 代玩家操作：说书人手动选目标（复用现有选择器）
+    let w=''; if(id==='poisoner') w=poisonUI(); else if(id==='fortuneteller') w=ftUI(); else if(id==='imp') w=impKillUI();
+    h+='<div class="nf-status">代玩家操作：请在下方手动选择目标。</div>';
+    h+='<div class="nf-imp">'+w+'</div>';
+    h+='<div class="nf-btns"><button class="nf-ok" onclick="nightManualDone(\''+id+'\')">✓ 完成本步</button>'
+      +'<button class="nf-skip" onclick="nightForceSkip(\''+id+'\')">无行动 · 跳过</button></div>';
+    return h+'</div>';
+  }
   if(stage==='result'){
     const rtxt=(f.resultText!=null&&f.resultText!=='')?f.resultText:ftResultText();
     h+='<div class="nf-status">结果已发送，等待玩家确认…</div>';
@@ -1394,7 +1414,9 @@ function nightPanel(id, active){
       +'<button class="nf-skip" onclick="nightSkip(\''+id+'\')">代确认/跳过</button></div>';
     return h+'</div>';
   }
-  const waitMsg=(kind==='info')?'已发送，等待玩家确认…':'已发送，等待玩家选择…';
+  let waitMsg;
+  if(kind==='info'){ const tot=nightSendSeats(id).length; const ack=(f.ackSeats?f.ackSeats.length:0); waitMsg='已发送，等待玩家确认…（已确认 '+ack+'/'+tot+'）'; }
+  else waitMsg='已发送，等待玩家选择…';
   h+='<div class="nf-status">'+waitMsg+'</div>';
   h+='<div class="nf-btns"><button class="nf-re" onclick="nightResend(\''+id+'\')">重发</button>'
     +'<button class="nf-skip" onclick="nightSkip(\''+id+'\')">代确认/跳过</button></div>';
@@ -3192,8 +3214,11 @@ load(); render();
     if(replied){ h+='<div class="nb-done">✓ 已回复说书人，请等待…</div>'; bar.innerHTML=h; return; }
     if(nm.pick && nm.pick.count){
       const opts='<option value="">选择玩家…</option>'+((nm.pick.options||[]).map(function(o){return '<option value="'+o.seat+'">'+_nbEsc(o.name)+'</option>';}).join(''));
-      let sels=''; for(let k=0;k<nm.pick.count;k++){ sels+='<select class="nb-sel" id="nbSel'+k+'">'+opts+'</select>'; }
-      h+='<div class="nb-picks">'+sels+'</div><button class="nb-btn" onclick="_nightSubmitPick('+nm.pick.count+')">提交</button>';
+      let sels=''; for(let k=0;k<nm.pick.count;k++){ sels+='<select class="nb-sel" id="nbSel'+k+'" onchange="_nightPickChange()">'+opts+'</select>'; }
+      let succ='';
+      if(nm.pick.succ && nm.pick.succ.length){ const so='<option value="">选择继任爪牙…</option>'+nm.pick.succ.map(function(o){return '<option value="'+o.seat+'">'+_nbEsc(o.name)+'</option>';}).join('');
+        succ='<div id="nbSuccWrap" style="display:none"><div class="nb-text" style="font-size:.9em;margin:8px 0 4px">你选择了自杀，传位给哪名爪牙：</div><select class="nb-sel" id="nbSucc">'+so+'</select></div>'; }
+      h+='<div class="nb-picks">'+sels+'</div>'+succ+'<button class="nb-btn" onclick="_nightSubmitPick('+nm.pick.count+')">提交</button>';
     } else { h+='<button class="nb-btn" onclick="_nightAck()">确认收到</button>'; }
     bar.innerHTML=h; }
   window.updateNightBar=updateNightBar;
@@ -3202,8 +3227,13 @@ load(); render();
     try{ notesRef.child('nightReply').set(rep).catch(function(){}); }catch(e){}
     if(S) S.nightReply=rep; updateNightBar(); }
   window._nightAck=function(){ if(role==='player') _nightWriteReply(null); };
-  window._nightSubmitPick=function(count){ const picks=[]; for(let k=0;k<count;k++){ const el=document.getElementById('nbSel'+k); if(!el||el.value===''){ try{toast('请选择'+count+'名玩家');}catch(e){} return; } picks.push(+el.value); }
+  window._nightPickChange=function(){ const nm=S&&S.night; if(!nm||!nm.pick) return; const w=document.getElementById('nbSuccWrap'); if(!w) return;
+    const el=document.getElementById('nbSel0'); const self=nm.pick.selfSeat;
+    w.style.display=(el&&self!=null&&el.value!==''&&(+el.value)===(+self))?'block':'none'; };
+  window._nightSubmitPick=function(count){ const nm=S&&S.night; const picks=[]; for(let k=0;k<count;k++){ const el=document.getElementById('nbSel'+k); if(!el||el.value===''){ try{toast('请选择'+count+'名玩家');}catch(e){} return; } picks.push(+el.value); }
     if(count>=2 && picks[0]===picks[1]){ try{toast('请选择两名不同玩家');}catch(e){} return; }
+    if(nm&&nm.pick&&nm.pick.selfSeat!=null && picks[0]===(+nm.pick.selfSeat) && nm.pick.succ && nm.pick.succ.length){   // 自杀 → 必须指定传位爪牙
+      const se=document.getElementById('nbSucc'); if(!se||se.value===''){ try{toast('你选择了自杀，请指定传位的爪牙');}catch(e){} return; } picks.push(+se.value); }
     _nightWriteReply(picks); };
 
   /* 说书人：开启一轮举手 */
@@ -3228,7 +3258,11 @@ load(); render();
   function recomputeNightReplies(all){ if(role!=='st') return; all=all||{}; let changed=false;
     Object.keys(all).forEach(function(uid){ const nd=all[uid]; const rep=nd&&nd.nightReply; if(!rep||typeof rep!=='object') return;
       if(rep.n!==night) return; const f=nightFlow[night+':'+rep.stepId]; if(!f) return; if((f.sid||0)!==(rep.sid||0)) return;   // 只认本次下发(sid)对应的回复
-      if(f.stage==='sent' && rep.phase==='info' && rep.ack){ nfDone(rep.stepId); changed=true; }
+      if(f.stage==='sent' && rep.phase==='info' && rep.ack){   // 信息步：多爪牙群发需全部确认才完成
+        const seats=nightSendSeats(rep.stepId);
+        f.ackSeats=seats.filter(function(si){ const u=_seatUid(si); const nd2=all[u]; const r2=nd2&&nd2.nightReply; return r2 && r2.stepId===rep.stepId && (r2.sid||0)===(f.sid||0) && r2.ack; });
+        if(seats.length>0 && f.ackSeats.length>=seats.length){ nfDone(rep.stepId); }
+        changed=true; }
       else if(f.stage==='sent' && rep.phase==='pick' && rep.pick && rep.pick.length){ f.pick=rep.pick.map(Number); f.stage='picked'; changed=true; }
       else if(f.stage==='result' && rep.phase==='result' && rep.ack){ nfDone(rep.stepId); changed=true; }
     });
