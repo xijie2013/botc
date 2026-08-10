@@ -1051,6 +1051,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.36.0', d:'2026-08-10', items:['夜晚信息自动化拓展（第四批）：守鸦人接入自动下发。守鸦人本夜被恶魔杀死才触发——说书人发「请选择一名玩家查看其角色」给该（已死）玩家，玩家选1人（不能选自己）提交，说书人审核通过后回一条结果（得知其真实角色），玩家确认后记入局内信息。中毒/醉酒时说书人可先设定要告知的假角色再发。守鸦人未死亡的夜晚该步自动标记为「无需行动」，不阻塞结束本夜。至此暗流涌动全部夜间角色均已接入自动化（间谍看魔典除外）']},
   {v:'v2.35.0', d:'2026-08-10', items:['夜晚信息自动化拓展（第三批）：僧侣、管家接入自动下发。说书人一键把「请选择守护目标 / 请选择主人」发给对应玩家，玩家在弹窗里下拉选目标提交（不能选自己），说书人审核通过后写入魔典并生效（守护免疫恶魔攻击、管家主人投票限制）。玩家离线可由说书人「代确认」手动代选。选择会记入该玩家的局内信息']},
   {v:'v2.34.1', d:'2026-08-10', items:['开新局清理补全：新的一局现在会一并清空说书人日志（此前只清了玩家局内信息、漏了说书人的夜间日志）。「重置角色」与「随机发牌（大排灯）」也统一清空玩家的局内信息、座位备注、所有标记与说书人日志——新的一局开始，上一局的痕迹全部清零']},
   {v:'v2.34.0', d:'2026-08-10', items:['夜晚信息自动化拓展（第二批）：洗衣妇、图书管理员、调查员接入自动下发。说书人在夜晚面板先用「揭示选择器」选好要告知的两张牌（真身角色所在玩家 + 一名幌子玩家；图书管理员无外来者时自动为「没有外来者」），发送框随之显示要告知玩家的内容，一键发送、玩家确认收到后记入其局内信息与魔典。中毒/醉酒时可自由选两人并自定角色给假信息。未选好揭示内容前不可发送/代确认，避免误发空信息']},
@@ -1328,7 +1329,8 @@ function recordSpecial(sid,on){
 const NIGHT_AUTO_INFO=new Set(['_minion','_demon','chef','empath','undertaker','washerwoman','librarian','investigator']);
 const NIGHT_AUTO_PICK1=new Set(['poisoner','imp','monk','butler']);
 const NIGHT_AUTO_PICK2=new Set(['fortuneteller']);
-function stepKind(id){ if(NIGHT_AUTO_INFO.has(id)) return 'info'; if(NIGHT_AUTO_PICK1.has(id)) return 'pick1'; if(NIGHT_AUTO_PICK2.has(id)) return 'pick2info'; return null; }
+const NIGHT_AUTO_PICK1INFO=new Set(['ravenkeeper']);   // 选1人 + 回结果（守鸦人：得知其角色）
+function stepKind(id){ if(NIGHT_AUTO_INFO.has(id)) return 'info'; if(NIGHT_AUTO_PICK1.has(id)) return 'pick1'; if(NIGHT_AUTO_PICK2.has(id)) return 'pick2info'; if(NIGHT_AUTO_PICK1INFO.has(id)) return 'pick1info'; return null; }
 function stepAutomated(s){ const id=s.id; if(id==='imp') return night>=2; return !!stepKind(id); }   // 首夜恶魔是「恶魔信息(_demon)」而非击杀
 function nfKey(id){ return night+':'+id; }
 function nfGet(id){ const k=nfKey(id); return nightFlow[k]||(nightFlow[k]={stage:'idle'}); }
@@ -1337,7 +1339,16 @@ function _minSeats(){ const a=[]; meta.forEach((m,i)=>{ if(m&&m.role&&RMAP[m.rol
 function nightSendSeats(id){ if(id==='_minion') return _minSeats(); if(id==='_demon'){ const d=_demSeat(); return d>=0?[d]:[]; } if(id==='imp'){ const s=impSeat(); return s>=0?[s]:[]; } const s=meta.findIndex(m=>m&&m.role===id); return s>=0?[s]:[]; }
 function nightSeatOptions(exclude){ const a=[]; for(let i=0;i<N;i++){ if(exclude!=null && i===exclude) continue; a.push({seat:i, name:(i+1)+'号 '+nameAt(i)+(isDeadSeat(i)?'（已出局）':'')}); } return a; }
 /* 僧侣/管家不能选自己：从玩家的可选目标里排除该角色自身座位 */
-function _pickOptionsFor(id){ const ex=(id==='monk'||id==='butler')?((nightSendSeats(id)||[])[0]):null; return nightSeatOptions(ex==null?undefined:ex); }
+function _pickOptionsFor(id){ const ex=(id==='monk'||id==='butler'||id==='ravenkeeper')?((nightSendSeats(id)||[])[0]):null; return nightSeatOptions(ex==null?undefined:ex); }
+/* 守鸦人本夜是否触发（被恶魔杀死）+ 给玩家看的结果文本 */
+function ravenActive(){ const rk=meta.findIndex(m=>m&&m.role==='ravenkeeper'); if(rk<0||!isDeadSeat(rk)) return false;
+  const rec=impKills[night]; return !!(rec && rec.type==='normal' && rec.death===rk); }
+function ravenPlayerResult(){ const rec=ravenPicks[night]||{}; if(rec.t==null) return '';
+  const rk=meta.findIndex(m=>m&&m.role==='ravenkeeper'); const sick=rk>=0&&!healthy(rk);
+  const actual=(meta[rec.t]&&meta[rec.t].role)?meta[rec.t].role:null; const shown=(sick&&rec.role)?rec.role:actual;
+  const rn=(shown&&RMAP[shown])?RMAP[shown].name:'（未知）';
+  return '【守鸦人】你得知 '+nameAt(rec.t)+' 的真实角色是：'+rn+'。'; }
+function _resultDefaultText(id){ return id==='ravenkeeper'?ravenPlayerResult():ftResultText(); }   // 结果类步骤的默认文本（占卜/守鸦人）
 function impSuccessorOptions(){ const sw=meta.findIndex(m=>m&&m.role==='scarletwoman'); const swAlive=sw>=0 && !isDeadSeat(sw) && healthy(sw); const aliveNow=countAlive();
   if(swAlive && aliveNow>=5) return [{seat:sw, name:(sw+1)+'号 '+nameAt(sw)+'（红唇女郎·强制继任）'}];   // 红唇女郎存活且5人以上 → 只能传她
   return _minSeats().filter(i=>!isDeadSeat(i)).map(i=>({seat:i, name:(i+1)+'号 '+nameAt(i)})); }
@@ -1348,6 +1359,7 @@ function nightAutoText(id){
   if(id==='imp') return '【恶魔】请选择今晚要击杀的目标。';
   if(id==='monk') return '【僧侣】请选择今晚要守护的一名玩家（当晚免疫恶魔攻击，不能选自己）。';
   if(id==='butler') return '【管家】请选择今晚的主人（仅当你的主人投票时，你才能投票；不能选自己）。';
+  if(id==='ravenkeeper') return '【守鸦人】你今夜死亡——请选择一名玩家，你将得知其真实角色。';
   if(id==='fortuneteller') return '【占卜师】请选择今晚要占卜的两名玩家。';
   if(id==='chef'){ const s=meta.findIndex(m=>m&&m.role==='chef'); const sick=s>=0&&!healthy(s); const sv=sickAns[night+':chef'];   // 中毒/醉酒且已设假值→用假值，否则真值
     const c=(sick&&sv!=null&&sv!=='')?sv:chefPairs(); return '【厨师】相邻而坐的邪恶玩家共有 '+c+' 对。'; }
@@ -1395,6 +1407,11 @@ function nightApprove(id){ const f=nfGet(id); if(!f.pick||!f.pick.length){ try{t
     if(ft>=0 && !healthy(ft)){ f.stage='ftsick'; save(); render(); return; }   // 中毒/醉酒：先让说书人设定要告知的（可假）结果再发送，避免直接发出真结果
     const rtext=(f.resultText!=null&&f.resultText!=='')?f.resultText:ftResultText(); f.resultText=rtext; f.stage='result'; f.phase='result'; f.sid=(f.sid||0)+1;
     const seats=nightSendSeats(id); if(window.stNightSend) window.stNightSend(id,'result',rtext,null,seats,f.sid); }
+  else if(id==='ravenkeeper'){ ravenSet('t', String(f.pick[0]));
+    const rk=meta.findIndex(m=>m&&m.role==='ravenkeeper');
+    if(rk>=0 && !healthy(rk)){ f.stage='ravensick'; save(); render(); return; }   // 中毒/醉酒：先让说书人设定要告知的（可假）角色再发送
+    const rtext=(f.resultText!=null&&f.resultText!=='')?f.resultText:ravenPlayerResult(); f.resultText=rtext; f.stage='result'; f.phase='result'; f.sid=(f.sid||0)+1;
+    const seats=nightSendSeats(id); if(window.stNightSend) window.stNightSend(id,'result',rtext,null,seats,f.sid); }
   save(); render(); }
 function nightImpReviewDone(id){ const rec=impKills[night]||{};
   if(rec.type==='starpass' && rec.newImp==null && _minSeats().some(i=>!isDeadSeat(i))){ try{toast('恶魔自杀：请先指定一名存活爪牙继任为新恶魔');}catch(e){} return; }
@@ -1403,7 +1420,7 @@ function nightRetract(id){ const f=nfGet(id); const kind=stepKind(id); f.pick=nu
   const seats=nightSendSeats(id); const pick={count:kind==='pick2info'?2:1, options:_pickOptionsFor(id)};
   if(window.stNightSend) window.stNightSend(id,'pick',(f.text||nightAutoText(id)),pick,seats,f.sid); save(); render(); }
 function nightResend(id){ const f=nfGet(id);
-  if(f.stage==='result'){ f.sid=(f.sid||0)+1; const seats=nightSendSeats(id); if(window.stNightSend) window.stNightSend(id,'result',(f.resultText||ftResultText()),null,seats,f.sid); save(); render(); }
+  if(f.stage==='result'){ f.sid=(f.sid||0)+1; const seats=nightSendSeats(id); if(window.stNightSend) window.stNightSend(id,'result',(f.resultText||_resultDefaultText(id)),null,seats,f.sid); save(); render(); }
   else nightSend(id); }
 /* 代确认：这一步「确实发生了」（说书人替离线玩家确认/操作）→ 记入玩家局内信息。信息步直接记录+完成；选择步进入代选择器由说书人替玩家选。 */
 function nightProxyConfirm(id){ const kind=stepKind(id);
@@ -1413,12 +1430,15 @@ function nightProxyConfirm(id){ const kind=stepKind(id);
   nfGet(id).stage='manual'; save(); render(); }                // 选目标步：代玩家操作 → 说书人手动选目标
 /* 代确认结果（占卜结果）：把结果记入玩家局内信息并完成（nfDone 里会一并记录占卜选择） */
 function nightProxyConfirmResult(id){ const f=nfGet(id);
-  if(window.stRecordGameInfo){ const rtxt=(f.resultText!=null&&f.resultText!=='')?f.resultText:ftResultText();
+  if(window.stRecordGameInfo){ const rtxt=(f.resultText!=null&&f.resultText!=='')?f.resultText:_resultDefaultText(id);
     const key='info:'+night+':'+id+':result:'+(f.sid||0);
     (nightSendSeats(id)||[]).forEach(function(seat){ window.stRecordGameInfo(seat,key,rtxt,night,2); }); }
   nfDone(id); save(); render(); }
 /* 中毒/醉酒占卜师：说书人在 ftsick 阶段设定好（可假）结果后发送给玩家 */
 function nightSendFtResult(id){ const f=nfGet(id); const rtext=ftResultText(); f.resultText=rtext; f.stage='result'; f.phase='result'; f.sid=(f.sid||0)+1;
+  const seats=nightSendSeats(id); if(window.stNightSend) window.stNightSend(id,'result',rtext,null,seats,f.sid); save(); render(); }
+/* 中毒/醉酒守鸦人：说书人在 ravensick 阶段设定好（可假）角色后发送给玩家 */
+function nightSendRavenResult(id){ const f=nfGet(id); const rtext=ravenPlayerResult(); f.resultText=rtext; f.stage='result'; f.phase='result'; f.sid=(f.sid||0)+1;
   const seats=nightSendSeats(id); if(window.stNightSend) window.stNightSend(id,'result',rtext,null,seats,f.sid); save(); render(); }
 /* 把信息步文本记入相关玩家局内信息（代确认时用；key 与玩家自己确认写入的一致，幂等，ord=0） */
 function _nfRecordInfoToPlayers(id){ if(!window.stRecordGameInfo || stepKind(id)!=='info') return;
@@ -1431,6 +1451,9 @@ function nightManualDone(id){ if(id==='imp'){ const rec=impKills[night]||{}; if(
     _impDone(id); return; }
   if(id==='fortuneteller'){ try{ if(typeof recordFt==='function') recordFt(); }catch(e){}   // 代占卜：把结果记入魔典日志
     try{ const cur=ftPicks[night]; if(window.stRecordGameInfo && cur && cur[0]!=null && cur[1]!=null){ const seat=(nightSendSeats('fortuneteller')||[])[0]; if(seat!=null&&seat>=0) window.stRecordGameInfo(seat,'info:'+night+':fortuneteller:result:1',ftResultText(),night,2); } }catch(e){}   // 代占卜也把结果记入占卜师局内信息（否则只有选择没有结果）
+  }
+  if(id==='ravenkeeper'){
+    try{ const rec=ravenPicks[night]||{}; if(window.stRecordGameInfo && rec.t!=null){ const seat=(nightSendSeats('ravenkeeper')||[])[0]; if(seat!=null&&seat>=0) window.stRecordGameInfo(seat,'info:'+night+':ravenkeeper:result:1',ravenPlayerResult(),night,2); } }catch(e){}   // 代守鸦人也把结果记入其局内信息
   }
   nfDone(id); save(); render(); }
 function nightForceSkip(id){ nfDone(id,true); save(); render(); }   // 无行动·跳过：标记完成但不记录（未发生）
@@ -1454,6 +1477,9 @@ function _nfRecordChoice(id){ if(!window.stRecordGameInfo) return;
   if(id==='butler'){ const t=butlerPicks[night]; if(t==null) return;
     const seat=(nightSendSeats('butler')||[])[0]; if(seat==null) return;
     window.stRecordGameInfo(seat,'choice:butler:n'+night,'【管家】你选择 '+(t+1)+'号 '+nameAt(t)+' 作为你的主人（仅当主人投票你才能投票）。',night,1); return; }
+  if(id==='ravenkeeper'){ const rec=ravenPicks[night]||{}; if(rec.t==null) return;
+    const seat=(nightSendSeats('ravenkeeper')||[])[0]; if(seat==null) return;
+    window.stRecordGameInfo(seat,'choice:raven:n'+night,'【守鸦人】你选择查看 '+(rec.t+1)+'号 '+nameAt(rec.t)+'。',night,1); return; }
 }
 /* 传位通知文本 & 排序权重：ord=3 让它排在新恶魔当晚的爪牙行动（如投毒 ord=1）之后——夜晚顺序里投毒在先、恶魔自刀传位在后 */
 const NEWIMP_TEXT='【恶魔】原小恶魔自杀传位，你已成为新的小恶魔（恶魔阵营）。从此刻起你的身份是小恶魔，之后每晚由你选择击杀目标。';
@@ -1490,15 +1516,17 @@ function nfDone(id,skip){ const f=nfGet(id); f.stage='done';
     try{ if(window.stNightClear) window.stNightClear(id); }catch(e){}   // 完成后清掉该玩家的夜晚弹窗与回复
   } }
 function _nfEscA(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
-function stepDone(s){ if(stepAutomated(s)){ const f=nightFlow[night+':'+s.id]; return !!(f&&f.stage==='done'); } return !!nightChecks[night+':'+s.id]; }
+function stepDone(s){ if(s.id==='ravenkeeper' && stepAutomated(s) && !ravenActive()) return true;   // 守鸦人本夜未死亡：无需行动，视为已完成（不阻塞结束本夜）
+  if(stepAutomated(s)){ const f=nightFlow[night+':'+s.id]; return !!(f&&f.stage==='done'); } return !!nightChecks[night+':'+s.id]; }
 /* 该步对应角色是否已出局（全部座位都死→本夜无行动，只能跳过） */
-function _stepRoleDead(id){ const seats=nightSendSeats(id); if(!seats||!seats.length) return false; return seats.every(function(i){ return isDeadSeat(i); }); }
+function _stepRoleDead(id){ if(id==='ravenkeeper') return false; const seats=nightSendSeats(id); if(!seats||!seats.length) return false; return seats.every(function(i){ return isDeadSeat(i); }); }   // 守鸦人正是死亡才行动，不按「出局变灰」处理
 function nightPanel(id, active){
   const kind=stepKind(id); const f=nfGet(id); const stage=f.stage||'idle';
   const dead=_stepRoleDead(id);                     // 角色已出局：除「跳过」外其余操作变灰
   const lock = (active&&!dead)?'' : ' disabled';    // 发送等操作在非激活或已出局时禁用
   let h='<div class="nflow">';
   if(stage==='done'){ return h+'<div class="nf-done">✓ 已完成</div></div>'; }
+  if(id==='ravenkeeper' && !ravenActive()){ return h+'<div class="nf-done">✓ 守鸦人本夜未死亡，无需行动</div></div>'; }   // 仅当守鸦人本夜被恶魔杀死才触发
   if(stage==='idle'){
     const txt=(f.text!=null&&f.text!=='')?f.text:nightAutoText(id);
     h+='<textarea class="nf-ta" oninput="nightEditText(\''+id+'\',this.value)"'+lock+'>'+_nfEscA(txt)+'</textarea>';
@@ -1530,7 +1558,7 @@ function nightPanel(id, active){
     return h+'</div>';
   }
   if(stage==='manual'){   // 代玩家操作：说书人手动选目标（复用现有选择器）
-    let w=''; if(id==='poisoner') w=poisonUI(); else if(id==='fortuneteller') w=ftUI(); else if(id==='imp') w=impKillUI(); else if(id==='monk') w=monkUI(); else if(id==='butler') w=butlerUI();
+    let w=''; if(id==='poisoner') w=poisonUI(); else if(id==='fortuneteller') w=ftUI(); else if(id==='imp') w=impKillUI(); else if(id==='monk') w=monkUI(); else if(id==='butler') w=butlerUI(); else if(id==='ravenkeeper') w=ravenUI();
     h+='<div class="nf-status">代玩家操作：请在下方手动选择目标。</div>';
     h+='<div class="nf-imp">'+w+'</div>';
     h+='<div class="nf-btns"><button class="nf-ok" onclick="nightManualDone(\''+id+'\')">✓ 完成本步</button>'
@@ -1552,8 +1580,20 @@ function nightPanel(id, active){
       +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button></div>';
     return h+'</div>';
   }
+  if(id==='ravenkeeper' && stage==='ravensick'){   // 中毒/醉酒守鸦人：说书人先设定要告知的（可假）角色再发送
+    const rec=ravenPicks[night]||{}; const actual=(rec.t!=null&&meta[rec.t]&&meta[rec.t].role)?meta[rec.t].role:null;
+    let rOpt='<option value="">选择要告知的角色</option>';
+    ROLES.filter(r=>!lockedRoles.has(r.id)).forEach(function(r){ rOpt+='<option value="'+r.id+'"'+(rec.role===r.id?' selected':'')+'>'+r.name+(r.id===actual?'（真实）':'')+'</option>'; });
+    h+='<div class="nf-status">守鸦人中毒/醉酒——请设定要告知的角色（可给假信息），再发送。真实是「'+(actual&&RMAP[actual]?RMAP[actual].name:'（未知）')+'」</div>';
+    h+='<div class="nf-imp">查看 <b>'+(rec.t!=null?nameAt(rec.t):'—')+'</b> → 告知角色：<select onchange="ravenSet(\'role\',this.value)">'+rOpt+'</select></div>';
+    h+='<div class="nf-status" style="opacity:.85">将发送：'+ravenPlayerResult()+'</div>';
+    h+='<div class="nf-btns"><button class="nf-ok"'+(rec.role?'':' disabled')+' onclick="nightSendRavenResult(\''+id+'\')">发送结果</button>'
+      +'<button class="nf-re" onclick="nightRetract(\''+id+'\')">退回重选</button>'
+      +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button></div>';
+    return h+'</div>';
+  }
   if(stage==='result'){
-    const rtxt=(f.resultText!=null&&f.resultText!=='')?f.resultText:ftResultText();
+    const rtxt=(f.resultText!=null&&f.resultText!=='')?f.resultText:_resultDefaultText(id);
     h+='<div class="nf-status">结果已发送，等待玩家确认…</div>';
     h+='<textarea class="nf-ta" oninput="nightEditResult(\''+id+'\',this.value)">'+_nfEscA(rtxt)+'</textarea>';
     h+='<div class="nf-btns"><button class="nf-re" onclick="nightResend(\''+id+'\')">重发结果</button>'
