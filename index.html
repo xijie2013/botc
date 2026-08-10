@@ -1017,6 +1017,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.29.4', d:'2026-08-10', items:['修复：旧局记录·对局列表/统计/积分榜里早期存成小写的名字（如「cooler」）现在统一显示为客人名册里的原始大小写「Cooler」，并与「Cooler」合并计分/统计（同一人不再拆成两行）。以客人名册登记为准，名册里没有的名字则采用历史记录中出现过的带大写写法；中文名不受影响']},
   {v:'v2.29.3', d:'2026-08-10', items:['修复：名字大小写分裂——说书人把「Cooler」加入客人名册后，玩家用「Cooler」登录却被强制变成小写「cooler」，导致显示名、记录与座位上的「Cooler」对不上、像是两个人。现在登录后统一采用客人名册里说书人登记的原始大小写作为显示名（名册里没有则保留你输入的原样）；每次登录都会校正一次，之前已存成小写的老账号下次登录会自动改回正确大小写。账号本身仍不区分大小写，Cooler/cooler 登录的是同一个账号']},
   {v:'v2.29.2', d:'2026-08-10', items:['修复：开局发牌后角色卡入场时会先闪一下上一局的旧卡面，再切到本局正确角色——改为等新角色图加载完成后再播放入场动画（带 1.5s 兜底），不再闪旧图']},
   {v:'v2.29.1', d:'2026-08-10', items:['修复：说书人登录后在设置里看不到「说书人口令」设置项（判断登录身份的写法跨脚本块失效，改用说书人角标判断）。现在说书人打开设置即可看到并设置口令']},
@@ -2855,14 +2856,26 @@ load(); render();
   const _ALIGN=g=>(g==='tf'||g==='out')?'good':'evil';
   const _TEAMLBL={tf:'镇民',out:'外来者',min:'爪牙',dem:'恶魔'};
   function _histFetch(){ return db.ref('history').once('value').then(s=>{ const v=s.val()||{}; return Object.keys(v).map(k=>{ const g=v[k]; if(g&&typeof g==='object') g.__key=k; return g; }).filter(Boolean).sort((a,b)=>(b.ts||0)-(a.ts||0)); }); }
+  /* 旧局记录里的名字大小写统一：小写键 -> 展示用原始大小写。名册（说书人登记）优先，历史记录里出现过的大写写法作补充；
+     这样早期存成小写「cooler」的记录，在对局列表/统计/积分榜里都显示为「Cooler」，且与「Cooler」合并计分（同一人） */
+  let _histNameMap={};
+  function _dn(nm){ if(!nm) return nm; const k=norm(nm); return _histNameMap[k]||nm; }
+  function _buildNameMap(games, roster){ const m={}; const hasUpper=s=>/[A-Z]/.test(s);
+    const consider=nm=>{ if(!nm) return; const k=norm(nm); if(!k) return; const cur=m[k];
+      if(cur===undefined){ m[k]=nm; return; } if(!hasUpper(cur)&&hasUpper(nm)) m[k]=nm; };   // 用「含大写」的写法替换「全小写」的
+    try{ if(roster&&typeof roster==='object'){ Object.keys(roster).forEach(k=>{ const v=roster[k]; if(typeof v==='string') consider(v); }); } }catch(e){}   // 1) 名册优先
+    (games||[]).forEach(g=>{ consider(g&&g.st); ((g&&g.seats)||[]).forEach(s=>consider(s&&s.name)); });   // 2) 历史记录补充
+    return m; }
   function _renderHist(){ const c=document.getElementById('histContent'); if(!c) return; c.innerHTML='<div style="padding:8px;color:#8a6b3a;font-size:12px">读取中…</div>';
-    _histFetch().then(games=>{ c.innerHTML = _histTabCur==='stats'?_histStatsHTML(games) : (_histTabCur==='score'?_histScoreHTML(games) : _histListHTML(games)); })
+    Promise.all([ _histFetch(), db.ref('roster').once('value').then(s=>s.val()||{}).catch(()=>({})) ])
+      .then(([games,roster])=>{ _histNameMap=_buildNameMap(games,roster);
+        c.innerHTML = _histTabCur==='stats'?_histStatsHTML(games) : (_histTabCur==='score'?_histScoreHTML(games) : _histListHTML(games)); })
       .catch(e=>{ c.innerHTML='<div style="padding:8px;color:#c98;font-size:12px">读取失败：'+((e&&e.code)||e&&e.message||'')+'</div>'; }); }
   function _fmtDate(ts){ if(!ts) return ''; try{ const d=new Date(ts); const p=n=>(''+n).padStart(2,'0'); return (d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }catch(e){ return ''; } }
   function _histListHTML(games){ if(!games.length) return '<div style="padding:8px;color:#8a6b3a;font-size:12px">还没有对局记录。分出胜负后会自动存档。</div>';
     let h=''; games.forEach(g=>{ const res=g.result==='good'?'好人胜利':'邪恶胜利';
-      h+='<div class="hgame"><div class="hg-h"><span class="hg-t">'+E(g.name||'本局')+' · <span class="hg-res '+g.result+'">'+res+'</span> <span style="color:#8a6b3a;font-weight:400">'+_fmtDate(g.ts)+' · 说书人 '+E(g.st||'—')+'</span></span><button class="hg-del" onclick="_histDel(this,\''+(g.__key||'')+'\')">删除</button></div>';
-      const ps=(g.seats||[]).filter(s=>s.name).map(s=>{ const cls=s.team?('r'+s.team):''; return '<span class="'+cls+'">'+E(s.name)+(s.role&&RMAP[s.role]?'（'+RMAP[s.role].name+'）':'')+'</span>'; }).join('、');
+      h+='<div class="hgame"><div class="hg-h"><span class="hg-t">'+E(g.name||'本局')+' · <span class="hg-res '+g.result+'">'+res+'</span> <span style="color:#8a6b3a;font-weight:400">'+_fmtDate(g.ts)+' · 说书人 '+E(_dn(g.st)||'—')+'</span></span><button class="hg-del" onclick="_histDel(this,\''+(g.__key||'')+'\')">删除</button></div>';
+      const ps=(g.seats||[]).filter(s=>s.name).map(s=>{ const cls=s.team?('r'+s.team):''; return '<span class="'+cls+'">'+E(_dn(s.name))+(s.role&&RMAP[s.role]?'（'+RMAP[s.role].name+'）':'')+'</span>'; }).join('、');
       h+='<div class="hg-p">'+(ps||'—')+'</div></div>'; });
     return h; }
   window._histDel=function(btn,key){ if(role!=='st'||!key) return;
@@ -2870,8 +2883,8 @@ load(); render();
       clearTimeout(btn._t); btn._t=setTimeout(()=>{ if(!btn) return; btn.dataset.armed=''; btn.textContent='删除'; btn.classList.remove('armed'); },3000); return; }
     db.ref('history/'+key).remove().then(()=>{ try{ if(window._sfx) _sfx('pen-return'); }catch(e){} _renderHist(); }).catch(()=>{}); };
   function _aggregate(games){ const P={}; const get=n=>P[n]||(P[n]={tf:{n:0,w:0},out:{n:0,w:0},min:{n:0,w:0},dem:{n:0,w:0},stN:0,stG:0,stE:0});
-    games.forEach(g=>{ const res=g.result; (g.seats||[]).forEach(s=>{ if(!s.name||!s.team||!_TEAMLBL[s.team]) return; const p=get(s.name); p[s.team].n++; if(_ALIGN(s.team)===res) p[s.team].w++; });
-      if(g.st){ const p=get(g.st); p.stN++; if(res==='good')p.stG++; else if(res==='evil')p.stE++; } });
+    games.forEach(g=>{ const res=g.result; (g.seats||[]).forEach(s=>{ if(!s.name||!s.team||!_TEAMLBL[s.team]) return; const p=get(_dn(s.name)); p[s.team].n++; if(_ALIGN(s.team)===res) p[s.team].w++; });
+      if(g.st){ const p=get(_dn(g.st)); p.stN++; if(res==='good')p.stG++; else if(res==='evil')p.stE++; } });
     return P; }
   function _pct(w,n){ return n?Math.round(w*100/n)+'%':'—'; }
   function _histStatsHTML(games){ if(!games.length) return '<div style="padding:8px;color:#8a6b3a;font-size:12px">还没有对局记录。</div>';
