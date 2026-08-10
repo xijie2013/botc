@@ -1051,6 +1051,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.33.2', d:'2026-08-10', items:['修复：跳过某个夜晚步骤后「结束本夜」仍点不动——门控改用步骤完成状态判定（跳过=已完成放行），不再依赖是否记录魔典。新增：角色已出局时，其夜晚步骤面板里除「跳过」外的按钮（发送/代确认）自动变灰，并提示「该角色已出局，本夜无行动，请点跳过」——出局角色当夜本就只能跳过']},
   {v:'v2.33.1', d:'2026-08-10', items:['夜晚面板把「代确认」与「跳过」拆成两个按钮，语义区分：「代确认」表示这一步确实发生（说书人替离线玩家确认信息或代为选择），会记入该玩家的局内信息与魔典；「跳过」表示这一步没有发生，不记入玩家局内信息、也不记魔典（仅标记完成以放行「结束本夜」）。修复：此前信息类角色（爪牙相认/厨师/共情者/送葬者等）被「代确认」时并未写入玩家局内信息，现已一并记录，与选择类角色行为一致']},
   {v:'v2.33.0', d:'2026-08-10', items:['夜晚信息自动化拓展（第一批）：厨师、共情者、送葬者现在也走自动下发流程——说书人在夜晚面板一键「发送给玩家」，玩家底部弹窗「确认收到」后即记入其局内信息，并同步写入魔典日志。中毒/醉酒时面板仍显示假值选择器，说书人设定的假值会同时用于下发文本与日志（健康则用真值）。厨师仅首夜、共情者每夜、送葬者次夜起（按昨日处决）']},
   {v:'v2.32.1', d:'2026-08-10', items:['修复：占卜师局内信息顺序颠倒——此前显示「占卜结果」在前、「你选择占卜谁」在后（因选择记录在确认结果时才写入、时间戳更晚）。现在每条局内信息带逻辑顺序（信息→选择→结果），按此排序，占卜师正确显示为先选人、后出结果']},
@@ -1423,18 +1424,22 @@ function nfDone(id,skip){ const f=nfGet(id); f.stage='done';
   try{ if(window.stNightClear) window.stNightClear(id); }catch(e){} }   // 完成后清掉该玩家的夜晚弹窗与回复
 function _nfEscA(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 function stepDone(s){ if(stepAutomated(s)){ const f=nightFlow[night+':'+s.id]; return !!(f&&f.stage==='done'); } return !!nightChecks[night+':'+s.id]; }
+/* 该步对应角色是否已出局（全部座位都死→本夜无行动，只能跳过） */
+function _stepRoleDead(id){ const seats=nightSendSeats(id); if(!seats||!seats.length) return false; return seats.every(function(i){ return isDeadSeat(i); }); }
 function nightPanel(id, active){
   const kind=stepKind(id); const f=nfGet(id); const stage=f.stage||'idle';
-  const lock = active?'' : ' disabled';
+  const dead=_stepRoleDead(id);                     // 角色已出局：除「跳过」外其余操作变灰
+  const lock = (active&&!dead)?'' : ' disabled';    // 发送等操作在非激活或已出局时禁用
   let h='<div class="nflow">';
   if(stage==='done'){ return h+'<div class="nf-done">✓ 已完成</div></div>'; }
   if(stage==='idle'){
     const txt=(f.text!=null&&f.text!=='')?f.text:nightAutoText(id);
-    h+='<textarea class="nf-ta" oninput="nightEditText(\''+id+'\',this.value)"'+(active?'':' disabled')+'>'+_nfEscA(txt)+'</textarea>';
+    h+='<textarea class="nf-ta" oninput="nightEditText(\''+id+'\',this.value)"'+lock+'>'+_nfEscA(txt)+'</textarea>';
     h+='<div class="nf-btns"><button class="nf-send"'+lock+' onclick="nightSend(\''+id+'\')">发送给玩家</button>'
-      +'<button class="nf-ok" onclick="nightProxyConfirm(\''+id+'\')">代确认</button>'
+      +'<button class="nf-ok"'+(dead?' disabled':'')+' onclick="nightProxyConfirm(\''+id+'\')">代确认</button>'
       +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button></div>';
-    if(!active) h+='<div class="nf-hint">（等前一步完成后再发送）</div>';
+    if(dead) h+='<div class="nf-hint">该角色已出局，本夜无行动，请点「跳过」。</div>';
+    else if(!active) h+='<div class="nf-hint">（等前一步完成后再发送）</div>';
     return h+'</div>';
   }
   if(kind!=='info' && stage==='picked'){
@@ -1464,7 +1469,7 @@ function nightPanel(id, active){
     h+='<div class="nf-status">结果已发送，等待玩家确认…</div>';
     h+='<textarea class="nf-ta" oninput="nightEditResult(\''+id+'\',this.value)">'+_nfEscA(rtxt)+'</textarea>';
     h+='<div class="nf-btns"><button class="nf-re" onclick="nightResend(\''+id+'\')">重发结果</button>'
-      +'<button class="nf-ok" onclick="nightProxyConfirmResult(\''+id+'\')">代确认</button>'
+      +'<button class="nf-ok"'+(dead?' disabled':'')+' onclick="nightProxyConfirmResult(\''+id+'\')">代确认</button>'
       +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button></div>';
     return h+'</div>';
   }
@@ -1473,7 +1478,7 @@ function nightPanel(id, active){
   else waitMsg='已发送，等待玩家选择…';
   h+='<div class="nf-status">'+waitMsg+'</div>';
   h+='<div class="nf-btns"><button class="nf-re" onclick="nightResend(\''+id+'\')">重发</button>'
-    +'<button class="nf-ok" onclick="nightProxyConfirm(\''+id+'\')">代确认</button>'
+    +'<button class="nf-ok"'+(dead?' disabled':'')+' onclick="nightProxyConfirm(\''+id+'\')">代确认</button>'
     +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button></div>';
   return h+'</div>';
 }
@@ -2427,7 +2432,7 @@ function renderGrim(){
       if(s.id==="chef") h+=numUI("chef","相邻邪恶对数",Math.max(2,meta.filter((m,i)=>regEvil(i)).length));
       if(s.id==="empath") h+=numUI("empath","两侧存活邻座邪恶数",2);
       if(s.id==="washerwoman"||s.id==="librarian"||s.id==="investigator") h+=pingUI(s.id); });
-    const _dawnReady = steps.length>0 && steps.every(s=> nightChecks[night+":"+s.id]);
+    const _dawnReady = steps.length>0 && steps.every(s=> stepDone(s));   // 用 stepDone：自动化步骤看 f.stage（跳过也算完成），非自动化看 nightChecks
     const _dawned = !!(dayFlow[night]&&dayFlow[night].dawn);
     h+='<div style="margin-top:14px">';
     if(_dawned) h+='<button class="btn purple" style="width:100%;font-weight:800;opacity:.4;cursor:not-allowed;filter:grayscale(.85)" disabled>已结束本夜 · 已进入白天</button>';
