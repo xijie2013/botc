@@ -484,14 +484,14 @@
   .nbtok.used{opacity:.4;}
   .nbtok{cursor:grab;}
   .nbtok.crossed{opacity:.45; text-decoration:line-through;}
-  /* 防止拖拽时误选中文字/图片 */
-  #tableZone, #tableZone *, #notesPanel .nbcontent, #notesPanel .nbcontent *{ -webkit-user-select:none; -moz-user-select:none; user-select:none; }
-  #tableZone img, #notesPanel img{ -webkit-user-drag:none; user-drag:none; -webkit-touch-callout:none; }
-  #notesPanel textarea, #notesPanel input{ -webkit-user-select:text; user-select:text; }
-  /* 清除所有标记按钮 */
+  /* 防止拖拽/点击时误选中界面文字与图片（整站禁用文本选择，仅输入框可选） */
+  body{ -webkit-user-select:none; -moz-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  input, textarea{ -webkit-user-select:text; -moz-user-select:text; user-select:text; }
+  img{ -webkit-user-drag:none; user-drag:none; }
+  /* 清除所有标记按钮：玩家笔记主题色（浅黄底 + 深金字/边） */
   .nb-clearall{display:block; width:100%; margin:16px 0 6px; padding:8px 10px; font-size:calc(1 * var(--sw) / 100); font-weight:800;
-    border-radius:8px; cursor:pointer; border:1px solid rgba(176,64,46,.5); background:rgba(176,64,46,.1); color:#b0402e; user-select:none;}
-  .nb-clearall.confirm{background:#b0402e; color:#fff; border-color:#b0402e;}
+    border-radius:8px; cursor:pointer; border:1px solid rgba(122,83,32,.55); background:rgba(255,250,235,.7); color:#6b4a1e; user-select:none;}
+  .nb-clearall.confirm{background:rgba(184,134,11,.32); color:#5a3d16; border-color:rgba(122,83,32,.8);}
   .nb-note{padding:4px 2px; border-bottom:1px solid rgba(122,83,32,.14); line-height:1.35;}
   .nb-nom{border:1px solid rgba(74,43,107,.22); border-radius:8px; padding:6px 8px; margin:6px 0; background:rgba(255,252,244,.6);}
   .nb-nomhead{font-weight:700; color:#6b4a1e;}
@@ -1009,6 +1009,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.24.0', d:'2026-08-10', items:['「清除所有标记」按钮改用玩家笔记主题色（浅黄底 + 深金字/边），确认态为深金色','扩大防误选范围：整个界面（中间钟表表盘、左上角设置/全屏/刷新按钮、页面标题、下方标签等）都不再被误选中高亮，仅输入框内文字可正常选择']},
   {v:'v2.23.0', d:'2026-08-10', items:['玩家笔记「标记」页面最下方新增「清除所有标记」按钮（一次点击进入确认、再点一次执行，清空所有座位的身份与状态标记，保留座位备注）','拖拽删除身份时只显示身份标记本身作为虚影跟随鼠标（不再拖动整个座位+玩家），且鼠标一离开原座位范围即生效','拖拽时不再误选中画面中的图片或文字（座位圈与笔记面板禁用文本/图片选择，输入框仍可正常选择）']},
   {v:'v2.22.0', d:'2026-08-10', items:['修复管家投票规则：玩家笔记里管家现在也受主人限制——主人当前未举手时管家不能投（投票开始时说书人会把管家的主人座位私密下发到管家端校验）','出局的管家不再受主人限制，可自由投票（鬼票）——魔典与玩家笔记均已修正（此前魔典里出局管家仍被主人未投票卡住）']},
   {v:'v2.21.0', d:'2026-08-10', items:['角色锁定去掉锁形图标，锁定时只变灰+划线','玩家笔记「标记」tab 改为与魔典一致的拖拽：把状态/角色标签拖到座位上即可标注；单击标签可划掉（变灰+划线）再点恢复','玩家笔记：把座位上的身份拖出座位圈即可删除该身份；点击自己加的状态标记可移除该标记（死亡标记除外，由说书人给出）','（拖拽与魔典一样使用鼠标拖放，触屏设备可能不支持拖拽）']},
