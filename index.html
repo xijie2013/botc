@@ -252,6 +252,18 @@
     border-left:3px solid #7a5aa0; font-size:.92em; color:#3a2456; line-height:1.35;}
   .ninfo b{color:#2e1a47; font-size:1.15em;}
   .ninfo-warn{display:inline-block; background:#b0402e; color:#fff; border-radius:4px; padding:0 5px; margin-right:4px; font-weight:700;}
+  /* 夜晚信息自动化：说书人流程面板 */
+  .nstep.nauto{cursor:default;}
+  .nflow{margin:2px 0 9px 0; padding:7px 9px; border-radius:8px; background:rgba(74,43,107,.10); border:1px solid rgba(122,83,32,.22);}
+  .nflow .nf-ta{width:100%; box-sizing:border-box; min-height:44px; resize:vertical; font-family:inherit; font-size:.9em; line-height:1.4;
+    color:#2e1a47; background:rgba(255,252,245,.8); border:1px solid rgba(122,83,32,.35); border-radius:6px; padding:5px 7px; margin-bottom:6px;}
+  .nflow .nf-status{font-size:.9em; color:#43286b; margin-bottom:6px;} .nflow .nf-status b{color:#2e1a47;}
+  .nflow .nf-done{font-size:.9em; color:#2e7d46; font-weight:700;}
+  .nflow .nf-hint{font-size:.82em; color:#8a7250; margin-top:5px;}
+  .nflow .nf-btns{display:flex; flex-wrap:wrap; gap:6px;}
+  .nflow .nf-btns button{padding:5px 10px; border-radius:7px; font-size:.85em; font-weight:700; cursor:pointer; border:1px solid rgba(122,83,32,.4); background:#f3ead9; color:#43286b;}
+  .nflow .nf-send, .nflow .nf-ok{background:linear-gradient(180deg,#7a5aa0,#5e3f80); color:#fff; border-color:#5e3f80;}
+  .nflow .nf-btns button[disabled]{opacity:.4; cursor:not-allowed;}
   /* per-seat info bubbles (grimoire) */
   #bubbleLayer{position:absolute; inset:0; z-index:40; pointer-events:none;}
   .bubble{position:absolute; transform:translateY(-50%); pointer-events:auto; z-index:41;
@@ -596,6 +608,18 @@
   #voteBar button[disabled]{opacity:.45; cursor:not-allowed; filter:grayscale(1);}
   #voteBar .vb-hint{font-size:12px; margin-bottom:7px; color:#e9c46a;}
   #voteBar .vb-hint .vb-ghost.used{color:#f0a89e;}
+  /* ===== 夜晚信息自动化：玩家底部弹窗 ===== */
+  #nightBar{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:121; display:none;
+    max-width:min(94vw,480px); text-align:center; color:#f3e6c4; animation:vbIn .35s ease both;
+    background:linear-gradient(180deg,rgba(52,32,66,.98),rgba(28,16,38,.98)); border:1.5px solid rgba(233,196,106,.6);
+    border-radius:16px; padding:14px 18px; box-shadow:0 10px 30px rgba(0,0,0,.55);}
+  #nightBar.on{display:block;}
+  #nightBar .nb-text{font-size:14.5px; font-weight:700; color:#ffe9b8; line-height:1.5; margin-bottom:10px; white-space:pre-wrap;}
+  #nightBar .nb-picks{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:10px;}
+  #nightBar .nb-sel{padding:8px 10px; border-radius:10px; font-size:14px; background:rgba(20,12,28,.95); color:#f3e6c4; border:1.2px solid rgba(233,196,106,.5); min-width:120px;}
+  #nightBar .nb-btn{min-width:150px; padding:11px 30px; border-radius:14px; font-size:15px; font-weight:800; cursor:pointer;
+    border:1.5px solid rgba(233,196,106,.7); background:linear-gradient(180deg,rgba(60,38,78,.98),rgba(34,20,44,.98)); color:#e9c46a; box-shadow:0 6px 20px rgba(0,0,0,.5);}
+  #nightBar .nb-done{font-size:13px; color:#c9b6e6; letter-spacing:1px;}
   /* 手机竖屏引导：竖着拿时提示转横 */
   #rotateGate{position:fixed; inset:0; z-index:99999; display:none; flex-direction:column; align-items:center; justify-content:center;
     background:radial-gradient(circle at 50% 40%,#3a2a1e,#160e1c 82%); color:#f3e6c4; text-align:center; padding:24px;}
@@ -630,6 +654,10 @@
     #voteBar .vb-wait{font-size:12px;}
     #voteBar .vb-btns{gap:6px; flex:0 0 auto;}
     #voteBar button{padding:6px 12px; font-size:12px; max-width:none; flex:0 0 auto;}
+    #nightBar{bottom:6px; padding:9px 12px; max-width:96vw; border-radius:13px;}
+    #nightBar .nb-text{font-size:12.5px; margin-bottom:7px;}
+    #nightBar .nb-btn{padding:7px 16px; font-size:13px; min-width:0;}
+    #nightBar .nb-sel{padding:6px 8px; font-size:12.5px; min-width:96px;}
     /* 顶部角标略缩，避免拥挤 */
     #playerBadge, #stBadge{font-size:11px; padding:3px 9px;}
   }
@@ -887,6 +915,7 @@ let meta=[], bluffs=["","",""];
 let view="seat", gtab="list", sel=-1, night=1, listMode="all", lockedRoles=new Set(), overviewDecoys=[], redHerring=-1, customDist=null;
 let openBubbles=new Set(), seatPos=[], tableCenter=null, impKills={}, poisonPicks={}, monkPicks={}, ftPicks={}, butlerPicks={}, pingPicks={}, ravenPicks={}, undertakerPicks={}, sickAns={}, nominations={}, executions={}, virginUsed=false, slayerShot=null;
 const nightChecks={};
+const nightFlow={};   /* 夜晚信息自动化：每步流程状态 key=`${night}:${stepId}` → {stage,text,phase,pick,resultText,sid} */
 
 const ROLES=[
  {id:"washerwoman",name:"洗衣妇",team:"tf",ab:"首夜：得知2名玩家中有1个特定镇民。"},
@@ -950,7 +979,7 @@ function blankMeta(){return {role:null,poison:false,drunk:false,dead:false,note:
 function ensureMeta(){ while(meta.length<N) meta.push(blankMeta()); meta.length=N; }
 
 function save(){ if(window.__stApplyingRemote) return;   // 正在应用远端同步时不重复写/上传，避免回声循环
-  try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,impKills,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,sickAns,redHerring,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist,ts:Date.now()})); }catch(e){}
+  try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,nightFlow,impKills,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,sickAns,redHerring,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist,ts:Date.now()})); }catch(e){}
   try{ if(window._stCloudPush) window._stCloudPush(); }catch(e){} }   // 说书人存档实时云同步（防抖上传）
 function load(){
   try{ const d=JSON.parse(localStorage.getItem(KEY)||"{}");
@@ -966,6 +995,7 @@ function load(){
     if(gtab==="log") gtab="list";                      // 不从日志页恢复：每次进入魔典默认到魔典页
     if(typeof d.night==="number") night=Math.max(1,d.night);
     if(d.nightChecks&&typeof d.nightChecks==="object") Object.assign(nightChecks,d.nightChecks);
+    Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); if(d.nightFlow&&typeof d.nightFlow==="object") Object.assign(nightFlow,d.nightFlow);
     if(d.impKills&&typeof d.impKills==="object") impKills=d.impKills;
     if(d.poisonPicks&&typeof d.poisonPicks==="object") poisonPicks=d.poisonPicks;
     if(d.monkPicks&&typeof d.monkPicks==="object") monkPicks=d.monkPicks;
@@ -1019,6 +1049,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.30.0', d:'2026-08-10', items:['【新功能·夜晚信息自动化（第一版）】说书人魔典的夜晚步骤中，「爪牙相认 / 恶魔信息 / 投毒者 / 占卜师 / 恶魔夜杀」现在可一键把信息私密发送给对应玩家；玩家会在屏幕底部收到弹窗并点「确认」。需要选目标的（投毒、夜杀选1人；占卜选2人）由玩家在弹窗里下拉选择、提交，说书人「审核通过」后写入魔典；占卜会自动算出结果再发一条给玩家确认。信息内容自动生成、发送前说书人可修改（照顾中毒/醉酒给假信息）。按夜晚顺序逐步推进：前一步完成才解锁下一步，全部完成才能「结束本夜」。玩家掉线可由说书人「代确认/跳过」。其余角色暂沿用原有勾选方式']},
   {v:'v2.29.7', d:'2026-08-10', items:['修复：处决/猎人视频有时没有声音——改为等视频数据就绪(canplay)后再播放，且只在浏览器真正拦截自动播放时才退回静音（此前任何瞬时加载中断都会被误判成"要静音"，导致该次播放永久没声，表现为"有的能出声、有的不行"）；并在"点击进入"时预先解锁视频元素，提升带声音播放成功率','背景音乐在动画时的淡入淡出改用缓动曲线并略微加长，过渡更柔和不突兀']},
   {v:'v2.29.6', d:'2026-08-10', items:['背景音乐改为「播 5 分钟 → 静默 5 分钟」循环播放，避免全程有音乐略显吵闹；每次开始/停止都用 6 秒长淡入淡出，柔和不突兀。静音按钮、三档音量、动画期间静音等原有行为不变']},
   {v:'v2.29.5', d:'2026-08-10', items:['修复：播放处决/猎人射杀视频与胜负结算动画时，背景音乐现在完全静音（此前只压低到约 8%，仍隐约可闻），动画结束后自动从原处续播并淡回原音量；视频播放期间也不再叠加零碎的界面音效（结算的胜负音效在视频结束后触发，不受影响）。提名转盘不受影响']},
@@ -1152,6 +1183,7 @@ async function dealRoles(){
   try{ if(window._histNewRound) _histNewRound(); }catch(e){}   // 新一局：胜负另记一条
   ensureMeta(); night=1; impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
   Object.keys(nightChecks).forEach(k=>delete nightChecks[k]);   // 清空每夜勾选
+  Object.keys(nightFlow).forEach(k=>delete nightFlow[k]);       // 清空夜晚信息流程
   const pick=(team,k)=>{ const pool=ROLES.filter(r=>r.team===team&&!lockedRoles.has(r.id)).map(r=>r.id);
     for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
     return pool.slice(0,Math.max(0,k)); };
@@ -1184,7 +1216,7 @@ async function dealRoles(){
 }
 async function resetRoles(){ if(!await uiConfirm("重置所有身份、状态、备注、伪装？（保留名字与座位）")) return;
   meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
-  Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); overviewDecoys=[]; tokens.forEach(t=>t.dead=false); render();
+  Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); overviewDecoys=[]; tokens.forEach(t=>t.dead=false); render();
   try{ if(window._stClearPlayerRoles) _stClearPlayerRoles(); }catch(e){} try{ if(window._stResetPublic) _stResetPublic(); }catch(e){} try{ if(window._histNewRound) _histNewRound(); }catch(e){} }   // 重置角色：清空玩家角色卡 + 公开状态（大厅/笔记的死亡/处决/胜负等一并清零）；胜负另记一条
 function setBluff(k,v){ bluffs[k]=v; refreshOverviewDecoys(); render(); }
 
@@ -1264,6 +1296,94 @@ function recordSpecial(sid,on){
     const txt='爪牙：'+(mins.map(nameAt).join('、')||'无')+'　伪装：'+(bl.join('、')||'（未设）');
     dem.forEach(i=>histSet(i,'evil', on?txt:null));
   }
+}
+/* ==================== 夜晚信息自动化（第一版）====================
+   支持角色：爪牙相认(_minion)/恶魔信息(_demon)=纯信息；投毒者(poisoner)/恶魔夜杀(imp)=选1目标；占卜师(fortuneteller)=选2+回结果。
+   每步：说书人「发送」私密信息 → 玩家底部弹窗确认(或选目标提交) → 选目标类由说书人「审核通过」写入魔典 → 占卜再回一条结果 → 玩家确认。
+   流程状态存 nightFlow[`${night}:${id}`]，随魔典存档同步。完成即置 nightChecks 令「结束本夜」门控自动生效。 */
+const NIGHT_AUTO_INFO=new Set(['_minion','_demon']);
+const NIGHT_AUTO_PICK1=new Set(['poisoner','imp']);
+const NIGHT_AUTO_PICK2=new Set(['fortuneteller']);
+function stepKind(id){ if(NIGHT_AUTO_INFO.has(id)) return 'info'; if(NIGHT_AUTO_PICK1.has(id)) return 'pick1'; if(NIGHT_AUTO_PICK2.has(id)) return 'pick2info'; return null; }
+function stepAutomated(s){ const id=s.id; if(id==='imp') return night>=2; return !!stepKind(id); }   // 首夜恶魔是「恶魔信息(_demon)」而非击杀
+function nfKey(id){ return night+':'+id; }
+function nfGet(id){ const k=nfKey(id); return nightFlow[k]||(nightFlow[k]={stage:'idle'}); }
+function _demSeat(){ return meta.findIndex(m=>m&&m.role&&RMAP[m.role]&&RMAP[m.role].team==='dem'); }
+function _minSeats(){ const a=[]; meta.forEach((m,i)=>{ if(m&&m.role&&RMAP[m.role]&&RMAP[m.role].team==='min') a.push(i); }); return a; }
+function nightSendSeats(id){ if(id==='_minion') return _minSeats(); if(id==='_demon'){ const d=_demSeat(); return d>=0?[d]:[]; } if(id==='imp'){ const s=impSeat(); return s>=0?[s]:[]; } const s=meta.findIndex(m=>m&&m.role===id); return s>=0?[s]:[]; }
+function nightSeatOptions(){ const a=[]; for(let i=0;i<N;i++){ a.push({seat:i, name:(i+1)+'号 '+nameAt(i)+(isDeadSeat(i)?'（已出局）':'')}); } return a; }
+function nightAutoText(id){
+  if(id==='_minion'){ const d=_demSeat(); const dn=d>=0?((d+1)+'号 '+nameAt(d)):'（未定）'; const ms=_minSeats().map(i=>(i+1)+'号 '+nameAt(i)); return '【爪牙信息】你的恶魔是：'+dn+'。同伙爪牙：'+(ms.join('、')||'无其他爪牙')+'。'; }
+  if(id==='_demon'){ const ms=_minSeats().map(i=>(i+1)+'号 '+nameAt(i)); const bl=(bluffs||[]).filter(Boolean).map(x=>RMAP[x]?RMAP[x].name:x); return '【恶魔信息】你的爪牙：'+(ms.join('、')||'无')+'。可伪装的身份（不在场好人）：'+(bl.join('、')||'（说书人未设置）')+'。'; }
+  if(id==='poisoner') return '【投毒者】请选择今晚要下毒的一名玩家（当晚及次日中毒）。';
+  if(id==='imp') return '【恶魔】请选择今晚要击杀的目标。';
+  if(id==='fortuneteller') return '【占卜师】请选择今晚要占卜的两名玩家。';
+  return '';
+}
+function ftResultText(){ const cur=ftPicks[night]; if(!cur||cur[0]==null||cur[1]==null) return '【占卜结果】（尚未选定两名玩家）'; const has=readsDemon(cur[0])||readsDemon(cur[1]); return '【占卜结果】你所占卜的 '+nameAt(cur[0])+'、'+nameAt(cur[1])+' 之中'+(has?'有':'没有')+'恶魔。'; }
+/* 说书人操作：发送 / 编辑文本 / 审核通过 / 退回重选 / 代确认跳过 / 重发 */
+function nightSend(id){ const kind=stepKind(id); if(!kind) return; const f=nfGet(id);
+  const seats=nightSendSeats(id); if(!seats.length){ try{toast('没找到该角色对应的已登录玩家，可用「代确认/跳过」');}catch(e){} }
+  const text=(f.text!=null&&f.text!=='')?f.text:nightAutoText(id); f.text=text;
+  let phase='info', pick=null; if(kind!=='info'){ phase='pick'; pick={count:kind==='pick2info'?2:1, options:nightSeatOptions()}; }
+  f.stage='sent'; f.phase=phase; f.sid=(f.sid||0)+1; f.pick=null;
+  if(window.stNightSend) window.stNightSend(id, phase, text, pick, seats, f.sid);
+  save(); render(); }
+function nightEditText(id,val){ nfGet(id).text=val; }
+function nightEditResult(id,val){ nfGet(id).resultText=val; }
+function nightApprove(id){ const f=nfGet(id); if(!f.pick||!f.pick.length){ try{toast('玩家还没提交选择');}catch(e){} return; }
+  if(id==='poisoner'){ poisonPick(String(f.pick[0])); nfDone(id); }
+  else if(id==='imp'){ impKill(String(f.pick[0])); nfDone(id); }
+  else if(id==='fortuneteller'){ ftPick(0,String(f.pick[0])); ftPick(1,String(f.pick[1])); if(typeof recordFt==='function') recordFt();
+    const rtext=(f.resultText!=null&&f.resultText!=='')?f.resultText:ftResultText(); f.resultText=rtext; f.stage='result'; f.phase='result'; f.sid=(f.sid||0)+1;
+    const seats=nightSendSeats(id); if(window.stNightSend) window.stNightSend(id,'result',rtext,null,seats,f.sid); }
+  save(); render(); }
+function nightRetract(id){ const f=nfGet(id); const kind=stepKind(id); f.pick=null; f.stage='sent'; f.phase='pick'; f.sid=(f.sid||0)+1;
+  const seats=nightSendSeats(id); const pick={count:kind==='pick2info'?2:1, options:nightSeatOptions()};
+  if(window.stNightSend) window.stNightSend(id,'pick',(f.text||nightAutoText(id)),pick,seats,f.sid); save(); render(); }
+function nightResend(id){ const f=nfGet(id);
+  if(f.stage==='result'){ f.sid=(f.sid||0)+1; const seats=nightSendSeats(id); if(window.stNightSend) window.stNightSend(id,'result',(f.resultText||ftResultText()),null,seats,f.sid); save(); render(); }
+  else nightSend(id); }
+function nightSkip(id){ nfDone(id); save(); render(); }   // 掉线/代确认：直接标记完成（不写选目标，说书人如需可另行处理）
+function nfDone(id){ const f=nfGet(id); f.stage='done'; nightChecks[nfKey(id)]=true;
+  if(id==='_minion'||id==='_demon'){ try{ recordSpecial(id,true); }catch(e){} }   // 纯信息步：完成时把「已告知」记入魔典日志
+  try{ if(window.stNightClear) window.stNightClear(id); }catch(e){} }   // 完成后清掉该玩家的夜晚弹窗与回复
+function _nfEscA(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function stepDone(s){ if(stepAutomated(s)){ const f=nightFlow[night+':'+s.id]; return !!(f&&f.stage==='done'); } return !!nightChecks[night+':'+s.id]; }
+function nightPanel(id, active){
+  const kind=stepKind(id); const f=nfGet(id); const stage=f.stage||'idle';
+  const lock = active?'' : ' disabled';
+  let h='<div class="nflow">';
+  if(stage==='done'){ return h+'<div class="nf-done">✓ 已完成</div></div>'; }
+  if(stage==='idle'){
+    const txt=(f.text!=null&&f.text!=='')?f.text:nightAutoText(id);
+    h+='<textarea class="nf-ta" oninput="nightEditText(\''+id+'\',this.value)"'+(active?'':' disabled')+'>'+_nfEscA(txt)+'</textarea>';
+    h+='<div class="nf-btns"><button class="nf-send"'+lock+' onclick="nightSend(\''+id+'\')">发送给玩家</button>'
+      +'<button class="nf-skip" onclick="nightSkip(\''+id+'\')">代确认/跳过</button></div>';
+    if(!active) h+='<div class="nf-hint">（等前一步完成后再发送）</div>';
+    return h+'</div>';
+  }
+  if(kind!=='info' && stage==='picked'){
+    const pk=(f.pick||[]).map(function(s){return nameAt(+s)+'（'+((+s)+1)+'号）';}).join('、');
+    h+='<div class="nf-status">玩家已选择：<b>'+_nfEscA(pk)+'</b></div>';
+    h+='<div class="nf-btns"><button class="nf-ok"'+lock+' onclick="nightApprove(\''+id+'\')">审核通过（写入魔典）</button>'
+      +'<button class="nf-re" onclick="nightRetract(\''+id+'\')">退回重选</button>'
+      +'<button class="nf-skip" onclick="nightSkip(\''+id+'\')">跳过</button></div>';
+    return h+'</div>';
+  }
+  if(stage==='result'){
+    const rtxt=(f.resultText!=null&&f.resultText!=='')?f.resultText:ftResultText();
+    h+='<div class="nf-status">结果已发送，等待玩家确认…</div>';
+    h+='<textarea class="nf-ta" oninput="nightEditResult(\''+id+'\',this.value)">'+_nfEscA(rtxt)+'</textarea>';
+    h+='<div class="nf-btns"><button class="nf-re" onclick="nightResend(\''+id+'\')">重发结果</button>'
+      +'<button class="nf-skip" onclick="nightSkip(\''+id+'\')">代确认/跳过</button></div>';
+    return h+'</div>';
+  }
+  const waitMsg=(kind==='info')?'已发送，等待玩家确认…':'已发送，等待玩家选择…';
+  h+='<div class="nf-status">'+waitMsg+'</div>';
+  h+='<div class="nf-btns"><button class="nf-re" onclick="nightResend(\''+id+'\')">重发</button>'
+    +'<button class="nf-skip" onclick="nightSkip(\''+id+'\')">代确认/跳过</button></div>';
+  return h+'</div>';
 }
 function stepNight(d){ night=Math.max(1,night+d); render(); }
 
@@ -2172,22 +2292,25 @@ function renderGrim(){
     const hasTeam=t=>meta.some(m=>m.role&&RMAP[m.role].team===t);
     const steps=NIGHT[night===1?"first":"other"].filter(s=> s.special ? hasTeam(s.special) : inplay.has(s.id));
     if(!steps.length) h='<div class="rrow" style="opacity:.6">（发牌后按在场角色自动生成顺序）</div>';
-    steps.forEach(s=>{ let name,color,info="";
+    const firstUndone = steps.findIndex(s=>!stepDone(s));
+    steps.forEach((s,si)=>{ let name,color,info="";
       if(s.special){ name=s.name; color=s.special==="dem"?TEAMC.dem:TEAMC.min; }
       else{ const r=RMAP[s.id]; const ds=meta.some(m=>m&&m.role===s.id&&m.isDrunk);
         name=r.name+(ds?'-酒鬼':''); color=ds?TEAMC.out:TEAMC[r.team]; info=computeNightInfo(s.id); }
+      if(stepAutomated(s)){   // 自动化步骤：改用信息流程面板（发送/确认/审核），并按顺序门控
+        const done=stepDone(s), active=(si===firstUndone);
+        h+='<div class="nstep nauto"><span><b style="color:'+color+'">'+(done?'✓ ':'')+name+'</b> <span class="nn">'+s.note+'</span>'+(info?'<div class="ninfo">'+info+'</div>':'')+'</span></div>';
+        h+=nightPanel(s.id, active); return;
+      }
       const ck=nightChecks[night+":"+s.id]?" checked":"";
       h+='<label class="nstep"><input type="checkbox"'+ck+' onchange="onStepCheck(\''+s.id+'\',this.checked)"><span><b style="color:'+color+'">'+name+'</b> <span class="nn">'+s.note+'</span>'+(info?'<div class="ninfo">'+info+'</div>':'')+'</span></label>';
-      if(s.id==="poisoner") h+=poisonUI();
       if(s.id==="monk") h+=monkUI();
       if(s.id==="butler") h+=butlerUI();
-      if(s.id==="fortuneteller") h+=ftUI();
       if(s.id==="ravenkeeper") h+=ravenUI();
       if(s.id==="undertaker") h+=undertakerUI();
       if(s.id==="chef") h+=numUI("chef","相邻邪恶对数",Math.max(2,meta.filter((m,i)=>regEvil(i)).length));
       if(s.id==="empath") h+=numUI("empath","两侧存活邻座邪恶数",2);
-      if(s.id==="washerwoman"||s.id==="librarian"||s.id==="investigator") h+=pingUI(s.id);
-      if(night>=2 && s.id==="imp") h+=impKillUI(); });
+      if(s.id==="washerwoman"||s.id==="librarian"||s.id==="investigator") h+=pingUI(s.id); });
     const _dawnReady = steps.length>0 && steps.every(s=> nightChecks[night+":"+s.id]);
     h+='<div style="margin-top:14px">'
       +'<button class="btn purple" style="width:100%;font-weight:800;'+(_dawnReady?'':'opacity:.4;cursor:not-allowed;filter:grayscale(.85);')+'" '+(_dawnReady?'onclick="stDawn()"':'disabled')+'>结束本夜</button>'
@@ -2385,6 +2508,7 @@ load(); render();
 <!-- ================= 多人版 DOM ================= -->
 <div id="fbToast"></div>
 <div id="voteBar"></div>
+<div id="nightBar"></div>
 <div id="rotateGate"><div class="phone"></div><div class="rg-t">请把手机横过来</div><div class="rg-s">血染钟楼在横屏下体验更好 🔄</div></div>
 <div id="cfgModal"><div class="cbox"><h3><span>本局存档 · 角色配置</span><span class="cX" onclick="_cfgClose()">✕</span></h3><div id="cfgList"></div></div></div>
 <div id="setModal" onclick="if(event.target.id==='setModal')closeSettings()"><div class="setbox">
@@ -3041,6 +3165,31 @@ load(); render();
     if(!on && _butlerBlocked(seat)){ bar.innerHTML='<button class="vb-yes" disabled>主人未投票 · 暂不能投</button>'; return; }   // 管家：等主人先举手
     bar.innerHTML='<button class="vb-yes'+(on?' act':'')+'" onclick="_raiseHand('+(on?'false':'true')+')">'+(on?'放下':'举手')+gtag+'</button>'; }
 
+  /* ===== 夜晚信息自动化：玩家端底部弹窗 ===== */
+  function _nbEsc(s){ return (s==null?'':String(s)).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+  function updateNightBar(){ const bar=document.getElementById('nightBar'); if(!bar) return;
+    const nm=S&&S.night;
+    if(role!=='player'||!nm||!nm.text){ bar.classList.remove('on'); bar.innerHTML=''; return; }
+    const rep=S&&S.nightReply; const replied = rep && (rep.sid||0)===(nm.sid||0) && rep.stepId===nm.stepId && rep.ack;
+    bar.classList.add('on');
+    let h='<div class="nb-text">'+_nbEsc(nm.text)+'</div>';
+    if(replied){ h+='<div class="nb-done">✓ 已回复说书人，请等待…</div>'; bar.innerHTML=h; return; }
+    if(nm.pick && nm.pick.count){
+      const opts='<option value="">选择玩家…</option>'+((nm.pick.options||[]).map(function(o){return '<option value="'+o.seat+'">'+_nbEsc(o.name)+'</option>';}).join(''));
+      let sels=''; for(let k=0;k<nm.pick.count;k++){ sels+='<select class="nb-sel" id="nbSel'+k+'">'+opts+'</select>'; }
+      h+='<div class="nb-picks">'+sels+'</div><button class="nb-btn" onclick="_nightSubmitPick('+nm.pick.count+')">提交</button>';
+    } else { h+='<button class="nb-btn" onclick="_nightAck()">确认收到</button>'; }
+    bar.innerHTML=h; }
+  window.updateNightBar=updateNightBar;
+  function _nightWriteReply(pick){ const nm=S&&S.night; if(!nm||!notesRef) return;
+    const rep={n:nm.n, stepId:nm.stepId, phase:nm.phase, sid:nm.sid||0, ack:true, pick:(pick&&pick.length)?pick.map(Number):null, ts:firebase.database.ServerValue.TIMESTAMP};
+    try{ notesRef.child('nightReply').set(rep).catch(function(){}); }catch(e){}
+    if(S) S.nightReply=rep; updateNightBar(); }
+  window._nightAck=function(){ if(role==='player') _nightWriteReply(null); };
+  window._nightSubmitPick=function(count){ const picks=[]; for(let k=0;k<count;k++){ const el=document.getElementById('nbSel'+k); if(!el||el.value===''){ try{toast('请选择'+count+'名玩家');}catch(e){} return; } picks.push(+el.value); }
+    if(count>=2 && picks[0]===picks[1]){ try{toast('请选择两名不同玩家');}catch(e){} return; }
+    _nightWriteReply(picks); };
+
   /* 说书人：开启一轮举手 */
   /* 投票前把管家的主人座位私密下发到管家的玩家节点，供玩家端校验（活着且有主人才下发；出局→清空=自由投票） */
   window._stPushButlerMaster=function(){ if(role!=='st'||!curGid) return;
@@ -3051,6 +3200,24 @@ load(); render();
       if(typeof isDeadSeat==='function' && !isDeadSeat(b)){ const mp=(typeof butlerPicks==='object'&&butlerPicks)?butlerPicks[night]:null; if(mp!=null) master=+mp; }
       db.ref('games/'+curGid+'/players/'+uid+'/master').set(master==null?null:master).catch(()=>{});
     }catch(e){} };
+  /* ===== 夜晚信息自动化：说书人端下发/收集 ===== */
+  function _seatUid(i){ try{ const t=(typeof seatToken==='function')?seatToken(i):null; const nm=(t&&t.name)?t.name:((pub&&pub.seats&&pub.seats[i])?pub.seats[i].name:''); const accs=window.__accounts||{}; const acc=nm?accs[rkey(nm)]:null; return (acc&&acc.uid)||''; }catch(e){ return ''; } }
+  window.stNightSend=function(id, phase, text, pick, seats, sid){ if(role!=='st'||!curGid) return;
+    (seats||[]).forEach(function(i){ const uid=_seatUid(i); if(!uid) return;
+      db.ref('games/'+curGid+'/players/'+uid+'/nightReply').remove().catch(function(){});   // 先清旧回复，避免 sid 之外的误判
+      db.ref('games/'+curGid+'/players/'+uid+'/night').set({n:night, stepId:id, phase:phase, text:text, pick:pick||null, sid:sid||0, ts:firebase.database.ServerValue.TIMESTAMP}).catch(function(){});
+    }); };
+  window.stNightClear=function(id){ if(role!=='st'||!curGid) return; try{ (nightSendSeats(id)||[]).forEach(function(i){ const uid=_seatUid(i); if(!uid) return;
+    db.ref('games/'+curGid+'/players/'+uid+'/night').remove().catch(function(){}); db.ref('games/'+curGid+'/players/'+uid+'/nightReply').remove().catch(function(){}); }); }catch(e){} };
+  function recomputeNightReplies(all){ if(role!=='st') return; all=all||{}; let changed=false;
+    Object.keys(all).forEach(function(uid){ const nd=all[uid]; const rep=nd&&nd.nightReply; if(!rep||typeof rep!=='object') return;
+      if(rep.n!==night) return; const f=nightFlow[night+':'+rep.stepId]; if(!f) return; if((f.sid||0)!==(rep.sid||0)) return;   // 只认本次下发(sid)对应的回复
+      if(f.stage==='sent' && rep.phase==='info' && rep.ack){ nfDone(rep.stepId); changed=true; }
+      else if(f.stage==='sent' && rep.phase==='pick' && rep.pick && rep.pick.length){ f.pick=rep.pick.map(Number); f.stage='picked'; changed=true; }
+      else if(f.stage==='result' && rep.phase==='result' && rep.ack){ nfDone(rep.stepId); changed=true; }
+    });
+    if(changed){ try{ save(); }catch(e){} if(typeof render==='function') render(); } }
+  window.__recomputeNightReplies=recomputeNightReplies;
   window._voteOpen=function(day,by,to){ if(role!=='st'||!curGid) return;
     try{ if(window._stPushButlerMaster) _stPushButlerMaster(); }catch(e){}
     db.ref('games/'+curGid+'/public/vote').set({day:day,by:by,to:to,open:true,hands:null,ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); };
@@ -3070,7 +3237,7 @@ load(); render();
   window.__playerHands={};
   let stPlayersRef=null;
   function bindStPlayers(){ if(stPlayersRef){stPlayersRef.off();stPlayersRef=null;} window.__playerHands={};
-    if(role==='st'&&curGid){ stPlayersRef=db.ref('games/'+curGid+'/players'); stPlayersRef.on('value',s=>recomputeHands(s.val())); } }
+    if(role==='st'&&curGid){ stPlayersRef=db.ref('games/'+curGid+'/players'); stPlayersRef.on('value',s=>{ const v=s.val(); recomputeHands(v); if(window.__recomputeNightReplies) __recomputeNightReplies(v); }); } }
   /* 当前进行中的提名（by/to/day 与公开 vote 匹配） */
   function stActiveNom(){ const v=pub&&pub.vote; if(!v||!v.open) return null;
     const list=nominations[v.day]||[];
@@ -3114,7 +3281,7 @@ load(); render();
     if(window._syncNoms) window._syncNoms(); if(typeof render==='function') render(); };
 
   /* ---------- 渲染分发 ---------- */
-  function renderView(){ if(mode==='hall') renderHall(); else if(mode==='notes') renderNotes(); drawSeats(); if(window.renderClock) renderClock(); updateVoteBar(); }
+  function renderView(){ if(mode==='hall') renderHall(); else if(mode==='notes') renderNotes(); drawSeats(); if(window.renderClock) renderClock(); updateVoteBar(); updateNightBar(); }
 
   /* ---------- 座位圈（访客，复刻说书人比例，画进 #tableZone） ---------- */
   function drawSeats(){ if(mode==='st') return; const zone=document.getElementById('tableZone'); if(!zone) return;
@@ -3308,6 +3475,7 @@ load(); render();
     try{ night=1; nominations={}; executions={}; virginUsed=false; slayerShot=null;
       impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={};
       if(typeof nightChecks==='object') Object.keys(nightChecks).forEach(k=>delete nightChecks[k]);
+      if(typeof nightFlow==='object') Object.keys(nightFlow).forEach(k=>delete nightFlow[k]);
       if(Array.isArray(tokens)) tokens.forEach(t=>{ if(t) t.dead=false; });
       if(Array.isArray(meta)) meta.forEach(m=>{ if(m){ m.dead=false; m.poison=false; m.drunk=false; } });
       try{ save(); }catch(e){} try{ if(typeof render==='function') render(); }catch(e){}
