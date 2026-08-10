@@ -1017,6 +1017,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.29.3', d:'2026-08-10', items:['修复：名字大小写分裂——说书人把「Cooler」加入客人名册后，玩家用「Cooler」登录却被强制变成小写「cooler」，导致显示名、记录与座位上的「Cooler」对不上、像是两个人。现在登录后统一采用客人名册里说书人登记的原始大小写作为显示名（名册里没有则保留你输入的原样）；每次登录都会校正一次，之前已存成小写的老账号下次登录会自动改回正确大小写。账号本身仍不区分大小写，Cooler/cooler 登录的是同一个账号']},
   {v:'v2.29.2', d:'2026-08-10', items:['修复：开局发牌后角色卡入场时会先闪一下上一局的旧卡面，再切到本局正确角色——改为等新角色图加载完成后再播放入场动画（带 1.5s 兜底），不再闪旧图']},
   {v:'v2.29.1', d:'2026-08-10', items:['修复：说书人登录后在设置里看不到「说书人口令」设置项（判断登录身份的写法跨脚本块失效，改用说书人角标判断）。现在说书人打开设置即可看到并设置口令']},
   {v:'v2.29.0', d:'2026-08-10', items:['说书人登录改为「顶号」模型：登录始终成功，新登录会自动顶掉旧的说书人页面（旧页提示「已在其他设备或账号登录」）——再也不会出现占用锁卡住、谁都登不进的情况','新增「说书人口令」防止玩家偷登说书人：登录说书人时除账号密码外还需输入统一口令；说书人可在设置里设置或修改口令（首次未设置口令时先登录进去设置即可）','移除旧的占用锁与「强制下线」按钮（顶号模型下已不再需要）']},
@@ -2522,7 +2523,7 @@ load(); render();
   async function _provApp(){ let a; try{ a=firebase.app('_prov'); }catch(e){ a=firebase.initializeApp(firebase.app().options,'_prov'); }
     try{ await a.auth().setPersistence(firebase.auth.Auth.Persistence.NONE); }catch(e){} return a; }
   async function _provisionOtherRole(id, fpw, otherDom){ try{ const a=await _provApp(); const em=idToLocal(id)+otherDom;
-    try{ const c=await a.auth().createUserWithEmailAndPassword(em,fpw); try{ await c.user.updateProfile({displayName:id}); }catch(e){} }catch(e){}   // 已存在则忽略
+    try{ const c=await a.auth().createUserWithEmailAndPassword(em,fpw); try{ const nm=await _canonName(id,(auth.currentUser&&auth.currentUser.displayName)||id); await c.user.updateProfile({displayName:nm}); }catch(e){} }catch(e){}   // 已存在则忽略
     try{ await a.auth().signOut(); }catch(e){} }catch(e){} }
   async function _syncOtherRolePw(id, oldFpw, otherDom, newFpw){ let ok=false; try{ const a=await _provApp(); const em=idToLocal(id)+otherDom;
     try{ const c=await a.auth().signInWithEmailAndPassword(em, oldFpw); await c.user.updatePassword(newFpw); ok=true; }catch(e){}
@@ -2532,7 +2533,14 @@ load(); render();
     try{ if(window.crypto&&crypto.subtle){ const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode('botc-st::'+s));
       return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join(''); } }catch(e){}
     let h=5381; for(let i=0;i<s.length;i++){ h=((h<<5)+h+s.charCodeAt(i))>>>0; } return 'f'+h.toString(16); }   // 回退哈希（非加密级，够用）
-  window._stLogin=async function(){ const id=document.getElementById('stId').value.trim().toLowerCase(), pw=document.getElementById('stPw').value, code=(document.getElementById('stCode')||{}).value||'', err=document.getElementById('stErr');
+  /* 显示名统一：优先用客人名册里说书人登记的原始大小写；名册没有则用本人输入的原样；再退化为小写 id。避免「Cooler 入席、登录后变 cooler」的大小写分裂 */
+  async function _canonName(id, rawTyped){
+    try{ const s=await db.ref('roster/'+rkey(id)).once('value'); const v=s.val(); if(v && typeof v==='string' && v.trim()) return v.trim(); }catch(e){}
+    return (rawTyped&&String(rawTyped).trim())||id;
+  }
+  async function _applyDisplayName(id, rawTyped){ try{ const u=auth.currentUser; if(!u) return; const want=await _canonName(id, rawTyped);
+    if(want && (u.displayName||'')!==want){ await u.updateProfile({displayName:want}); } }catch(e){} }
+  window._stLogin=async function(){ const rawId=document.getElementById('stId').value.trim(), id=rawId.toLowerCase(), pw=document.getElementById('stPw').value, code=(document.getElementById('stCode')||{}).value||'', err=document.getElementById('stErr');
     if(!id){ err.textContent='请输入 ID'; return; }
     if(!/^[\p{L}\p{N}_]+$/u.test(id)){ err.textContent='ID 只能用中文/字母/数字/下划线（不能有空格）'; return; }
     err.textContent='登录中…';
@@ -2544,11 +2552,11 @@ load(); render();
     const done=()=>{ show('stGate',false); document.getElementById('stPw').value=''; try{ document.getElementById('stCode').value=''; }catch(e){}
       try{ if(rem){ localStorage.setItem('botc_stpw',pw); localStorage.setItem('botc_lastrole','st'); } else localStorage.removeItem('botc_stpw'); }catch(e){}
       try{ _provisionOtherRole(id,fpw,PLAYER_DOM); }catch(e){} };   // 同 ID 玩家账号也用同一密码建好
-    try{ await auth.signInWithEmailAndPassword(email,fpw); done(); }
+    try{ await auth.signInWithEmailAndPassword(email,fpw); await _applyDisplayName(id, rawId); done(); }
     catch(e){ if((e.code||'').match(/user-not-found|invalid-credential/)){
         const allowed=await window._checkRoster(id);
         if(!allowed){ err.textContent='你不在客人名单里，不能创建账号（请让说书人先把你加进名单）'; return; }
-        try{ await auth.createUserWithEmailAndPassword(email,fpw); await auth.currentUser.updateProfile({displayName:id}); toast('已创建说书人账号'); done(); }
+        try{ await auth.createUserWithEmailAndPassword(email,fpw); await _applyDisplayName(id, rawId); toast('已创建说书人账号'); done(); }
         catch(e2){ err.textContent=(e2.code||'').includes('email-already-in-use')?'密码不对':authErr(e2); }
       } else err.textContent=authErr(e); } };
   window._setStCode=async function(btn){ if(role!=='st'){ try{ if(typeof toast==='function') toast('请先登录说书人'); }catch(e){} return; }
@@ -2564,18 +2572,18 @@ load(); render();
      中文等非 ASCII 字符编码为 -<码点16进制>- ，'-' 在旧 ID 里不可能出现，故无冲突 */
   function idToLocal(id){ let s=id.replace(/[^a-z0-9_]/g, c=>'-'+c.codePointAt(0).toString(16)+'-');
     if(s.charAt(0)==='-') s='0'+s; if(s.charAt(s.length-1)==='-') s=s+'0'; return s; }
-  window._pLogin=async function(){ const id=document.getElementById('pId').value.trim().toLowerCase(), pw=document.getElementById('pPw').value, err=document.getElementById('pErr');
+  window._pLogin=async function(){ const rawId=document.getElementById('pId').value.trim(), id=rawId.toLowerCase(), pw=document.getElementById('pPw').value, err=document.getElementById('pErr');
     if(!id){ err.textContent='请输入 ID'; return; }
     if(!/^[\p{L}\p{N}_]+$/u.test(id)){ err.textContent='ID 只能用中文/字母/数字/下划线（不能有空格）'; return; }
     const email=idToLocal(id)+PLAYER_DOM, fpw=fbPw(pw); err.textContent='登录中…'; try{ localStorage.setItem('botc_pid',id); }catch(e){}
     const rem=!!document.getElementById('pRemember').checked; await _setPersist(rem);
     const done=()=>{ show('pGate',false); try{ if(rem){ localStorage.setItem('botc_ppw',pw); localStorage.setItem('botc_lastrole','player'); } else localStorage.removeItem('botc_ppw'); }catch(e){} document.getElementById('pPw').value=''; try{ window._recordAccount(id); }catch(e){}
       try{ _provisionOtherRole(id,fpw,ST_DOM); }catch(e){} };   // 同 ID 说书人账号也用同一密码建好
-    try{ await auth.signInWithEmailAndPassword(email,fpw); done(); }
+    try{ await auth.signInWithEmailAndPassword(email,fpw); await _applyDisplayName(id, rawId); done(); }
     catch(e){ if((e.code||'').match(/user-not-found|invalid-credential/)){
         const allowed=await window._checkRoster(id);
         if(!allowed){ err.textContent='你不在客人名单里，不能创建账号（请让说书人先把你加进名单）'; return; }
-        try{ await auth.createUserWithEmailAndPassword(email,fpw); await auth.currentUser.updateProfile({displayName:id}); toast('已创建你的笔记本'); done(); }
+        try{ await auth.createUserWithEmailAndPassword(email,fpw); await _applyDisplayName(id, rawId); toast('已创建你的笔记本'); done(); }
         catch(e2){ err.textContent=(e2.code||'').includes('email-already-in-use')?'密码不对':authErr(e2); }
       } else err.textContent=authErr(e); } };
 
@@ -2638,7 +2646,9 @@ load(); render();
       if(!_autoTried){ _autoTried=true; _autoLogin(); }   // 首次未登录时才尝试记住的自动登录
       return; }
     _autoTried=true;
-    _stateTransition(()=>{ if((user.email||'').endsWith(ST_DOM)){ role='st'; enterSt(); } else { role='player'; enterPlayer(); } });
+    (async()=>{ try{ const _id=((user.displayName||_storedId((user.email||'').endsWith(ST_DOM)?'botc_stid':'botc_pid'))||'').toLowerCase();
+        if(_id) await _applyDisplayName(_id, user.displayName||''); }catch(e){}   // 每次进入都用客人名册里的原始大小写校正显示名（修正老账号已存成小写的情况）
+      _stateTransition(()=>{ if((user.email||'').endsWith(ST_DOM)){ role='st'; enterSt(); } else { role='player'; enterPlayer(); } }); })();
   }));
   function _storedId(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
   function _enterStUI(){ document.getElementById('stBadge').classList.add('on'); document.body.classList.remove('pl'); document.getElementById('stName').textContent=(me&&me.displayName)||_storedId('botc_stid'); bindStPlayers(); bindStAccounts(); setMode('st'); try{ if(window._stCloudLoad) _stCloudLoad(); }catch(e){} try{ _presenceStart(); }catch(e){} try{ _stSessStart(); }catch(e){} }
@@ -2941,7 +2951,7 @@ load(); render();
   function rkey(s){ return norm(s).replace(/[.#$\[\]\/]/g,'_'); }   // Firebase 安全的名单键
   /* ---------- 客人名册白名单 / 已注册账号 ---------- */
   window._checkRoster=async function(id){ try{ const s=await db.ref('roster').once('value'); if(!s.exists()) return true; return s.child(rkey(id)).exists(); }catch(e){ return true; } };
-  window._recordAccount=function(id){ try{ db.ref('accounts/'+rkey(id)).set({name:id, uid:(auth.currentUser&&auth.currentUser.uid)||'', ts:firebase.database.ServerValue.TIMESTAMP}); }catch(e){} };
+  window._recordAccount=function(id){ try{ const nm=(auth.currentUser&&auth.currentUser.displayName)||id; db.ref('accounts/'+rkey(id)).set({name:nm, uid:(auth.currentUser&&auth.currentUser.uid)||'', ts:firebase.database.ServerValue.TIMESTAMP}); }catch(e){} };
   window._isRegistered=function(name){ const a=window.__accounts||{}; return !!a[rkey(name)]; };
   window._stDelAccount=function(name){ if(role!=='st') return; const k=rkey(name);
     try{ const acc=(window.__accounts||{})[k];
