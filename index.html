@@ -1051,6 +1051,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.33.0', d:'2026-08-10', items:['夜晚信息自动化拓展（第一批）：厨师、共情者、送葬者现在也走自动下发流程——说书人在夜晚面板一键「发送给玩家」，玩家底部弹窗「确认收到」后即记入其局内信息，并同步写入魔典日志。中毒/醉酒时面板仍显示假值选择器，说书人设定的假值会同时用于下发文本与日志（健康则用真值）。厨师仅首夜、共情者每夜、送葬者次夜起（按昨日处决）']},
   {v:'v2.32.1', d:'2026-08-10', items:['修复：占卜师局内信息顺序颠倒——此前显示「占卜结果」在前、「你选择占卜谁」在后（因选择记录在确认结果时才写入、时间戳更晚）。现在每条局内信息带逻辑顺序（信息→选择→结果），按此排序，占卜师正确显示为先选人、后出结果']},
   {v:'v2.32.0', d:'2026-08-10', items:['玩家「局内信息」页除了确认过的信息外，现在也会记录该玩家自己做出的选择：投毒者毒了谁、恶魔杀了谁（含自杀传位）、占卜师占卜了哪两人。即便玩家离线、由说书人代为确认/代为选择，也会一并记录到该玩家的局内信息里。技术上把局内信息从「玩家写的数组」改为「按 key 写子节点的对象」，避免玩家写入与说书人写入互相覆盖（旧数据兼容显示，按夜晚顺序排序）']},
   {v:'v2.31.0', d:'2026-08-10', items:['昼夜流程完善：①「结束本夜」只能点一次，点后灰掉并自动跳到「白天」标签。② 白天标签新增「结束本日」按钮，同样只能点一次：处决结果出来后才能点，点后自动推进到下一夜、跳回「夜晚」标签，并作为清除投毒者中毒的时机。③ 猎人可在白天任意时间开枪，但一旦有人被处决、或选「今日无人处决」，本日猎人即锁定不能再开枪。④ 玩家端点墨水瓶从「我的座位备注」改为「局内信息」页（标题同步改为局内信息），显示本局从说书人处收到的全部信息——每次点「确认收到」时自动记录']},
@@ -1311,7 +1312,7 @@ function recordSpecial(sid,on){
    支持角色：爪牙相认(_minion)/恶魔信息(_demon)=纯信息；投毒者(poisoner)/恶魔夜杀(imp)=选1目标；占卜师(fortuneteller)=选2+回结果。
    每步：说书人「发送」私密信息 → 玩家底部弹窗确认(或选目标提交) → 选目标类由说书人「审核通过」写入魔典 → 占卜再回一条结果 → 玩家确认。
    流程状态存 nightFlow[`${night}:${id}`]，随魔典存档同步。完成即置 nightChecks 令「结束本夜」门控自动生效。 */
-const NIGHT_AUTO_INFO=new Set(['_minion','_demon']);
+const NIGHT_AUTO_INFO=new Set(['_minion','_demon','chef','empath','undertaker']);
 const NIGHT_AUTO_PICK1=new Set(['poisoner','imp']);
 const NIGHT_AUTO_PICK2=new Set(['fortuneteller']);
 function stepKind(id){ if(NIGHT_AUTO_INFO.has(id)) return 'info'; if(NIGHT_AUTO_PICK1.has(id)) return 'pick1'; if(NIGHT_AUTO_PICK2.has(id)) return 'pick2info'; return null; }
@@ -1331,6 +1332,17 @@ function nightAutoText(id){
   if(id==='poisoner') return '【投毒者】请选择今晚要下毒的一名玩家（当晚及次日中毒）。';
   if(id==='imp') return '【恶魔】请选择今晚要击杀的目标。';
   if(id==='fortuneteller') return '【占卜师】请选择今晚要占卜的两名玩家。';
+  if(id==='chef'){ const s=meta.findIndex(m=>m&&m.role==='chef'); const sick=s>=0&&!healthy(s); const sv=sickAns[night+':chef'];   // 中毒/醉酒且已设假值→用假值，否则真值
+    const c=(sick&&sv!=null&&sv!=='')?sv:chefPairs(); return '【厨师】相邻而坐的邪恶玩家共有 '+c+' 对。'; }
+  if(id==='empath'){ const s=meta.findIndex(m=>m&&m.role==='empath'); const sick=s>=0&&!healthy(s); const sv=sickAns[night+':empath'];
+    const c=(sick&&sv!=null&&sv!=='')?sv:(s>=0?empathNum(s):0); return '【共情者】你两侧存活的邻座中，邪恶玩家有 '+c+' 名。'; }
+  if(id==='undertaker'){ const ex=executions[night-1];
+    if(ex===undefined||ex<0) return '【送葬者】昨日没有人被处决，你今晚没有得到信息。';
+    const ut=meta.findIndex(m=>m&&m.role==='undertaker'); const sick=ut>=0&&!healthy(ut);
+    const trueRole=meta[ex]?(meta[ex].isDrunk?'drunk':meta[ex].role):null;
+    const shown=(sick&&undertakerPicks[night])?undertakerPicks[night]:trueRole;
+    const rn=(shown&&RMAP[shown])?RMAP[shown].name:'（未知）';
+    return '【送葬者】昨日被处决的 '+nameAt(ex)+' 的真实角色是：'+rn+'。'; }
   return '';
 }
 function ftResultText(){ const cur=ftPicks[night]; if(!cur||cur[0]==null||cur[1]==null) return '【占卜结果】（尚未选定两名玩家）'; const has=readsDemon(cur[0])||readsDemon(cur[1]); return '【占卜结果】你所占卜的 '+nameAt(cur[0])+'、'+nameAt(cur[1])+' 之中'+(has?'有':'没有')+'恶魔。'; }
@@ -2378,7 +2390,12 @@ function renderGrim(){
       if(stepAutomated(s)){   // 自动化步骤：改用信息流程面板（发送/确认/审核），并按顺序门控
         const done=stepDone(s), active=(si===firstUndone);
         h+='<div class="nstep nauto"><span><b style="color:'+color+'">'+(done?'✓ ':'')+name+'</b> <span class="nn">'+s.note+'</span>'+(info?'<div class="ninfo">'+info+'</div>':'')+'</span></div>';
-        h+=nightPanel(s.id, active); return;
+        h+=nightPanel(s.id, active);
+        /* 中毒/醉酒的信息角色：仍显示假值选择器（只在病态时返回内容），让说书人设定告知的假值——同时影响下发文本与魔典日志 */
+        if(s.id==="undertaker") h+=undertakerUI();
+        if(s.id==="chef") h+=numUI("chef","相邻邪恶对数",Math.max(2,meta.filter((m,i)=>regEvil(i)).length));
+        if(s.id==="empath") h+=numUI("empath","两侧存活邻座邪恶数",2);
+        return;
       }
       const ck=nightChecks[night+":"+s.id]?" checked":"";
       h+='<label class="nstep"><input type="checkbox"'+ck+' onchange="onStepCheck(\''+s.id+'\',this.checked)"><span><b style="color:'+color+'">'+name+'</b> <span class="nn">'+s.note+'</span>'+(info?'<div class="ninfo">'+info+'</div>':'')+'</span></label>';
