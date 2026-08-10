@@ -1051,6 +1051,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.37.0', d:'2026-08-10', items:['角色设置改进：①唯一角色——同一身份场上只能有一个，把某角色拖到新座位会自动清空之前那个座位（其他角色同理）。②酒鬼流程理顺：直接把「酒鬼」牌拖到座位即成为「酒鬼·未定」，再在下方「酒鬼自以为是」下拉里选一个不在场的镇民作为其自以为的身份（该镇民牌会一并变半透明）；若该镇民之后被分配到别处，酒鬼的镇民身份自动清空、需重设。③「新的一局」按钮改为完整性门控：所有座位都分配角色、且酒鬼身份/恶魔伪装(3个)/红鲱鱼(有占卜师时)等都设好才可点，否则按钮下方提示第一项未完成的内容（如「座位 3 未安排角色」「恶魔伪装未设满 3 个」）']},
   {v:'v2.36.1', d:'2026-08-10', items:['守鸦人夜晚步骤的头部提示区分死因：本夜被恶魔击杀时显示绿色「被恶魔击杀 · 开始行动（选1人得知其角色）」；因处决等其他原因出局时仍显示「已出局，不再行动」（这种情况本就该跳过）']},
   {v:'v2.36.0', d:'2026-08-10', items:['夜晚信息自动化拓展（第四批）：守鸦人接入自动下发。守鸦人本夜被恶魔杀死才触发——说书人发「请选择一名玩家查看其角色」给该（已死）玩家，玩家选1人（不能选自己）提交，说书人审核通过后回一条结果（得知其真实角色），玩家确认后记入局内信息。中毒/醉酒时说书人可先设定要告知的假角色再发。守鸦人未死亡的夜晚该步自动标记为「无需行动」，不阻塞结束本夜。至此暗流涌动全部夜间角色均已接入自动化（间谍看魔典除外）']},
   {v:'v2.35.0', d:'2026-08-10', items:['夜晚信息自动化拓展（第三批）：僧侣、管家接入自动下发。说书人一键把「请选择守护目标 / 请选择主人」发给对应玩家，玩家在弹窗里下拉选目标提交（不能选自己），说书人审核通过后写入魔典并生效（守护免疫恶魔攻击、管家主人投票限制）。玩家离线可由说书人「代确认」手动代选。选择会记入该玩家的局内信息']},
@@ -1259,6 +1260,28 @@ function setReg(i,v){ ensureMeta(); meta[i].reg=v; render(); }
 function setRedHerring(v){ redHerring = v===""? -1 : +v; render(); }
 function setDrunk(v){ const prev=meta.findIndex(m=>m&&m.isDrunk); if(prev>=0){ meta[prev].isDrunk=false; meta[prev].drunk=false; }
   if(v!==""){ ensureMeta(); meta[+v].isDrunk=true; meta[+v].drunk=true; } render(); }
+/* 把角色分配到座位：唯一角色——同一角色只能在场一个，重复分配会清空前一个座位（酒鬼保留身份标记、仅清自以为的镇民）。酒鬼特殊：先成为「未定身份的酒鬼」，再用下拉设自以为的镇民。 */
+function assignRoleToSeat(i, rid){ ensureMeta();
+  if(rid==="drunk"){
+    for(let k=0;k<N;k++){ if(k!==i && meta[k] && meta[k].isDrunk){ meta[k].isDrunk=false; meta[k].drunk=false; meta[k].role=null; } }   // 场上仅一个酒鬼
+    meta[i].isDrunk=true; meta[i].drunk=true; meta[i].role=null; return;
+  }
+  for(let k=0;k<N;k++){ if(k!==i && meta[k] && meta[k].role===rid){ meta[k].role=null; } }   // 唯一：清掉其他座位上的同一角色（含酒鬼自以为的身份→酒鬼保留 isDrunk）
+  meta[i].role=rid; meta[i].isDrunk=false; meta[i].drunk=false;
+}
+/* 设置酒鬼「自以为的镇民角色」（同样唯一：占用则清掉别处的同角色） */
+function setDrunkRole(v){ const d=meta.findIndex(m=>m&&m.isDrunk); if(d<0) return;
+  if(v===""){ meta[d].role=null; }
+  else { for(let k=0;k<N;k++){ if(k!==d && meta[k] && meta[k].role===v){ meta[k].role=null; } } meta[d].role=v; }
+  render(); }
+/* 开局完整性检查：返回未完成项（座位未分配 / 酒鬼身份未设 / 伪装不足3 / 有占卜师却没红鲱鱼）。空数组=可开局。 */
+function setupIssues(){ const out=[];
+  for(let i=0;i<N;i++){ const m=meta[i]||{};
+    if(m.isDrunk && !m.role) out.push('酒鬼（座位 '+(i+1)+'）未设自以为的身份');
+    else if(!m.role) out.push('座位 '+(i+1)+' 未安排角色'); }
+  if((bluffs||[]).filter(Boolean).length<3) out.push('恶魔伪装未设满 3 个');
+  if(meta.some(m=>m&&m.role==='fortuneteller') && !(redHerring>=0)) out.push('红鲱鱼未指定');
+  return out; }
 function teamSeats(team){ const r=[]; meta.forEach((m,i)=>{ if(m.role&&RMAP[m.role].team===team) r.push(i); }); return r; }
 function nameAt(i){ const t=seatToken(i); return t?esc(t.name):('座位'+(i+1)); }
 function nearestLiving(i,dir){ for(let s=1;s<N;s++){ const j=((i+dir*s)%N+N)%N; if(j===i) break; if(seatAlive(j)) return j; } return -1; }
@@ -2398,15 +2421,15 @@ function renderGrim(){
   if(gtab==="list"){
     const cd=(customDist||DIST[N]||[0,0,0,0]).slice();
     const total=cd[0]+cd[1]+cd[2]+cd[3];
-    let assigned=0; for(let i=0;i<N;i++){ const m=meta[i]; if(m&&m.role) assigned++; }
-    const ready = assigned===N;
+    const _setupIssues=setupIssues(); const ready=_setupIssues.length===0;
+    const _usedSet=new Set(); meta.forEach(m=>{ if(!m) return; if(m.isDrunk){ _usedSet.add('drunk'); if(m.role) _usedSet.add(m.role); } else if(m.role) _usedSet.add(m.role); });   // 酒鬼占用「酒鬼」牌+其自以为的镇民牌（都半透明）
     ORDER.forEach((team,idx)=>{
       h+='<div class="gsec" style="color:'+TEAMC[team]+';display:flex;align-items:center;justify-content:space-between;margin-top:6px">'
         +'<span>'+TEAMLABEL[team]+'</span>'
         +'<span style="font-weight:700;white-space:nowrap"><span class="dstep" onclick="setDistCount('+idx+',-1)">−</span>'+cd[idx]+'<span class="dstep" onclick="setDistCount('+idx+',1)">＋</span></span></div>';
       h+='<div class="rlist">';
       ROLES.filter(r=>r.team===team).forEach(r=>{
-        const used=meta.some(m=>m.role===r.id), locked=lockedRoles.has(r.id);
+        const used=_usedSet.has(r.id), locked=lockedRoles.has(r.id);
         h+='<div class="rchip'+(used?' used':'')+(locked?' locked':'')+'" draggable="true" data-role="'+r.id+'" title="单击锁定/解锁 · '+esc(r.ab)+
            '" style="border-color:'+TEAMC[r.team]+';color:'+TEAMC[r.team]+'">'+r.name+'</div>';
       });
@@ -2432,17 +2455,20 @@ function renderGrim(){
         o+='<option value="'+i+'"'+(redHerring===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+'＝'+rn+'</option>'; } });
       h+='<div class="gsec" style="display:flex;align-items:center;gap:8px">红鲱鱼<select onchange="setRedHerring(this.value)" style="flex:1;min-width:0;font-weight:400;font-size:clamp(9px,.9vw,12px);padding:3px;border:1px solid rgba(122,83,32,.5);border-radius:5px;background:rgba(255,252,244,.85);color:#3a2a12;font-family:inherit">'+o+'</select></div>';
     }
-    if(meta.some(m=>m&&m.isDrunk)){ const dSel=meta.findIndex(m=>m&&m.isDrunk); let o='<option value="">（无）</option>';
-      meta.forEach((m,i)=>{ if(m.role && (m.isDrunk || RMAP[m.role].team==="tf"))
-        o+='<option value="'+i+'"'+(dSel===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+'（自以为是 '+RMAP[m.role].name+'）</option>'; });
-      h+='<div class="gsec" style="display:flex;align-items:center;gap:8px">酒鬼<select onchange="setDrunk(this.value)" style="flex:1;min-width:0;font-weight:400;font-size:clamp(9px,.9vw,12px);padding:3px;border:1px solid rgba(122,83,32,.5);border-radius:5px;background:rgba(255,252,244,.85);color:#3a2a12;font-family:inherit">'+o+'</select></div>'; }
+    if(meta.some(m=>m&&m.isDrunk)){ const dSel=meta.findIndex(m=>m&&m.isDrunk); let o='<option value="">（未定身份）</option>';
+      ROLES.filter(r=>r.team==="tf" && !lockedRoles.has(r.id)).forEach(r=>{
+        const takenElsewhere=meta.some((m,i)=>i!==dSel && m && m.role===r.id);   // 该镇民已被别的座位占用 → 不列（避免重复；除非正是当前酒鬼所选）
+        if(takenElsewhere && meta[dSel].role!==r.id) return;
+        o+='<option value="'+r.id+'"'+(meta[dSel].role===r.id?' selected':'')+'>'+r.name+'</option>'; });
+      h+='<div class="gsec" style="display:flex;align-items:center;gap:8px">酒鬼（'+(dSel+1)+'号）自以为是<select onchange="setDrunkRole(this.value)" style="flex:1;min-width:0;font-weight:400;font-size:clamp(9px,.9vw,12px);padding:3px;border:1px solid rgba(122,83,32,.5);border-radius:5px;background:rgba(255,252,244,.85);color:#3a2a12;font-family:inherit">'+o+'</select></div>'; }
     h+='<div class="gsec">恶魔伪装</div><div class="bluffsel">'+bluffSel(0)+bluffSel(1)+bluffSel(2)+'</div>';
     h+='<div class="gsec" style="margin-top:12px;border-top:1px solid rgba(122,83,32,.25);padding-top:8px;color:#43286b">牌局</div>';
     h+='<div style="display:flex;gap:6px;margin-top:6px;align-items:stretch">'
-      +'<button class="btn purple" style="flex:1;'+(ready?'':'opacity:.4;cursor:not-allowed;')+'" '+(ready?'onclick="stNewGame()"':'disabled title="发满牌后可点"')+'>新的一局</button>'
+      +'<button class="btn purple" style="flex:1;'+(ready?'':'opacity:.4;cursor:not-allowed;')+'" '+(ready?'onclick="stNewGame()"':'disabled title="所有座位分配角色、且设置完成后可点"')+'>新的一局</button>'
       +'<button class="btn purple" style="flex:0 0 auto;padding:7px 9px" onclick="stSaveConfig()">保存本局</button>'
       +'<button class="btn lpurple" style="flex:0 0 auto;padding:7px 9px" onclick="stViewConfigs()">查看存档</button>'
       +'</div>';
+    if(!ready){ h+='<div class="rrow" style="border:none;color:#b0402e;font-size:calc(1.02 * var(--sw) / 100);margin-top:4px">⚠ 还不能开局：'+esc(_setupIssues[0])+(_setupIssues.length>1?('（还有 '+(_setupIssues.length-1)+' 项待完成）'):'')+'</div>'; }
     c.innerHTML=h;
     c.querySelectorAll('.rchip').forEach(el=>{
       el.addEventListener('dragstart',e=>e.dataTransfer.setData("text","role:"+el.dataset.role));
@@ -2621,6 +2647,8 @@ function renderSeats(){
       if(role){ const label=role.name+(m.isDrunk?'-酒鬼':'');
         const rfz=Math.min(rF, Math.floor(0.8*seatD/label.length));
         html+='<div class="role" style="font-size:'+rfz+'px;color:'+(m.isDrunk?TEAMC.out:TEAMC[role.team])+'">'+label+'</div>'; }
+      else if(m.isDrunk){ const label='酒鬼·未定'; const rfz=Math.min(rF, Math.floor(0.8*seatD/label.length));   // 已成为酒鬼但还没设自以为的镇民
+        html+='<div class="role" style="font-size:'+rfz+'px;color:'+TEAMC.out+'">'+label+'</div>'; }
       if(dead){ s.classList.add("hascause"); const isClaw=deathCauseLabel(i)==='夜晚死亡';
         const pos=isClaw?'calc(50% + 6px) center':'center', sz=isClaw?'80%':'62%';
         s.style.background="url('"+deathCauseIcon(i)+"') "+pos+" / "+sz+" no-repeat, radial-gradient(circle at 50% 35%, rgba(48,34,58,.9), rgba(22,15,30,.95))"; }
@@ -2645,12 +2673,7 @@ function renderSeats(){
       s.addEventListener("dragleave",()=>s.classList.remove("over"));
       s.addEventListener("drop",e=>{e.preventDefault();s.classList.remove("over");
         const d=e.dataTransfer.getData("text");
-        if(d&&d.indexOf("role:")===0){ ensureMeta(); const rid=d.slice(5);
-          if(rid==="drunk"){ const used=new Set(meta.map(m=>m.role).filter(Boolean));
-            const pool=ROLES.filter(r=>r.team==="tf"&&!used.has(r.id)&&!lockedRoles.has(r.id)).map(r=>r.id);
-            meta[i].role=pool.length?pool[Math.floor(Math.random()*pool.length)]:null; meta[i].isDrunk=true; meta[i].drunk=true; }
-          else { meta[i].role=rid; meta[i].isDrunk=false; meta[i].drunk=false; }
-          render(); }});
+        if(d&&d.indexOf("role:")===0){ const rid=d.slice(5); assignRoleToSeat(i, rid); render(); }});
     }
     zone.appendChild(s);
   }
