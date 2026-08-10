@@ -132,6 +132,7 @@
   #setModal .vol-row .vol-n{flex:0 0 42px; text-align:right; font-size:12.5px; color:#ffd76b; font-weight:700;}
   #setModal .rp-open{width:100%; padding:9px 0; border-radius:10px; border:1px solid rgba(233,196,106,.4); background:rgba(255,252,244,.08); color:#e9c46a; font-weight:700; cursor:pointer;}
   #setModal .rp-open:hover{background:rgba(233,196,106,.16);}
+  #setModal .rp-open.armed{background:#b0402e; color:#fff; border-color:#b0402e;}
   #setModal #rpForm{margin-top:9px; display:flex; flex-direction:column; gap:7px;}
   #setModal #rpForm input, #setModal #rpForm select{width:100%; padding:8px; border-radius:8px; border:1px solid #3a2d4e; background:#2c2340; color:#efe6d2; font-size:14px; font-family:inherit;}
   #setModal .rp-err{font-size:12px; color:#f0a89e; min-height:14px;}
@@ -1015,6 +1016,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.28.0', d:'2026-08-10', items:['重置密码不再需要选择「玩家账号 / 说书人账号」：因为两者已共用同一密码，直接重置当前登录的账号即可，另一角色会自动同步','设置里（说书人可见）新增「强制所有说书人下线」：一键让当前所有在线说书人页面立即登出（可盖过占用锁心跳的自动重占用），用于占用锁卡住或需要清场时；点两次确认，自己也会一并登出、可随后重新登录']},
   {v:'v2.27.0', d:'2026-08-10', items:['玩家笔记「清除所有标记」现在会连同座位备注一起清除（身份、状态标记、座位备注全部清空）','设置里新增三档音量调节：音效音量、动画音量（处决/射杀等视频）、背景音乐音量，0~100% 独立可调、本地记住；左上角静音按钮仍可一键临时静音全部']},
   {v:'v2.26.0', d:'2026-08-10', items:['说书人魔典改为「全体共用一套」：任意说书人账号、在任意设备登录，读写的都是同一份魔典（客人名单、座位、身份、公布记录等），实时双向同步','修复新设备登录会把魔典清空的问题：登录时一律以云端已保存的魔典为准，只有云端为空时才用本地初始化，避免空数据覆盖大家的进度']},
   {v:'v2.25.0', d:'2026-08-10', items:['修复说书人「占用锁」偶发锁死：异常关闭页面、断线、手机休眠或同一账号在两处登录时，旧的占用可能不会被自动释放，导致「明明已退出仍显示在线、别人登不进」。现在占用锁带心跳（在线时每 15 秒续期），超过约 40 秒无心跳即视为离线，任何说书人都可直接登录接管；正常点「退出」会立即释放']},
@@ -1098,7 +1100,7 @@ window._prefetchExec=function(){ if(_execPrefetched) return; _execPrefetched=tru
 window.openSettings=function(){ document.getElementById('setVer').textContent=APP_VERSION;
   const log=document.getElementById('setLog'); const c=CHANGELOG[0];
   log.innerHTML='<div class="cl-item"><span class="cl-v">'+c.v+'</span><span class="cl-d">'+c.d+'</span><ul>'+c.items.map(i=>'<li>'+i+'</li>').join('')+'</ul></div>';
-  _platSync(); try{ if(window._volSync) _volSync(); }catch(e){} const rf=document.getElementById('rpForm'); if(rf) rf.style.display='none'; document.getElementById('setModal').classList.add('on'); };
+  _platSync(); try{ if(window._volSync) _volSync(); }catch(e){} try{ const a=document.getElementById('stAdminSec'); if(a) a.style.display=(role==='st'?'block':'none'); }catch(e){} const rf=document.getElementById('rpForm'); if(rf) rf.style.display='none'; document.getElementById('setModal').classList.add('on'); };
 window.closeSettings=function(){ document.getElementById('setModal').classList.remove('on'); };
 try{ applyPlatform(_platCur()); }catch(e){}
 
@@ -2380,11 +2382,16 @@ load(); render();
   <div class="set-sec">账号</div>
   <button class="rp-open" onclick="_openResetPw()">重置我的密码</button>
   <div id="rpForm" style="display:none">
-    <select id="rpRole"><option value="player">玩家账号</option><option value="st">说书人账号</option></select>
     <input id="rpId" type="text" placeholder="你的 ID" autocomplete="off">
     <input id="rpPw" type="password" placeholder="新密码（可留空）">
     <div class="rp-err" id="rpErr"></div>
     <button class="rp-go" onclick="_doResetPw()">确认重置</button>
+  </div>
+  <div class="set-hint">玩家与说书人账号共用同一密码，重置后两者会同步更新。</div>
+  <div id="stAdminSec" style="display:none">
+    <div class="set-sec">说书人</div>
+    <button class="rp-open" id="stForceBtn" onclick="_stForceLogoutAll(this)">强制所有说书人下线</button>
+    <div class="set-hint">让当前所有在线的说书人页面立即登出（用于占用锁被卡住或需要清场时）。你自己也会被登出，可随后重新登录。</div>
   </div>
   <div class="set-sec">更新内容</div>
   <div class="set-log" id="setLog"></div>
@@ -2558,16 +2565,15 @@ load(); render();
   window._openResetPw=function(){ const f=document.getElementById('rpForm'); if(!f) return;
     f.style.display = f.style.display==='none' ? 'flex' : 'none';
     if(f.style.display!=='none'){ const u=auth.currentUser, err=document.getElementById('rpErr'); err.textContent='';
-      if(u){ document.getElementById('rpId').value=u.displayName||''; document.getElementById('rpRole').value=(u.email||'').endsWith(ST_DOM)?'st':'player'; }
+      if(u){ document.getElementById('rpId').value=u.displayName||''; }
       else err.textContent='请先登录你的账号，再重置密码'; } };
   window._doResetPw=async function(){ const err=document.getElementById('rpErr'); err.textContent='';
     const id=(document.getElementById('rpId').value||'').trim().toLowerCase(), npw=document.getElementById('rpPw').value;
-    const wantRole=document.getElementById('rpRole').value;
     if(!id){ err.textContent='请输入 ID'; return; }
     const u=auth.currentUser;
     if(!u){ err.textContent='请先登录该账号（用旧密码），再来重置'; return; }
     const curRole=(u.email||'').endsWith(ST_DOM)?'st':'player', curId=(u.displayName||'').toLowerCase();
-    if(curRole!==wantRole || (curId&&curId!==id)){ err.textContent='只能重置当前登录的账号：'+(curRole==='st'?'说书人':'玩家')+' '+(u.displayName||''); return; }
+    if(curId&&curId!==id){ err.textContent='只能重置当前登录的账号：'+(u.displayName||''); return; }
     err.textContent='重置中…';
     try{ await u.updatePassword(fbPw(npw));
       let otherOk=false;   // 同 ID 另一角色账号同步改成同一密码（best-effort，需要本地存有旧密码）
@@ -2603,6 +2609,7 @@ load(); render();
       try{ if(window._stSyncStop) _stSyncStop(); }catch(e){}   // 登出：停止说书人实时同步监听
       try{ if(typeof _presenceStop==='function') _presenceStop(); }catch(e){} window.__kicked=false;   // 登出：停止在线占位监听
       try{ if(typeof _stHbStop==='function') _stHbStop(); }catch(e){}   // 登出：停止说书人占用锁心跳
+      try{ if(typeof _stForceStop==='function') _stForceStop(); }catch(e){}   // 登出：停止强制下线监听
       _stateTransition(()=>{ role='anon'; document.getElementById('stBadge').classList.remove('on'); document.body.classList.remove('pl'); if(notesRef){notesRef.off();notesRef=null;} S=null; setMode('hall'); }, willAuto);
       if(willAuto) setTimeout(()=>{ if(!me) _fadeReveal(); }, 4000);   // 自动登录失败兜底：4s 后仍未登录则显示大厅
       if(window.__stBlockedMsg){ const m=window.__stBlockedMsg; window.__stBlockedMsg=''; setTimeout(()=>{ try{ if(typeof toast==='function') toast(m); }catch(e){} const se=document.getElementById('stErr'); if(se) se.textContent=m; }, 600); }   // 说书人已被占用：提示
@@ -2612,7 +2619,7 @@ load(); render();
     _stateTransition(()=>{ if((user.email||'').endsWith(ST_DOM)){ role='st'; enterSt(); } else { role='player'; enterPlayer(); } });
   }));
   function _storedId(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
-  function _enterStUI(){ document.getElementById('stBadge').classList.add('on'); document.body.classList.remove('pl'); document.getElementById('stName').textContent=(me&&me.displayName)||_storedId('botc_stid'); bindStPlayers(); bindStAccounts(); setMode('st'); try{ if(window._stCloudLoad) _stCloudLoad(); }catch(e){} try{ _presenceStart(); }catch(e){} try{ _stHbStart(); }catch(e){} }
+  function _enterStUI(){ document.getElementById('stBadge').classList.add('on'); document.body.classList.remove('pl'); document.getElementById('stName').textContent=(me&&me.displayName)||_storedId('botc_stid'); bindStPlayers(); bindStAccounts(); setMode('st'); try{ if(window._stCloudLoad) _stCloudLoad(); }catch(e){} try{ _presenceStart(); }catch(e){} try{ _stHbStart(); }catch(e){} try{ _stForceStart(); }catch(e){} }
   function enterSt(){    /* 同一时间只允许一个说书人：抢占 storytellerUid（过期锁可接管），失败则提示并登出 */
     _stLockClaim()
       .then(res=>{ const val=res.snapshot.val(); const vu=(val&&typeof val==='object')?val.uid:val;
@@ -2668,8 +2675,24 @@ load(); render();
   function _stHbStart(){ _stHbStop(); _stHbT=setInterval(function(){ if(role!=='st'||!me||!me.uid){ return; }
       _stLockClaim().then(function(){ try{ db.ref('storytellerUid').onDisconnect().remove(); }catch(e){} }).catch(function(){}); }, 15000); }
   function _stHbStop(){ try{ if(_stHbT) clearInterval(_stHbT); }catch(e){} _stHbT=null; }
+  /* ===== 强制所有说书人下线：写一个时间戳，所有在线说书人页面收到比自己登录基线更新的值即登出（能盖过心跳的重新占用） ===== */
+  var _stForceRef=null, _forceBaseTs=0;
+  function _stForceStart(){ _stForceStop(); try{ _stForceRef=db.ref('stForceLogout');
+      _stForceRef.once('value').then(function(s){ _forceBaseTs=(+s.val()||0);
+        _stForceRef.on('value', function(ss){ const t=(+ss.val()||0); if(t>_forceBaseTs){ _forceBaseTs=t; _forceKicked(); } }); }).catch(function(){});
+    }catch(e){} }
+  function _stForceStop(){ try{ if(_stForceRef){ _stForceRef.off(); _stForceRef=null; } }catch(e){} }
+  function _forceKicked(){ try{ window.__stBlockedMsg='说书人已被强制下线，请重新登录'; }catch(e){}
+    try{ _stHbStop(); }catch(e){} try{ _stForceStop(); }catch(e){} try{ auth.signOut(); }catch(e){} }   // 轻登出：保留记住的凭据，且本页不会自动重登（避免立即抢回占用）
+  window._stForceLogoutAll=function(btn){
+    if(btn && btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn._o=btn.textContent; btn.textContent='确认强制下线？再点一次'; btn.classList.add('armed');
+      clearTimeout(btn._t); btn._t=setTimeout(function(){ try{ btn.dataset.armed=''; btn.textContent=btn._o||'强制所有说书人下线'; btn.classList.remove('armed'); }catch(e){} },3000); return; }
+    if(btn){ clearTimeout(btn._t); btn.dataset.armed=''; btn.textContent=btn._o||'强制所有说书人下线'; btn.classList.remove('armed'); }
+    db.ref('stForceLogout').set(firebase.database.ServerValue.TIMESTAMP)
+      .then(function(){ db.ref('storytellerUid').remove().catch(function(){}); })
+      .catch(function(e){ try{ if(typeof toast==='function') toast('操作失败：'+((e&&e.code)||'需说书人账号')); }catch(_){} }); };
   function _presenceKick(){ if(window.__kicked) return; window.__kicked=true;
-    try{ _presenceStop(); }catch(e){} try{ _stHbStop(); }catch(e){} try{ if(window._stSyncStop) _stSyncStop(); }catch(e){} try{ if(notesRef){ notesRef.off(); notesRef=null; } }catch(e){}
+    try{ _presenceStop(); }catch(e){} try{ _stHbStop(); }catch(e){} try{ _stForceStop(); }catch(e){} try{ if(window._stSyncStop) _stSyncStop(); }catch(e){} try{ if(notesRef){ notesRef.off(); notesRef=null; } }catch(e){}
     let ov=document.getElementById('kickLayer');
     if(!ov){ ov=document.createElement('div'); ov.id='kickLayer';
       ov.innerHTML='<div class="kick-box"><div class="kick-t">此账号已在其他页面 / 设备登录</div><div class="kick-s">为避免多处同时操作产生冲突，本页已停用。<br>你在新页面看到的内容已从云端继承本页的最新进度。</div><button onclick="location.reload()">切回本页继续</button></div>';
