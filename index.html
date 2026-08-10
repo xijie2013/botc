@@ -916,6 +916,7 @@ let view="seat", gtab="list", sel=-1, night=1, listMode="all", lockedRoles=new S
 let openBubbles=new Set(), seatPos=[], tableCenter=null, impKills={}, poisonPicks={}, monkPicks={}, ftPicks={}, butlerPicks={}, pingPicks={}, ravenPicks={}, undertakerPicks={}, sickAns={}, nominations={}, executions={}, virginUsed=false, slayerShot=null;
 const nightChecks={};
 const nightFlow={};   /* 夜晚信息自动化：每步流程状态 key=`${night}:${stepId}` → {stage,text,phase,pick,resultText,sid} */
+const dayFlow={};     /* 昼夜推进：dayFlow[night]={dawn,dusk}，结束本夜/结束本日各只能点一次 */
 
 const ROLES=[
  {id:"washerwoman",name:"洗衣妇",team:"tf",ab:"首夜：得知2名玩家中有1个特定镇民。"},
@@ -979,7 +980,7 @@ function blankMeta(){return {role:null,poison:false,drunk:false,dead:false,note:
 function ensureMeta(){ while(meta.length<N) meta.push(blankMeta()); meta.length=N; }
 
 function save(){ if(window.__stApplyingRemote) return;   // 正在应用远端同步时不重复写/上传，避免回声循环
-  try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,nightFlow,impKills,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,sickAns,redHerring,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist,ts:Date.now()})); }catch(e){}
+  try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,nightFlow,dayFlow,impKills,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,sickAns,redHerring,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist,ts:Date.now()})); }catch(e){}
   try{ if(window._stCloudPush) window._stCloudPush(); }catch(e){} }   // 说书人存档实时云同步（防抖上传）
 function load(){
   try{ const d=JSON.parse(localStorage.getItem(KEY)||"{}");
@@ -996,6 +997,7 @@ function load(){
     if(typeof d.night==="number") night=Math.max(1,d.night);
     if(d.nightChecks&&typeof d.nightChecks==="object") Object.assign(nightChecks,d.nightChecks);
     Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); if(d.nightFlow&&typeof d.nightFlow==="object") Object.assign(nightFlow,d.nightFlow);
+    Object.keys(dayFlow).forEach(k=>delete dayFlow[k]); if(d.dayFlow&&typeof d.dayFlow==="object") Object.assign(dayFlow,d.dayFlow);
     if(d.impKills&&typeof d.impKills==="object") impKills=d.impKills;
     if(d.poisonPicks&&typeof d.poisonPicks==="object") poisonPicks=d.poisonPicks;
     if(d.monkPicks&&typeof d.monkPicks==="object") monkPicks=d.monkPicks;
@@ -1049,6 +1051,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.31.0', d:'2026-08-10', items:['昼夜流程完善：①「结束本夜」只能点一次，点后灰掉并自动跳到「白天」标签。② 白天标签新增「结束本日」按钮，同样只能点一次：处决结果出来后才能点，点后自动推进到下一夜、跳回「夜晚」标签，并作为清除投毒者中毒的时机。③ 猎人可在白天任意时间开枪，但一旦有人被处决、或选「今日无人处决」，本日猎人即锁定不能再开枪。④ 玩家端点墨水瓶从「我的座位备注」改为「局内信息」页（标题同步改为局内信息），显示本局从说书人处收到的全部信息——每次点「确认收到」时自动记录']},
   {v:'v2.30.4', d:'2026-08-10', items:['修复：投毒者的毒此前会一直保留、只在投毒者下次行动换目标时才转移，导致投毒者死亡后被毒的人永远中毒。现在毒只在施放的那一夜及当天有效，进入下一夜（傍晚·白天处决公布后）自动失效，与投毒者是否存活无关；说书人前后翻查各夜时，中毒标记也会按当夜正确显示']},
   {v:'v2.30.3', d:'2026-08-10', items:['夜晚信息自动化调整：① 恶魔自杀（星传）改回由说书人指定继任的爪牙（红唇女郎存活且5人以上则自动继任她），恶魔弹窗不再让恶魔自己选。② 投毒者对恶魔下毒后，恶魔当晚的击杀能力失效——恶魔仍照常收到提示并选择目标，但无人死亡（魔典记为「击杀无效」）；这是通用规则，手动流程也一并生效']},
   {v:'v2.30.2', d:'2026-08-10', items:['夜晚信息自动化优化：① 恶魔选择「自杀」时，弹窗新增下拉，由恶魔自己指定传位给哪名存活爪牙（红唇女郎存活且5人以上则只能传她），不再由说书人代选。② 爪牙相认等群发信息现在要等所有爪牙都点确认才算完成（说书人面板显示「已确认 X/Y」）。③ 说书人「代确认」投毒/占卜/夜杀等选目标步骤时，现在会展开手动选择器，让说书人自己选毒谁/占谁/杀谁（含恶魔自杀继任、镇长弹刀）']},
@@ -1188,6 +1191,7 @@ async function dealRoles(){
   ensureMeta(); night=1; impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
   Object.keys(nightChecks).forEach(k=>delete nightChecks[k]);   // 清空每夜勾选
   Object.keys(nightFlow).forEach(k=>delete nightFlow[k]);       // 清空夜晚信息流程
+  Object.keys(dayFlow).forEach(k=>delete dayFlow[k]);           // 清空昼夜推进状态
   const pick=(team,k)=>{ const pool=ROLES.filter(r=>r.team===team&&!lockedRoles.has(r.id)).map(r=>r.id);
     for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
     return pool.slice(0,Math.max(0,k)); };
@@ -1220,7 +1224,7 @@ async function dealRoles(){
 }
 async function resetRoles(){ if(!await uiConfirm("重置所有身份、状态、备注、伪装？（保留名字与座位）")) return;
   meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
-  Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); overviewDecoys=[]; tokens.forEach(t=>t.dead=false); render();
+  Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); Object.keys(dayFlow).forEach(k=>delete dayFlow[k]); overviewDecoys=[]; tokens.forEach(t=>t.dead=false); render();
   try{ if(window._stClearPlayerRoles) _stClearPlayerRoles(); }catch(e){} try{ if(window._stResetPublic) _stResetPublic(); }catch(e){} try{ if(window._histNewRound) _histNewRound(); }catch(e){} }   // 重置角色：清空玩家角色卡 + 公开状态（大厅/笔记的死亡/处决/胜负等一并清零）；胜负另记一条
 function setBluff(k,v){ bluffs[k]=v; refreshOverviewDecoys(); render(); }
 
@@ -1427,6 +1431,8 @@ function syncPoisonToNight(){   // 投毒者的毒只在施放的那一夜(含�
   const cur=poisonPicks[night]; if(cur!=null && meta[cur]) meta[cur].poison=true;   // 只点亮当前夜的中毒目标
 }
 function stepNight(d){ night=Math.max(1,night+d); syncPoisonToNight(); render(); }
+function stEndNight(){ const d=night; (dayFlow[d]||(dayFlow[d]={})).dawn=true; try{ if(window.stDawn) window.stDawn(); }catch(e){} gtab='day'; save(); render(); }   // 结束本夜：只可点一次 → 天亮 + 跳白天tab
+function stEndDay(){ const d=night; (dayFlow[d]||(dayFlow[d]={})).dusk=true; gtab='night'; stepNight(1); save(); }   // 结束本日：只可点一次 → 推进到下一夜(顺带清投毒者中毒) + 跳夜晚tab
 
 /* ---------- 小恶魔夜间击杀 / 自杀转移 ---------- */
 function isDeadSeat(i){ const t=seatToken(i); return t?!!t.dead:!!(meta[i]&&meta[i].dead); }
@@ -1983,7 +1989,7 @@ function toggleVote(day,nomIdx,seat){ const nom=nominations[day][nomIdx]; const 
   render(); }
 /* ---------- 猎人：每局一次，白天指认，命中恶魔则其死 ---------- */
 function registersDemon(i){ const m=meta[i]; if(!m||!m.role) return false; if(RMAP[m.role].team==="dem") return true; if(m.role==="recluse"&&effReg(i)==="evil") return true; return false; }
-function slayerFire(v){ if(v===""||slayerShot) return; const t=+v; const sl=meta.findIndex(m=>m&&m.role==="slayer"); if(sl<0) return;
+function slayerFire(v){ if(v===""||slayerShot||executions[night]!==undefined) return; const t=+v; const sl=meta.findIndex(m=>m&&m.role==="slayer"); if(sl<0) return;   // 处决结果出来后不能再开枪
   const hit = healthy(sl) && !isDeadSeat(sl) && registersDemon(t);
   slayerShot={target:t, day:night, hit};
   if(hit){ killSeat(t,true); histSet(t,'death','被猎人射杀出局'); demonDied(t); }
@@ -2002,6 +2008,7 @@ function slayerUI(){
     return h+'<div class="rrow" style="border:none">第 '+slayerShot.day+' 天 · '+nameAt(sl)+' 射向 '+nameAt(t)+' → '+res+' <span class="regbtn" onclick="slayerUndo()">撤销</span></div>';
   }
   if(isDeadSeat(sl)) return h+'<div class="rrow" style="border:none;opacity:.6">猎人已出局，无法开枪</div>';
+  if(executions[night]!==undefined) return h+'<div class="rrow" style="border:none;opacity:.6">本日处决结果已出，猎人不可再开枪</div>';   // 处决/无人处决 后锁定
   let opts='<option value="">目标</option>'; livingSeats().forEach(i=>{ opts+='<option value="'+i+'">'+(i+1)+' '+nameAt(i)+'</option>'; });
   return h+'<div class="rrow" style="border:none">开枪：<select onchange="slayerFire(this.value)">'+opts+'</select></div>';
 }
@@ -2332,6 +2339,12 @@ function renderGrim(){
       if(executions[day]===-1) h+='<div class="rrow" style="color:#2e7d43;font-weight:800">镇长：仅剩 3 人且今日无处决 → 好人胜利！</div>';
       else h+='<div class="rrow" style="color:#8a5f28">镇长提示：仅剩 3 人，若今日无人处决则好人胜利</div>';
     }
+    const _executed = executions[day]!==undefined, _dusked = !!(dayFlow[day]&&dayFlow[day].dusk);
+    h+='<div style="margin-top:14px">';
+    if(_dusked) h+='<button class="btn purple" style="width:100%;font-weight:800;opacity:.4;cursor:not-allowed;filter:grayscale(.85)" disabled>已结束本日 · 已进入第 '+(day+1)+' 夜</button>';
+    else if(_executed) h+='<button class="btn purple" style="width:100%;font-weight:800" onclick="stEndDay()">结束本日 · 进入第 '+(day+1)+' 夜</button>';
+    else h+='<button class="btn purple" style="width:100%;font-weight:800;opacity:.4;cursor:not-allowed;filter:grayscale(.85)" disabled>结束本日</button><div style="text-align:center;font-size:11px;color:#8a7250;margin-top:5px">处决结果出来后可点亮</div>';
+    h+='</div>';
     c.innerHTML=h; return;
   }
   {
@@ -2359,10 +2372,12 @@ function renderGrim(){
       if(s.id==="empath") h+=numUI("empath","两侧存活邻座邪恶数",2);
       if(s.id==="washerwoman"||s.id==="librarian"||s.id==="investigator") h+=pingUI(s.id); });
     const _dawnReady = steps.length>0 && steps.every(s=> nightChecks[night+":"+s.id]);
-    h+='<div style="margin-top:14px">'
-      +'<button class="btn purple" style="width:100%;font-weight:800;'+(_dawnReady?'':'opacity:.4;cursor:not-allowed;filter:grayscale(.85);')+'" '+(_dawnReady?'onclick="stDawn()"':'disabled')+'>结束本夜</button>'
-      +(_dawnReady?'':'<div style="text-align:center;font-size:11px;color:#8a7250;margin-top:5px">完成本夜所有流程后可点亮</div>')
-      +'</div>';
+    const _dawned = !!(dayFlow[night]&&dayFlow[night].dawn);
+    h+='<div style="margin-top:14px">';
+    if(_dawned) h+='<button class="btn purple" style="width:100%;font-weight:800;opacity:.4;cursor:not-allowed;filter:grayscale(.85)" disabled>已结束本夜 · 已进入白天</button>';
+    else if(_dawnReady) h+='<button class="btn purple" style="width:100%;font-weight:800" onclick="stEndNight()">结束本夜</button>';
+    else h+='<button class="btn purple" style="width:100%;font-weight:800;opacity:.4;cursor:not-allowed;filter:grayscale(.85)" disabled>结束本夜</button><div style="text-align:center;font-size:11px;color:#8a7250;margin-top:5px">完成本夜所有流程后可点亮</div>';
+    h+='</div>';
   }
   c.innerHTML=h;
 }
@@ -3234,7 +3249,12 @@ load(); render();
   function _nightWriteReply(pick){ const nm=S&&S.night; if(!nm||!notesRef) return;
     const rep={n:nm.n, stepId:nm.stepId, phase:nm.phase, sid:nm.sid||0, ack:true, pick:(pick&&pick.length)?pick.map(Number):null, ts:firebase.database.ServerValue.TIMESTAMP};
     try{ notesRef.child('nightReply').set(rep).catch(function(){}); }catch(e){}
-    if(S) S.nightReply=rep; updateNightBar(); }
+    if(S) S.nightReply=rep;
+    if((nm.phase==='info'||nm.phase==='result') && nm.text && S){   // 记录收到的局内信息（信息/结果类，点「确认收到」时）
+      S.gameInfo=S.gameInfo||[]; const key=nm.n+':'+nm.stepId+':'+nm.phase+':'+(nm.sid||0);
+      if(!S.gameInfo.some(function(g){return g.key===key;})){ S.gameInfo.push({key:key, n:nm.n, text:nm.text, ts:firebase.database.ServerValue.TIMESTAMP});
+        try{ notesRef.child('gameInfo').set(S.gameInfo).catch(function(){}); }catch(e){} } }
+    updateNightBar(); }
   window._nightAck=function(){ if(role==='player') _nightWriteReply(null); };
   window._nightPickChange=function(){ const nm=S&&S.night; if(!nm||!nm.pick) return; const w=document.getElementById('nbSuccWrap'); if(!w) return;
     const el=document.getElementById('nbSel0'); const self=nm.pick.selfSeat;
@@ -3430,6 +3450,7 @@ load(); render();
   let _nbSeatPage=false;
   window._nbTab=function(t){ _nbSeatPage=false; const np=document.getElementById('notesPanel'); if(np) np.classList.remove('seatpage'); nbTab=t; ['mark','nom','ref'].forEach(x=>document.getElementById('nb-'+x).classList.toggle('on',x===t)); renderNotes(); };
   function renderNotes(){ const c=document.getElementById('nbContent'); if(!c) return;
+    try{ const _bt=document.getElementById('bannerTitle'); if(_bt&&role==='player'&&mode==='notes') _bt.textContent=(_nbSeatPage?'局内信息':'玩家笔记'); }catch(e){}   // 墨水瓶页标题：局内信息 / 玩家笔记
     if(!pub||!pub.count){ c.innerHTML='<div style="padding:8px;color:#9a7c4a;font-size:12px">🕯️ 说书人还没开局</div>'; return; }
     ensureS();
     const _rb=resultBadgeHTML();
@@ -3448,9 +3469,10 @@ load(); render();
     return h;
   }
   /* 我的座位备注（独立页，点墨水瓶进入） */
-  function seatNotesPageHTML(){ let h='<div class="nb-sec">我的座位备注</div>';
-    let any=false; (S.seats||[]).forEach((st,i)=>{ if(st&&st.note){ any=true; h+='<div class="nb-note"><b>'+(i+1)+' '+E(pname(i))+'</b>：'+E(st.note)+'</div>'; } });
-    if(!any) h+='<div style="font-size:11px;color:#8a6b3a">还没有备注。点右侧座位即可添加备注。</div>';
+  function seatNotesPageHTML(){ let h='<div class="nb-sec">局内信息 · 本局说书人发给你的信息</div>';
+    const gi=(S&&S.gameInfo)||[];
+    if(!gi.length){ h+='<div style="font-size:11px;color:#8a6b3a">还没有收到信息。夜晚说书人发给你的信息，你点「确认收到」后会记录在这里。</div>'; return h; }
+    gi.forEach(function(g){ h+='<div class="nb-note"><b>第 '+(g.n||'?')+' 夜</b>：'+E(g.text||'')+'</div>'; });
     return h;
   }
   function refHTML(){ const locked=new Set(pub.locked||[]); const d=pub.dist||DIST[pub.count]||[0,0,0,0];
@@ -3535,6 +3557,7 @@ load(); render();
       impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={};
       if(typeof nightChecks==='object') Object.keys(nightChecks).forEach(k=>delete nightChecks[k]);
       if(typeof nightFlow==='object') Object.keys(nightFlow).forEach(k=>delete nightFlow[k]);
+      if(typeof dayFlow==='object') Object.keys(dayFlow).forEach(k=>delete dayFlow[k]);
       if(Array.isArray(tokens)) tokens.forEach(t=>{ if(t) t.dead=false; });
       if(Array.isArray(meta)) meta.forEach(m=>{ if(m){ m.dead=false; m.poison=false; m.drunk=false; } });
       try{ save(); }catch(e){} try{ if(typeof render==='function') render(); }catch(e){}
