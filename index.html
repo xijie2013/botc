@@ -1051,6 +1051,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.33.1', d:'2026-08-10', items:['夜晚面板把「代确认」与「跳过」拆成两个按钮，语义区分：「代确认」表示这一步确实发生（说书人替离线玩家确认信息或代为选择），会记入该玩家的局内信息与魔典；「跳过」表示这一步没有发生，不记入玩家局内信息、也不记魔典（仅标记完成以放行「结束本夜」）。修复：此前信息类角色（爪牙相认/厨师/共情者/送葬者等）被「代确认」时并未写入玩家局内信息，现已一并记录，与选择类角色行为一致']},
   {v:'v2.33.0', d:'2026-08-10', items:['夜晚信息自动化拓展（第一批）：厨师、共情者、送葬者现在也走自动下发流程——说书人在夜晚面板一键「发送给玩家」，玩家底部弹窗「确认收到」后即记入其局内信息，并同步写入魔典日志。中毒/醉酒时面板仍显示假值选择器，说书人设定的假值会同时用于下发文本与日志（健康则用真值）。厨师仅首夜、共情者每夜、送葬者次夜起（按昨日处决）']},
   {v:'v2.32.1', d:'2026-08-10', items:['修复：占卜师局内信息顺序颠倒——此前显示「占卜结果」在前、「你选择占卜谁」在后（因选择记录在确认结果时才写入、时间戳更晚）。现在每条局内信息带逻辑顺序（信息→选择→结果），按此排序，占卜师正确显示为先选人、后出结果']},
   {v:'v2.32.0', d:'2026-08-10', items:['玩家「局内信息」页除了确认过的信息外，现在也会记录该玩家自己做出的选择：投毒者毒了谁、恶魔杀了谁（含自杀传位）、占卜师占卜了哪两人。即便玩家离线、由说书人代为确认/代为选择，也会一并记录到该玩家的局内信息里。技术上把局内信息从「玩家写的数组」改为「按 key 写子节点的对象」，避免玩家写入与说书人写入互相覆盖（旧数据兼容显示，按夜晚顺序排序）']},
@@ -1377,13 +1378,27 @@ function nightRetract(id){ const f=nfGet(id); const kind=stepKind(id); f.pick=nu
 function nightResend(id){ const f=nfGet(id);
   if(f.stage==='result'){ f.sid=(f.sid||0)+1; const seats=nightSendSeats(id); if(window.stNightSend) window.stNightSend(id,'result',(f.resultText||ftResultText()),null,seats,f.sid); save(); render(); }
   else nightSend(id); }
-function nightSkip(id){ const kind=stepKind(id);
-  if(kind==='info'){ nfDone(id); save(); render(); return; }   // 信息步：代确认=直接完成
+/* 代确认：这一步「确实发生了」（说书人替离线玩家确认/操作）→ 记入玩家局内信息。信息步直接记录+完成；选择步进入代选择器由说书人替玩家选。 */
+function nightProxyConfirm(id){ const kind=stepKind(id);
+  if(kind==='info'){ _nfRecordInfoToPlayers(id); nfDone(id); save(); render(); return; }
   nfGet(id).stage='manual'; save(); render(); }                // 选目标步：代玩家操作 → 说书人手动选目标
+/* 代确认结果（占卜结果）：把结果记入玩家局内信息并完成（nfDone 里会一并记录占卜选择） */
+function nightProxyConfirmResult(id){ const f=nfGet(id);
+  if(window.stRecordGameInfo){ const rtxt=(f.resultText!=null&&f.resultText!=='')?f.resultText:ftResultText();
+    const key='info:'+night+':'+id+':result:'+(f.sid||0);
+    (nightSendSeats(id)||[]).forEach(function(seat){ window.stRecordGameInfo(seat,key,rtxt,night,2); }); }
+  nfDone(id); save(); render(); }
+/* 把信息步文本记入相关玩家局内信息（代确认时用；key 与玩家自己确认写入的一致，幂等，ord=0） */
+function _nfRecordInfoToPlayers(id){ if(!window.stRecordGameInfo || stepKind(id)!=='info') return;
+  const f=nfGet(id); const text=(f.text!=null&&f.text!=='')?f.text:nightAutoText(id); if(!text) return;
+  const key='info:'+night+':'+id+':info:'+(f.sid||0);
+  (nightSendSeats(id)||[]).forEach(function(seat){ window.stRecordGameInfo(seat,key,text,night,0); }); }
+/* 跳过：这一步「没有发生」→ 不记入玩家局内信息、不记魔典，仅标记完成以放行「结束本夜」 */
+function nightSkipStep(id){ nfDone(id,true); save(); render(); }
 function nightManualDone(id){ if(id==='imp'){ const rec=impKills[night]||{}; if(rec.type==='starpass' && rec.newImp==null && _minSeats().some(i=>!isDeadSeat(i))){ try{toast('恶魔自杀：请先在下方指定继任爪牙');}catch(e){} return; } }
   if(id==='fortuneteller'){ try{ if(typeof recordFt==='function') recordFt(); }catch(e){} }   // 代占卜：把结果记入魔典日志
   nfDone(id); save(); render(); }
-function nightForceSkip(id){ nfDone(id); save(); render(); }   // 无行动：直接完成本步
+function nightForceSkip(id){ nfDone(id,true); save(); render(); }   // 无行动·跳过：标记完成但不记录（未发生）
 /* 把投毒者/恶魔/占卜师做出的选择（含说书人代操作）记入该玩家的「局内信息」。在 nfDone 统一触发，玩家提交或 ST 代确认/代选都会走到。 */
 function _nfRecordChoice(id){ if(!window.stRecordGameInfo) return;
   if(id==='poisoner'){ const t=poisonPicks[night]; if(t==null) return;
@@ -1399,9 +1414,12 @@ function _nfRecordChoice(id){ if(!window.stRecordGameInfo) return;
     const seat=(nightSendSeats('fortuneteller')||[])[0]; if(seat==null) return;
     window.stRecordGameInfo(seat,'choice:ft:n'+night,'【占卜师】你选择占卜 '+(cur[0]+1)+'号 '+nameAt(cur[0])+' 和 '+(cur[1]+1)+'号 '+nameAt(cur[1])+'。',night,1); return; }
 }
-function nfDone(id){ const f=nfGet(id); f.stage='done'; nightChecks[nfKey(id)]=true;
-  if(id==='_minion'||id==='_demon'){ try{ recordSpecial(id,true); }catch(e){} }   // 纯信息步：完成时把「已告知」记入魔典日志
-  try{ _nfRecordChoice(id); }catch(e){}   // 把玩家/说书人做出的选择记入该玩家的局内信息
+function nfDone(id,skip){ const f=nfGet(id); f.stage='done';
+  if(!skip){                                       // skip=跳过（未发生）：不置 nightChecks、不记魔典、不记玩家局内信息（门控用 f.stage 判定，不受影响）
+    nightChecks[nfKey(id)]=true;
+    if(id==='_minion'||id==='_demon'){ try{ recordSpecial(id,true); }catch(e){} }   // 纯信息步：完成时把「已告知」记入魔典日志
+    try{ _nfRecordChoice(id); }catch(e){}   // 把玩家/说书人做出的选择记入该玩家的局内信息
+  }
   try{ if(window.stNightClear) window.stNightClear(id); }catch(e){} }   // 完成后清掉该玩家的夜晚弹窗与回复
 function _nfEscA(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 function stepDone(s){ if(stepAutomated(s)){ const f=nightFlow[night+':'+s.id]; return !!(f&&f.stage==='done'); } return !!nightChecks[night+':'+s.id]; }
@@ -1414,7 +1432,8 @@ function nightPanel(id, active){
     const txt=(f.text!=null&&f.text!=='')?f.text:nightAutoText(id);
     h+='<textarea class="nf-ta" oninput="nightEditText(\''+id+'\',this.value)"'+(active?'':' disabled')+'>'+_nfEscA(txt)+'</textarea>';
     h+='<div class="nf-btns"><button class="nf-send"'+lock+' onclick="nightSend(\''+id+'\')">发送给玩家</button>'
-      +'<button class="nf-skip" onclick="nightSkip(\''+id+'\')">代确认/跳过</button></div>';
+      +'<button class="nf-ok" onclick="nightProxyConfirm(\''+id+'\')">代确认</button>'
+      +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button></div>';
     if(!active) h+='<div class="nf-hint">（等前一步完成后再发送）</div>';
     return h+'</div>';
   }
@@ -1423,7 +1442,7 @@ function nightPanel(id, active){
     h+='<div class="nf-status">玩家已选择：<b>'+_nfEscA(pk)+'</b></div>';
     h+='<div class="nf-btns"><button class="nf-ok"'+lock+' onclick="nightApprove(\''+id+'\')">审核通过（写入魔典）</button>'
       +'<button class="nf-re" onclick="nightRetract(\''+id+'\')">退回重选</button>'
-      +'<button class="nf-skip" onclick="nightSkip(\''+id+'\')">跳过</button></div>';
+      +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button></div>';
     return h+'</div>';
   }
   if(id==='imp' && stage==='review'){
@@ -1445,7 +1464,8 @@ function nightPanel(id, active){
     h+='<div class="nf-status">结果已发送，等待玩家确认…</div>';
     h+='<textarea class="nf-ta" oninput="nightEditResult(\''+id+'\',this.value)">'+_nfEscA(rtxt)+'</textarea>';
     h+='<div class="nf-btns"><button class="nf-re" onclick="nightResend(\''+id+'\')">重发结果</button>'
-      +'<button class="nf-skip" onclick="nightSkip(\''+id+'\')">代确认/跳过</button></div>';
+      +'<button class="nf-ok" onclick="nightProxyConfirmResult(\''+id+'\')">代确认</button>'
+      +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button></div>';
     return h+'</div>';
   }
   let waitMsg;
@@ -1453,7 +1473,8 @@ function nightPanel(id, active){
   else waitMsg='已发送，等待玩家选择…';
   h+='<div class="nf-status">'+waitMsg+'</div>';
   h+='<div class="nf-btns"><button class="nf-re" onclick="nightResend(\''+id+'\')">重发</button>'
-    +'<button class="nf-skip" onclick="nightSkip(\''+id+'\')">代确认/跳过</button></div>';
+    +'<button class="nf-ok" onclick="nightProxyConfirm(\''+id+'\')">代确认</button>'
+    +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button></div>';
   return h+'</div>';
 }
 function syncPoisonToNight(){   // 投毒者的毒只在施放的那一夜(含当天)有效：进入新的一夜自动失效（与投毒者是否存活无关，也不随其换目标而改变旧毒）
