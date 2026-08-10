@@ -1049,6 +1049,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.30.3', d:'2026-08-10', items:['夜晚信息自动化调整：① 恶魔自杀（星传）改回由说书人指定继任的爪牙（红唇女郎存活且5人以上则自动继任她），恶魔弹窗不再让恶魔自己选。② 投毒者对恶魔下毒后，恶魔当晚的击杀能力失效——恶魔仍照常收到提示并选择目标，但无人死亡（魔典记为「击杀无效」）；这是通用规则，手动流程也一并生效']},
   {v:'v2.30.2', d:'2026-08-10', items:['夜晚信息自动化优化：① 恶魔选择「自杀」时，弹窗新增下拉，由恶魔自己指定传位给哪名存活爪牙（红唇女郎存活且5人以上则只能传她），不再由说书人代选。② 爪牙相认等群发信息现在要等所有爪牙都点确认才算完成（说书人面板显示「已确认 X/Y」）。③ 说书人「代确认」投毒/占卜/夜杀等选目标步骤时，现在会展开手动选择器，让说书人自己选毒谁/占谁/杀谁（含恶魔自杀继任、镇长弹刀）']},
   {v:'v2.30.1', d:'2026-08-10', items:['修复：夜晚信息自动化中，恶魔选择「自杀」（星传）且没有红唇女郎自动继任时，此前会直接判好人胜利、说书人来不及指定继任爪牙。现在恶魔自杀且尚有存活爪牙时先不判负，进入「复核」子步让说书人指定一名爪牙继任为新恶魔（或确认无人继任才真死）；胜负判定也加了同样护栏（手动流程一并修复）。恶魔普通击杀命中镇长（弹刀）也会进入复核，确认实际死亡']},
   {v:'v2.30.0', d:'2026-08-10', items:['【新功能·夜晚信息自动化（第一版）】说书人魔典的夜晚步骤中，「爪牙相认 / 恶魔信息 / 投毒者 / 占卜师 / 恶魔夜杀」现在可一键把信息私密发送给对应玩家；玩家会在屏幕底部收到弹窗并点「确认」。需要选目标的（投毒、夜杀选1人；占卜选2人）由玩家在弹窗里下拉选择、提交，说书人「审核通过」后写入魔典；占卜会自动算出结果再发一条给玩家确认。信息内容自动生成、发送前说书人可修改（照顾中毒/醉酒给假信息）。按夜晚顺序逐步推进：前一步完成才解锁下一步，全部完成才能「结束本夜」。玩家掉线可由说书人「代确认/跳过」。其余角色暂沿用原有勾选方式']},
@@ -1330,8 +1331,7 @@ function ftResultText(){ const cur=ftPicks[night]; if(!cur||cur[0]==null||cur[1]
 function nightSend(id){ const kind=stepKind(id); if(!kind) return; const f=nfGet(id);
   const seats=nightSendSeats(id); if(!seats.length){ try{toast('没找到该角色对应的已登录玩家，可用「代确认/跳过」');}catch(e){} }
   const text=(f.text!=null&&f.text!=='')?f.text:nightAutoText(id); f.text=text;
-  let phase='info', pick=null; if(kind!=='info'){ phase='pick'; pick={count:kind==='pick2info'?2:1, options:nightSeatOptions()};
-    if(id==='imp'){ pick.selfSeat=impSeat(); pick.succ=impSuccessorOptions(); } }   // 恶魔：附带「自杀继任」信息，选自己时可传位
+  let phase='info', pick=null; if(kind!=='info'){ phase='pick'; pick={count:kind==='pick2info'?2:1, options:nightSeatOptions()}; }
   f.stage='sent'; f.phase=phase; f.sid=(f.sid||0)+1; f.pick=null;
   if(window.stNightSend) window.stNightSend(id, phase, text, pick, seats, f.sid);
   save(); render(); }
@@ -1340,9 +1340,8 @@ function nightEditResult(id,val){ nfGet(id).resultText=val; }
 function nightApprove(id){ const f=nfGet(id); if(!f.pick||!f.pick.length){ try{toast('玩家还没提交选择');}catch(e){} return; }
   if(id==='poisoner'){ poisonPick(String(f.pick[0])); nfDone(id); }
   else if(id==='imp'){ impKill(String(f.pick[0]));
-    let rec=impKills[night]||{};
-    if(rec.type==='starpass' && rec.newImp==null && f.pick[1]!=null){ chooseNewImp(String(f.pick[1])); rec=impKills[night]||{}; }   // 恶魔自选的继任爪牙 → 直接写入
-    const needReview = (rec.type==='starpass' && rec.newImp==null && _minSeats().some(i=>!isDeadSeat(i)))   // 未指定继任（异常兜底）→ 说书人补选
+    const rec=impKills[night]||{};
+    const needReview = (rec.type==='starpass' && rec.newImp==null && _minSeats().some(i=>!isDeadSeat(i)))   // 恶魔自杀·无红唇自动继任 → 说书人指定继任爪牙
                     || (rec.type==='normal' && rec.mayor);                                                    // 镇长弹刀 → 确认实际死亡
     if(needReview){ f.stage='review'; save(); render(); return; }
     nfDone(id); }
@@ -2039,6 +2038,11 @@ function impKill(v){
   const imp=impSeat(); if(imp<0){ delete impKills[night]; render(); return; }
   if(v===""){ delete impKills[night]; render(); return; }
   const target=+v;
+  if(!healthy(imp)){   // 恶魔中毒/醉酒 → 击杀能力失效，无人死亡（恶魔照常收到并选择目标，但不生效）
+    histSet(imp,'kill','击杀 '+nameAt(target)+'（恶魔中毒/醉酒 → 击杀无效，无人死亡）');
+    impKills[night]={type:"normal",target:target,imp:imp,blocked:false,sick:true,mayor:false,death:-1};
+    render(); return;
+  }
   if(target===imp){
     const sw=meta.findIndex(m=>m&&m.role==="scarletwoman");
     const swAlive=sw>=0 && !isDeadSeat(sw) && healthy(sw);          // 红唇中毒/醉酒则不接任
