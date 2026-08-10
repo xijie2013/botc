@@ -97,6 +97,54 @@
   .rc-fallback::before{content:""; position:absolute; width:20%; aspect-ratio:1; border-radius:50%; background:radial-gradient(circle, rgba(220,190,120,.55), rgba(184,134,11,0) 70%);}
   #rcHint{position:absolute; left:0; right:0; bottom:6%; text-align:center; color:#ece0c6; font-weight:600;
     font-size:clamp(13px,2.1vh,18px); text-shadow:0 1px 5px rgba(0,0,0,.85); pointer-events:none;}
+  /* ===== 间谍魔典（右下角图标 + 只读魔典遮罩） ===== */
+  #spyGrimIcon{position:absolute; bottom:3.5%; right:2.5%; z-index:31; cursor:pointer;
+    width:clamp(44px,5.4vw,66px); aspect-ratio:1/1; filter:drop-shadow(0 3px 8px rgba(0,0,0,.6)); transition:transform .14s;}
+  #spyGrimIcon img{width:100%; height:100%; object-fit:contain; display:block;}
+  #spyGrimIcon:hover{transform:scale(1.07);}
+  #spyGrimIcon.pulse{animation:spygPulse 1.1s ease-in-out 2;}
+  @keyframes spygPulse{0%,100%{filter:drop-shadow(0 3px 8px rgba(0,0,0,.6));}50%{filter:drop-shadow(0 0 10px rgba(184,120,240,.95)) drop-shadow(0 0 18px rgba(184,120,240,.7));}}
+  #spyGrimLayer{position:absolute; inset:0; z-index:212; display:none; background:rgba(8,6,14,.9);
+    -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px);}
+  #spyGrimLayer.on{display:block;}
+  #spyGrimLayer .spyg-inner{position:absolute; inset:0; display:flex; padding:2.4% 2.2%;
+    background-image:url("assets/tavern-bg-dark.jpg"); background-size:cover; background-position:center;}
+  #spyGrimLayer .spyg-inner::before{content:""; position:absolute; inset:0; background:rgba(14,9,22,.62);}
+  .spyg-close{position:absolute; top:14px; right:16px; z-index:5; width:clamp(40px,4.4vw,56px); aspect-ratio:1/1;
+    background:none; border:none; cursor:pointer; padding:0; filter:drop-shadow(0 2px 6px rgba(0,0,0,.6)); transition:transform .14s;}
+  .spyg-close img{width:100%; height:100%; object-fit:contain; display:block;}
+  .spyg-close:hover{transform:scale(1.08);}
+  .spyg-left{position:relative; z-index:2; width:34%; min-width:210px; max-width:400px; display:flex; flex-direction:column;
+    padding-right:2.2%; color:#efe3c8;}
+  .spyg-lt{font-weight:800; font-size:clamp(15px,2.3vh,21px); color:#c9a8ff; letter-spacing:1px; margin-bottom:10px;
+    text-shadow:0 1px 4px rgba(0,0,0,.7);}
+  .spyg-nights{display:flex; flex-wrap:wrap; gap:7px; margin-bottom:12px;}
+  .spyg-night{padding:6px 13px; border-radius:11px; font-size:14px; font-weight:700; cursor:pointer;
+    background:rgba(28,18,42,.9); color:#d9c9f0; border:1.3px solid rgba(150,110,210,.45);}
+  .spyg-night.on{background:linear-gradient(160deg,#5a3a8c,#3a2560); color:#fff; border-color:#b78af0; box-shadow:0 0 0 2px rgba(160,110,235,.4);}
+  .spyg-logwrap{flex:1; min-height:0; display:flex; flex-direction:column; background:rgba(20,13,30,.72);
+    border:1px solid rgba(120,90,170,.35); border-radius:12px; padding:10px 12px;}
+  .spyg-loghd{font-weight:700; color:#b79ae0; font-size:13px; margin-bottom:6px; opacity:.9;}
+  .spyg-log{flex:1; min-height:0; overflow:auto; font-size:13.5px; line-height:1.55; color:#e6dcc6;}
+  .spyg-log .sl{padding:5px 2px; border-bottom:1px solid rgba(120,90,170,.16);}
+  .spyg-log .sl-empty{opacity:.45; padding:6px 2px;}
+  .spyg-right{position:relative; z-index:2; flex:1; min-width:0;}
+  .spyg-seats{position:absolute; inset:0;}
+  .spyseat{position:absolute; box-sizing:border-box; border-radius:50%; border:2px solid #e9c46a;
+    background:radial-gradient(circle at 50% 35%, rgba(90,60,110,.92), rgba(45,28,60,.96));
+    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; overflow:visible;}
+  .spyseat.good{border-color:#4a86c8;} .spyseat.evil{border-color:#cf4436;}
+  .spyseat.dead{opacity:.42; filter:grayscale(.7);} .spyseat.hascause{opacity:1!important; filter:none!important;}
+  .spyseat .snum{position:absolute; top:-8%; left:-8%; display:flex; align-items:center; justify-content:center;
+    background:#1a1220; border:1px solid rgba(233,196,106,.7); border-radius:50%; color:#e9c46a; font-weight:800; z-index:2;}
+  .spyseat .snm{line-height:1.1; color:#fff6df; font-weight:700; word-break:break-all; max-width:90%; text-shadow:0 1px 2px rgba(0,0,0,.65);}
+  .spyseat .srole{line-height:1.05; font-weight:800; margin-top:1px; white-space:nowrap; text-shadow:0 1px 2px rgba(0,0,0,.6);}
+  .spyseat .sbadge{position:absolute; z-index:3; pointer-events:none; filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));}
+  .spyseat .sbadge img{width:100%; height:100%; object-fit:contain;}
+  @media (max-width:720px){
+    .spyg-left{width:42%; min-width:150px; padding-right:3%;}
+    .spyg-lt{font-size:15px;} .spyg-night{padding:5px 9px; font-size:12.5px;} .spyg-log{font-size:12px;}
+  }
   /* 左上角工具栏：全屏 / 刷新 / 设置 */
   #toolBar{position:fixed; top:12px; left:12px; z-index:60; display:flex; gap:8px; align-items:center;}
   .fsbtn{width:clamp(30px,2.6vw,40px); height:clamp(30px,2.6vw,40px);
@@ -757,6 +805,18 @@
       </div></div>
       <div id="rcHint">点击任意处收起</div>
     </div>
+    <div id="spyGrimIcon" onclick="window._openSpyGrim&&_openSpyGrim()" title="查看间谍魔典" style="display:none"><img src="assets/book-closed.png" alt=""></div>
+    <div id="spyGrimLayer">
+      <div class="spyg-inner">
+        <button class="spyg-close" onclick="window._closeSpyGrim&&_closeSpyGrim()" title="合上魔典"><img src="assets/book-open.png" alt=""></button>
+        <div class="spyg-left">
+          <div class="spyg-lt">间谍魔典 · 当夜快照</div>
+          <div class="spyg-nights" id="spyGrimNights"></div>
+          <div class="spyg-logwrap"><div class="spyg-loghd">本夜说书人日志</div><div class="spyg-log" id="spyGrimLog"></div></div>
+        </div>
+        <div class="spyg-right"><div class="spyg-seats" id="spyGrimSeats"></div></div>
+      </div>
+    </div>
     <div id="toolBar">
       <button class="fsbtn" id="fsBtn" onclick="toggleFull()" title="网页全屏">⛶</button>
       <button class="fsbtn" id="refreshBtn" onclick="window._softRefresh?window._softRefresh():location.reload()" title="刷新（重新同步，不退出全屏）"><span class="ric">⟳</span></button>
@@ -917,6 +977,7 @@ let openBubbles=new Set(), seatPos=[], tableCenter=null, impKills={}, poisonPick
 const nightChecks={};
 const nightFlow={};   /* 夜晚信息自动化：每步流程状态 key=`${night}:${stepId}` → {stage,text,phase,pick,resultText,sid} */
 const dayFlow={};     /* 昼夜推进：dayFlow[night]={dawn,dusk}，结束本夜/结束本日各只能点一次 */
+const spySent={};     /* 间谍魔典：spySent[night]=true 表示当夜魔典已下发并锁定 */
 
 const ROLES=[
  {id:"washerwoman",name:"洗衣妇",team:"tf",ab:"首夜：得知2名玩家中有1个特定镇民。"},
@@ -980,7 +1041,7 @@ function blankMeta(){return {role:null,poison:false,drunk:false,dead:false,note:
 function ensureMeta(){ while(meta.length<N) meta.push(blankMeta()); meta.length=N; }
 
 function save(){ if(window.__stApplyingRemote) return;   // 正在应用远端同步时不重复写/上传，避免回声循环
-  try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,nightFlow,dayFlow,impKills,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,sickAns,redHerring,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist,ts:Date.now()})); }catch(e){}
+  try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,nightFlow,dayFlow,spySent,impKills,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,sickAns,redHerring,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist,ts:Date.now()})); }catch(e){}
   try{ if(window._stCloudPush) window._stCloudPush(); }catch(e){} }   // 说书人存档实时云同步（防抖上传）
 function load(){
   try{ const d=JSON.parse(localStorage.getItem(KEY)||"{}");
@@ -998,6 +1059,7 @@ function load(){
     if(d.nightChecks&&typeof d.nightChecks==="object") Object.assign(nightChecks,d.nightChecks);
     Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); if(d.nightFlow&&typeof d.nightFlow==="object") Object.assign(nightFlow,d.nightFlow);
     Object.keys(dayFlow).forEach(k=>delete dayFlow[k]); if(d.dayFlow&&typeof d.dayFlow==="object") Object.assign(dayFlow,d.dayFlow);
+    Object.keys(spySent).forEach(k=>delete spySent[k]); if(d.spySent&&typeof d.spySent==="object") Object.assign(spySent,d.spySent);
     if(d.impKills&&typeof d.impKills==="object") impKills=d.impKills;
     if(d.poisonPicks&&typeof d.poisonPicks==="object") poisonPicks=d.poisonPicks;
     if(d.monkPicks&&typeof d.monkPicks==="object") monkPicks=d.monkPicks;
@@ -1051,6 +1113,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.38.0', d:'2026-08-10', items:['夜晚信息自动化拓展：间谍看魔典接入自动下发。说书人在间谍的夜晚步骤点「发送第 N 夜魔典给间谍」，即把当前座位图（每个座位的真实身份、酒鬼、中毒/醉酒/守护/出局及死因、管家主人、红鲱鱼等）与本夜说书人日志打成快照下发到间谍玩家端——发出即锁定、不可更改。间谍屏幕右下角出现魔典图标（说书人同款书本图标 + 翻书/合书音效），可随时点开进入只读魔典界面：左侧为夜晚切换与本夜日志、右侧为当夜座位图；若获取了多夜魔典，可在各夜间切换查看，每一夜都是当夜下发时的定格。至此暗流涌动全部夜间角色均已接入自动化']},
   {v:'v2.37.1', d:'2026-08-10', items:['恶魔伪装比照酒鬼身份处理：伪装下拉只列「场上不存在的好人身份」（镇民+外来者，排除已在座位上的角色、酒鬼自以为的身份、以及其他伪装槽已选的）；选中的伪装身份牌会变半透明表示被占用；若某个伪装身份之后被分配到座位（或设为酒鬼身份），该伪装自动撤销、需重新选择']},
   {v:'v2.37.0', d:'2026-08-10', items:['角色设置改进：①唯一角色——同一身份场上只能有一个，把某角色拖到新座位会自动清空之前那个座位（其他角色同理）。②酒鬼流程理顺：直接把「酒鬼」牌拖到座位即成为「酒鬼·未定」，再在下方「酒鬼自以为是」下拉里选一个不在场的镇民作为其自以为的身份（该镇民牌会一并变半透明）；若该镇民之后被分配到别处，酒鬼的镇民身份自动清空、需重设。③「新的一局」按钮改为完整性门控：所有座位都分配角色、且酒鬼身份/恶魔伪装(3个)/红鲱鱼(有占卜师时)等都设好才可点，否则按钮下方提示第一项未完成的内容（如「座位 3 未安排角色」「恶魔伪装未设满 3 个」）']},
   {v:'v2.36.1', d:'2026-08-10', items:['守鸦人夜晚步骤的头部提示区分死因：本夜被恶魔击杀时显示绿色「被恶魔击杀 · 开始行动（选1人得知其角色）」；因处决等其他原因出局时仍显示「已出局，不再行动」（这种情况本就该跳过）']},
@@ -1210,6 +1273,7 @@ async function dealRoles(){
   Object.keys(nightChecks).forEach(k=>delete nightChecks[k]);   // 清空每夜勾选
   Object.keys(nightFlow).forEach(k=>delete nightFlow[k]);       // 清空夜晚信息流程
   Object.keys(dayFlow).forEach(k=>delete dayFlow[k]);           // 清空昼夜推进状态
+  Object.keys(spySent).forEach(k=>delete spySent[k]);          // 清空间谍魔典发送记录
   const pick=(team,k)=>{ const pool=ROLES.filter(r=>r.team===team&&!lockedRoles.has(r.id)).map(r=>r.id);
     for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
     return pool.slice(0,Math.max(0,k)); };
@@ -1243,7 +1307,7 @@ async function dealRoles(){
 }
 async function resetRoles(){ if(!await uiConfirm("重置所有身份、状态、备注、伪装？（保留名字与座位）")) return;
   meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
-  Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); Object.keys(dayFlow).forEach(k=>delete dayFlow[k]); overviewDecoys=[]; tokens.forEach(t=>t.dead=false); render();
+  Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); Object.keys(dayFlow).forEach(k=>delete dayFlow[k]); Object.keys(spySent).forEach(k=>delete spySent[k]); overviewDecoys=[]; tokens.forEach(t=>t.dead=false); render();
   try{ if(window._stClearPlayerRoles) _stClearPlayerRoles(); }catch(e){} try{ if(window._stClearPlayerNotes) _stClearPlayerNotes(); }catch(e){} try{ if(window._stResetPublic) _stResetPublic(); }catch(e){} try{ if(window._histNewRound) _histNewRound(); }catch(e){} }   // 重置角色：清空玩家角色卡 + 局内信息/座位备注/标记 + 公开状态（大厅/笔记的死亡/处决/胜负等一并清零）；胜负另记一条
 function setBluff(k,v){ bluffs[k]=v; refreshOverviewDecoys(); render(); }
 
@@ -1793,6 +1857,58 @@ function butlerUI(){
   allSeats().forEach(i=>{ if(i===b) return; opts+='<option value="'+i+'"'+(rec===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+(isDeadSeat(i)?'（已出局）':'')+'</option>'; });
   return '<div class="impkill">主人：<select onchange="butlerPick(this.value)">'+opts+'</select></div>';
 }
+/* ---------- 间谍魔典：当夜快照（座位图 + 日志），发出即锁定 ---------- */
+function spySeat(){ return meta.findIndex(m=>m&&m.role==='spy'); }
+function _buildSpySnapshot(n){
+  const seats=[];
+  for(let i=0;i<N;i++){
+    const m=meta[i]||blankMeta(); const role=m.role?RMAP[m.role]:null; const t=seatToken(i); const dead=isDeadSeat(i);
+    const label = role ? (role.name+(m.isDrunk?'-酒鬼':'')) : (m.isDrunk?'酒鬼·未定':'');
+    const col = role ? (m.isDrunk?TEAMC.out:TEAMC[role.team]) : (m.isDrunk?TEAMC.out:'');
+    const o={ i:i, name:(t&&t.name)?t.name:'', label:label, col:col,
+      evil: role?isEvil(role.team):false, dead:dead, poison:!!m.poison, drunkSt:!!(m.drunk&&!m.isDrunk),
+      shield:!!(isProtected(i)||m.mShield), shot:!!((m.role==='slayer'&&slayerShot)||m.mShot),
+      master:(butlerPicks[night]===i), herring:(redHerring===i) };
+    if(dead){ o.claw=(deathCauseLabel(i)==='夜晚死亡'); o.deadIcon=deathCauseIcon(i); }
+    else if(isProtected(i)){ const rk=impKills[night]; o.shieldHit=!!(rk&&rk.type==='normal'&&rk.target===i&&rk.blocked); }
+    seats.push(o);
+  }
+  const log=[]; const order=NIGHT[n===1?'first':'other'];
+  const TAGO=['evil','info','poison','poisoned','kill','protected','death','role'];
+  const keyFor=(i,e)=>{ const m=meta[i]; const rk=order.findIndex(s=>s.id===m.role); if(rk>=0) return rk;
+    const team=m.role?RMAP[m.role].team:null;
+    if(e.evil){ const k=order.findIndex(s=>s.id===(team==='dem'?'_demon':'_minion')); if(k>=0) return k; }
+    return 500+i; };
+  const seatsN=[]; meta.forEach((m,i)=>{ if(!m.hist||!m.hist[n]) return; let e=m.hist[n]; if(typeof e==='string') e={info:e}; if(TAGO.some(t=>e[t])) seatsN.push({i,e}); });
+  seatsN.sort((A,B)=>(keyFor(A.i,A.e)-keyFor(B.i,B.e))||(A.i-B.i));
+  seatsN.forEach(function(o){ const i=o.i,e=o.e; const m=meta[i]; const parts=[]; TAGO.forEach(t=>{ if(e[t]) parts.push(e[t]); });
+    const r=m.role?RMAP[m.role]:null; const rn=r?(r.name+(m.isDrunk?'-酒鬼':'')):'';
+    const stArr=[]; if(isDeadSeat(i))stArr.push('出局'); if(m.poison)stArr.push('中毒'); if(m.drunk&&!m.isDrunk)stArr.push('醉酒');
+    const st=stArr.length?'['+stArr.join('/')+']':'';
+    log.push((i+1)+' '+nameAt(i)+(rn?' '+rn:'')+st+'：'+parts.join('；')); });
+  return { n:n, seats:seats, log:log };
+}
+function spyUI(){
+  const sp=spySeat(); if(sp<0) return '';
+  const sent=!!spySent[night];
+  const uid=(window._seatUidPub?_seatUidPub(sp):'');
+  let h='<div class="impkill" style="flex-direction:column;align-items:stretch;gap:6px">';
+  if(sent){
+    h+='<div style="color:#2e7d43;font-weight:700">✓ 第 '+night+' 夜魔典已发送给间谍（已锁定，不可更改）</div>';
+    h+='<button class="nf-ok" style="opacity:.5;cursor:not-allowed;filter:grayscale(.6)" disabled>本夜魔典已发送</button>';
+  } else {
+    if(!uid) h+='<div style="color:#b0402e;font-size:.9em">间谍（'+nameAt(sp)+'）尚未登录账号，暂无法下发；登录后即可发送。</div>';
+    h+='<button class="nf-ok"'+(uid?'':' disabled style="opacity:.5;cursor:not-allowed;filter:grayscale(.6)"')+' onclick="_sendSpyGrim()">发送第 '+night+' 夜魔典给间谍（发出即锁定）</button>';
+    h+='<div style="font-size:11px;color:#8a7250">下发当前座位图与本夜日志的快照；间谍右下角出现魔典图标，可随时查看并在已获取的各夜间切换。</div>';
+  }
+  h+='</div>';
+  return h;
+}
+window._sendSpyGrim=function(){ const sp=spySeat(); if(sp<0) return; if(spySent[night]) return;
+  const snap=_buildSpySnapshot(night);
+  const ok = window._stSendSpyGrim ? _stSendSpyGrim(sp, night, snap) : false;
+  if(ok){ spySent[night]=true; nightChecks[night+':spy']=true; save(); render(); }
+};
 function enforceButler(){
   const b=butlerSeat(); if(b<0 || isDeadSeat(b) || !healthy(b)) return;   // 出局的管家没有主人限制（可自由投票/鬼票）；中毒/醉酒亦无限制
   const master=butlerPicks[night]; const noms=nominations[night]||[];
@@ -2599,6 +2715,7 @@ function renderGrim(){
       h+='<label class="nstep"><input type="checkbox"'+ck+' onchange="onStepCheck(\''+s.id+'\',this.checked)"><span><b style="color:'+color+'">'+name+'</b> <span class="nn">'+s.note+'</span>'+(info?'<div class="ninfo">'+info+'</div>':'')+'</span></label>';
       if(s.id==="monk") h+=monkUI();
       if(s.id==="butler") h+=butlerUI();
+      if(s.id==="spy") h+=spyUI();
       if(s.id==="ravenkeeper") h+=ravenUI();
       if(s.id==="undertaker") h+=undertakerUI();
       if(s.id==="chef") h+=numUI("chef","相邻邪恶对数",Math.max(2,meta.filter((m,i)=>regEvil(i)).length));
@@ -3144,7 +3261,7 @@ load(); render();
       document.body.appendChild(ov); }
     ov.style.display='flex'; }
   function enterPlayer(){ document.getElementById('stBadge').classList.remove('on'); document.body.classList.add('pl'); document.getElementById('pbName').textContent=((me&&me.displayName)||_storedId('botc_pid')||'玩家'); _nbSeatPage=false; const _np=document.getElementById('notesPanel'); if(_np) _np.classList.remove('seatpage'); bindNotes(); setMode('notes'); try{ _presenceStart(); }catch(e){} }
-  function bindNotes(){ if(notesRef){ notesRef.off(); notesRef=null; } if(role==='player'&&me&&curGid){ notesRef=db.ref('games/'+curGid+'/players/'+me.uid); notesRef.on('value',s=>{ S=s.val(); ensureS(); window.__myRole=(S&&S.role)||''; try{ updateRoleCard(curGid, window.__myRole); }catch(e){} if(mode==='notes') renderView(); }); } }
+  function bindNotes(){ if(notesRef){ notesRef.off(); notesRef=null; } if(role==='player'&&me&&curGid){ notesRef=db.ref('games/'+curGid+'/players/'+me.uid); notesRef.on('value',s=>{ S=s.val(); ensureS(); window.__myRole=(S&&S.role)||''; try{ updateRoleCard(curGid, window.__myRole); }catch(e){} try{ updateSpyGrim(); }catch(e){} if(mode==='notes') renderView(); }); } }
 
   /* ===== 玩家本局角色卡（右上角卡背 + 入场/翻开动画） ===== */
   window.__myRole='';
@@ -3210,7 +3327,69 @@ load(); render();
     card.addEventListener('transitionend',done); setTimeout(()=>{ if(_rcState==='anim') done(); }, 850);
   }
   window._clearRoleCard=function(){ const {layer,card,cc}=_rcEls(); if(layer) layer.classList.remove('on'); if(cc) cc.style.display='none';
-    if(card){ card.style.transition='none'; card.style.transform=''; card.classList.remove('flip'); card.style.opacity=''; } _rcState=''; window.__myRole=''; };
+    if(card){ card.style.transition='none'; card.style.transform=''; card.classList.remove('flip'); card.style.opacity=''; } _rcState=''; window.__myRole='';
+    try{ const si=document.getElementById('spyGrimIcon'); if(si) si.style.display='none'; const sl=document.getElementById('spyGrimLayer'); if(sl) sl.classList.remove('on'); _spyG=null; _spyNights=[]; _spySel=null; }catch(e){} };
+
+  /* ===== 间谍魔典（收到当夜快照 → 右下角魔典图标 → 只读「左日志＋右座位图」，多夜可切换） ===== */
+  let _spyG=null, _spyNights=[], _spySel=null;
+  function updateSpyGrim(){ const icon=document.getElementById('spyGrimIcon'); if(!icon) return;
+    const g=(role==='player'&&S&&S.spyGrim)?S.spyGrim:null;
+    const nights=g?Object.keys(g).map(Number).filter(x=>g[x]).sort((a,b)=>a-b):[];
+    if(!nights.length){ icon.style.display='none'; _spyG=null; _spyNights=[]; _spySel=null;
+      const lay=document.getElementById('spyGrimLayer'); if(lay&&lay.classList.contains('on')) _closeSpyGrim(); return; }
+    _spyG=g; _spyNights=nights; icon.style.display='block';
+    const skey='botc_spyseen_'+((me&&me.uid)||'')+'_'+(curGid||'');
+    let seen=[]; try{ seen=JSON.parse(localStorage.getItem(skey)||'[]')||[]; }catch(e){}
+    const fresh=nights.filter(n=>seen.indexOf(n)<0);
+    if(fresh.length){ try{ if(window._sfx) _sfx('grimoire'); }catch(e){}
+      try{ localStorage.setItem(skey, JSON.stringify(nights)); }catch(e){}
+      _spySel=nights[nights.length-1];
+      icon.classList.remove('pulse'); void icon.offsetWidth; icon.classList.add('pulse'); setTimeout(function(){ icon.classList.remove('pulse'); }, 2400); }
+    if(_spySel==null || nights.indexOf(_spySel)<0) _spySel=nights[nights.length-1];
+    const lay=document.getElementById('spyGrimLayer'); if(lay&&lay.classList.contains('on')) _spyRender(); }
+  window._openSpyGrim=function(){ if(!_spyG||!_spyNights.length) return; const lay=document.getElementById('spyGrimLayer'); if(!lay) return;
+    if(_spySel==null||_spyNights.indexOf(_spySel)<0) _spySel=_spyNights[_spyNights.length-1];
+    lay.classList.add('on'); try{ if(window._sfx) _sfx('grimoire'); }catch(e){} _spyRender(); };
+  window._closeSpyGrim=function(){ const lay=document.getElementById('spyGrimLayer'); if(!lay) return;
+    if(lay.classList.contains('on')){ try{ if(window._sfx) _sfx('grimoire-close'); }catch(e){} } lay.classList.remove('on'); };
+  window._spyPickNight=function(n){ _spySel=+n; _spyRender(); };
+  function _spyRender(){ if(!_spyG) return; const snap=_spyG[_spySel]; if(!snap) return;
+    const nb=document.getElementById('spyGrimNights');
+    if(nb){ nb.innerHTML=_spyNights.map(function(n){ return '<span class="spyg-night'+(n===_spySel?' on':'')+'" onclick="window._spyPickNight&&_spyPickNight('+n+')">第 '+n+' 夜</span>'; }).join(''); }
+    const lg=document.getElementById('spyGrimLog');
+    if(lg){ const lines=(snap.log||[]); lg.innerHTML = lines.length ? lines.map(function(t){ return '<div class="sl">'+_nbEsc(t)+'</div>'; }).join('') : '<div class="sl-empty">（本夜暂无日志记录）</div>'; }
+    _spyDrawSeats(snap); }
+  function _spyDrawSeats(snap){ const wrap=document.getElementById('spyGrimSeats'); if(!wrap) return; wrap.innerHTML='';
+    const seats=(snap.seats||[]); const n=seats.length; if(!n) return;
+    const W=wrap.clientWidth||wrap.offsetWidth, H=wrap.clientHeight||wrap.offsetHeight;
+    if(!W||!H){ requestAnimationFrame(function(){ if(_spyG&&_spyG[_spySel]) _spyDrawSeats(_spyG[_spySel]); }); return; }
+    const cx=W/2, cy=H/2, R=Math.min(W,H)*0.40;
+    const seatD=Math.max(46, Math.min(104, R*3.7/n));
+    const numD=seatD*0.42, nmF=Math.max(10,seatD*0.22), rF=Math.max(9,seatD*0.165);
+    seats.forEach(function(o,idx){
+      const ang=-Math.PI/2+idx*2*Math.PI/n; const x=cx+R*Math.cos(ang), y=cy+R*Math.sin(ang);
+      const s=document.createElement('div');
+      s.className='spyseat'+(o.label?(o.evil?' evil':' good'):'')+(o.dead?' dead':'');
+      s.style.width=s.style.height=seatD+'px'; s.style.left=(x-seatD/2)+'px'; s.style.top=(y-seatD/2)+'px';
+      let html='<div class="snum" style="width:'+numD+'px;height:'+numD+'px;font-size:'+(numD*0.6)+'px">'+(o.i+1)+'</div>';
+      html+='<div class="snm" style="font-size:'+nmF+'px">'+(o.name?_nbEsc(o.name):'<span style="opacity:.5">空</span>')+'</div>';
+      if(o.label){ const rfz=Math.min(rF, Math.floor(0.82*seatD/Math.max(o.label.length,1)));
+        html+='<div class="srole" style="font-size:'+rfz+'px;color:'+(o.col||'#c9a8ff')+'">'+_nbEsc(o.label)+'</div>'; }
+      if(o.dead && o.deadIcon){ s.classList.add('hascause'); const pos=o.claw?'calc(50% + 6px) center':'center', sz=o.claw?'80%':'62%';
+        s.style.background="url('"+o.deadIcon+"') "+pos+" / "+sz+" no-repeat, radial-gradient(circle at 50% 35%, rgba(48,34,58,.9), rgba(22,15,30,.95))"; }
+      else if(o.shield){ s.style.background=(o.shieldHit?"url('assets/kp-demonkill.png') calc(50% + 6px) center / 60% no-repeat, ":"")+"url('assets/bg-shield.png') calc(50% + 6px) center / 78% no-repeat, radial-gradient(circle at 50% 35%, rgba(90,60,110,.9), rgba(45,28,60,.95))"; }
+      const r=seatD/2, bD=Math.max(16, seatD*0.24)*1.1, dist=r*1.3;
+      const badge=function(deg,ic,scl,glow){ const bd=bD*(scl||1); const a=deg*Math.PI/180, bx=r+dist*Math.sin(a), by=r-dist*Math.cos(a);
+        const gf=glow?'filter:drop-shadow(0 0 2px '+glow+') drop-shadow(0 0 4px '+glow+');':'';
+        return '<div class="sbadge" style="width:'+bd+'px;height:'+bd+'px;left:'+(bx-bd/2)+'px;top:'+(by-bd/2)+'px;'+gf+'"><img src="'+ic+'"></div>'; };
+      const RA=[30,60,90,120,150];
+      [[o.dead,'assets/mk-dead.png',1,'#000'],[o.poison,'assets/mk-poison.png',1,'#3fd44f'],[o.drunkSt,'assets/s-drunk.png',1,'#ffe14d'],[o.shield,'assets/mk-shield.png',1,'#d8dae2'],[o.shot,'assets/mk-crossbow.png',1.2,'#4aa8ff']]
+        .forEach(function(b,k){ if(b[0]) html+=badge(RA[k],b[1],b[2],b[3]); });
+      if(o.master) html+=badge(0,'assets/mk-master.png',1.1,'#f5c542');
+      if(o.herring) html+=badge(180,'assets/mk-herring.png',1.2,'#ff4a3a');
+      s.innerHTML=html; wrap.appendChild(s);
+    }); }
+  window.addEventListener('resize',function(){ const lay=document.getElementById('spyGrimLayer'); if(lay&&lay.classList.contains('on')&&_spyG&&_spyG[_spySel]) _spyDrawSeats(_spyG[_spySel]); });
 
   /* ===== 背景音乐（未登录=空酒馆 / 玩家=烛影 / 说书人=八音盒；淡入淡出 + 交叉淡化循环，避免生硬接缝） ===== */
   const BGM={ anon:'assets/bgm-tavern-empty.mp3', player:'assets/bgm-tavern-player.mp3', st:'assets/bgm-tavern-storyteller.mp3' };
@@ -3279,7 +3458,7 @@ load(); render();
   window._stClearPlayerNotes=function(){ if(role!=='st'||!curGid) return;
     db.ref('games/'+curGid+'/players').once('value').then(s=>{ const v=s.val()||{}; const up={};
       Object.keys(v).forEach(uid=>{ const b='games/'+curGid+'/players/'+uid+'/';
-        up[b+'gameInfo']=null; up[b+'seats']=null; up[b+'crossed']=null; up[b+'night']=null; up[b+'nightReply']=null; });
+        up[b+'gameInfo']=null; up[b+'seats']=null; up[b+'crossed']=null; up[b+'night']=null; up[b+'nightReply']=null; up[b+'spyGrim']=null; });
       if(Object.keys(up).length) db.ref().update(up).catch(()=>{});
     }).catch(()=>{}); };
   /* 说书人重置角色：把公开状态（座位死亡/死因、胜负横幅、提名、处决/击杀动画、举手、指针）一并清零，让大厅与玩家笔记同步复位 */
@@ -3514,6 +3693,14 @@ load(); render();
     }catch(e){} };
   /* ===== 夜晚信息自动化：说书人端下发/收集 ===== */
   function _seatUid(i){ try{ const t=(typeof seatToken==='function')?seatToken(i):null; const nm=(t&&t.name)?t.name:((pub&&pub.seats&&pub.seats[i])?pub.seats[i].name:''); const accs=window.__accounts||{}; const acc=nm?accs[rkey(nm)]:null; return (acc&&acc.uid)||''; }catch(e){ return ''; } }
+  window._seatUidPub=_seatUid;
+  /* 说书人：把当夜魔典快照写入间谍玩家节点（按夜存于 spyGrim/{n}；发出即锁定——仅当该夜尚无快照时写入） */
+  window._stSendSpyGrim=function(seat, n, snap){ if(role!=='st'||!curGid) return false;
+    const uid=_seatUid(seat); if(!uid) return false;
+    try{ const ref=db.ref('games/'+curGid+'/players/'+uid+'/spyGrim/'+n);
+      ref.transaction(function(cur){ if(cur) return; return {n:n, seats:snap.seats||[], log:snap.log||[], ts:Date.now()}; }, function(){}, false);
+    }catch(e){ return false; }
+    return true; };
   window.stNightSend=function(id, phase, text, pick, seats, sid){ if(role!=='st'||!curGid) return;
     (seats||[]).forEach(function(i){ const uid=_seatUid(i); if(!uid) return;
       db.ref('games/'+curGid+'/players/'+uid+'/nightReply').remove().catch(function(){});   // 先清旧回复，避免 sid 之外的误判
@@ -3812,6 +3999,7 @@ load(); render();
       if(typeof nightChecks==='object') Object.keys(nightChecks).forEach(k=>delete nightChecks[k]);
       if(typeof nightFlow==='object') Object.keys(nightFlow).forEach(k=>delete nightFlow[k]);
       if(typeof dayFlow==='object') Object.keys(dayFlow).forEach(k=>delete dayFlow[k]);
+      if(typeof spySent==='object') Object.keys(spySent).forEach(k=>delete spySent[k]);
       if(Array.isArray(tokens)) tokens.forEach(t=>{ if(t) t.dead=false; });
       if(Array.isArray(meta)) meta.forEach(m=>{ if(m){ m.dead=false; m.poison=false; m.drunk=false; m.hist={}; m.info=''; } });   // 新的一局：清空说书人日志（每座位的夜间记录）
       try{ save(); }catch(e){} try{ if(typeof render==='function') render(); }catch(e){}
