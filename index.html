@@ -1017,6 +1017,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.29.1', d:'2026-08-10', items:['修复：说书人登录后在设置里看不到「说书人口令」设置项（判断登录身份的写法跨脚本块失效，改用说书人角标判断）。现在说书人打开设置即可看到并设置口令']},
   {v:'v2.29.0', d:'2026-08-10', items:['说书人登录改为「顶号」模型：登录始终成功，新登录会自动顶掉旧的说书人页面（旧页提示「已在其他设备或账号登录」）——再也不会出现占用锁卡住、谁都登不进的情况','新增「说书人口令」防止玩家偷登说书人：登录说书人时除账号密码外还需输入统一口令；说书人可在设置里设置或修改口令（首次未设置口令时先登录进去设置即可）','移除旧的占用锁与「强制下线」按钮（顶号模型下已不再需要）']},
   {v:'v2.28.0', d:'2026-08-10', items:['重置密码不再需要选择「玩家账号 / 说书人账号」：因为两者已共用同一密码，直接重置当前登录的账号即可，另一角色会自动同步','设置里（说书人可见）新增「强制所有说书人下线」：一键让当前所有在线说书人页面立即登出（可盖过占用锁心跳的自动重占用），用于占用锁卡住或需要清场时；点两次确认，自己也会一并登出、可随后重新登录']},
   {v:'v2.27.0', d:'2026-08-10', items:['玩家笔记「清除所有标记」现在会连同座位备注一起清除（身份、状态标记、座位备注全部清空）','设置里新增三档音量调节：音效音量、动画音量（处决/射杀等视频）、背景音乐音量，0~100% 独立可调、本地记住；左上角静音按钮仍可一键临时静音全部']},
@@ -1102,7 +1103,9 @@ window._prefetchExec=function(){ if(_execPrefetched) return; _execPrefetched=tru
 window.openSettings=function(){ document.getElementById('setVer').textContent=APP_VERSION;
   const log=document.getElementById('setLog'); const c=CHANGELOG[0];
   log.innerHTML='<div class="cl-item"><span class="cl-v">'+c.v+'</span><span class="cl-d">'+c.d+'</span><ul>'+c.items.map(i=>'<li>'+i+'</li>').join('')+'</ul></div>';
-  _platSync(); try{ if(window._volSync) _volSync(); }catch(e){} try{ const a=document.getElementById('stCodeSec'); if(a) a.style.display=(role==='st'?'block':'none'); }catch(e){} const rf=document.getElementById('rpForm'); if(rf) rf.style.display='none'; document.getElementById('setModal').classList.add('on'); };
+  _platSync(); try{ if(window._volSync) _volSync(); }catch(e){}
+  try{ const isSt=!!(document.getElementById('stBadge')&&document.getElementById('stBadge').classList.contains('on')); const a=document.getElementById('stCodeSec'); if(a) a.style.display=(isSt?'block':'none'); }catch(e){}   // 说书人口令仅说书人可见（用角标判断，跨脚本块可靠）
+  const rf=document.getElementById('rpForm'); if(rf) rf.style.display='none'; document.getElementById('setModal').classList.add('on'); };
 window.closeSettings=function(){ document.getElementById('setModal').classList.remove('on'); };
 try{ applyPlatform(_platCur()); }catch(e){}
 
