@@ -134,7 +134,8 @@
   #setModal .rp-open:hover{background:rgba(233,196,106,.16);}
   #setModal .rp-open.armed{background:#b0402e; color:#fff; border-color:#b0402e;}
   #setModal #rpForm{margin-top:9px; display:flex; flex-direction:column; gap:7px;}
-  #setModal #rpForm input, #setModal #rpForm select{width:100%; padding:8px; border-radius:8px; border:1px solid #3a2d4e; background:#2c2340; color:#efe6d2; font-size:14px; font-family:inherit;}
+  #setModal #rpForm input, #setModal #rpForm select, #setModal #stCodeSec input{width:100%; padding:8px; border-radius:8px; border:1px solid #3a2d4e; background:#2c2340; color:#efe6d2; font-size:14px; font-family:inherit;}
+  #setModal #stCodeSec input{margin-bottom:8px;}
   #setModal .rp-err{font-size:12px; color:#f0a89e; min-height:14px;}
   #setModal .rp-go{padding:9px 0; border-radius:10px; border:none; background:var(--gold); color:#fff; font-weight:800; cursor:pointer;}
   #setModal .set-log{font-size:12.5px; line-height:1.55; color:#d8cee8;}
@@ -1016,6 +1017,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.29.0', d:'2026-08-10', items:['说书人登录改为「顶号」模型：登录始终成功，新登录会自动顶掉旧的说书人页面（旧页提示「已在其他设备或账号登录」）——再也不会出现占用锁卡住、谁都登不进的情况','新增「说书人口令」防止玩家偷登说书人：登录说书人时除账号密码外还需输入统一口令；说书人可在设置里设置或修改口令（首次未设置口令时先登录进去设置即可）','移除旧的占用锁与「强制下线」按钮（顶号模型下已不再需要）']},
   {v:'v2.28.0', d:'2026-08-10', items:['重置密码不再需要选择「玩家账号 / 说书人账号」：因为两者已共用同一密码，直接重置当前登录的账号即可，另一角色会自动同步','设置里（说书人可见）新增「强制所有说书人下线」：一键让当前所有在线说书人页面立即登出（可盖过占用锁心跳的自动重占用），用于占用锁卡住或需要清场时；点两次确认，自己也会一并登出、可随后重新登录']},
   {v:'v2.27.0', d:'2026-08-10', items:['玩家笔记「清除所有标记」现在会连同座位备注一起清除（身份、状态标记、座位备注全部清空）','设置里新增三档音量调节：音效音量、动画音量（处决/射杀等视频）、背景音乐音量，0~100% 独立可调、本地记住；左上角静音按钮仍可一键临时静音全部']},
   {v:'v2.26.0', d:'2026-08-10', items:['说书人魔典改为「全体共用一套」：任意说书人账号、在任意设备登录，读写的都是同一份魔典（客人名单、座位、身份、公布记录等），实时双向同步','修复新设备登录会把魔典清空的问题：登录时一律以云端已保存的魔典为准，只有云端为空时才用本地初始化，避免空数据覆盖大家的进度']},
@@ -1100,7 +1102,7 @@ window._prefetchExec=function(){ if(_execPrefetched) return; _execPrefetched=tru
 window.openSettings=function(){ document.getElementById('setVer').textContent=APP_VERSION;
   const log=document.getElementById('setLog'); const c=CHANGELOG[0];
   log.innerHTML='<div class="cl-item"><span class="cl-v">'+c.v+'</span><span class="cl-d">'+c.d+'</span><ul>'+c.items.map(i=>'<li>'+i+'</li>').join('')+'</ul></div>';
-  _platSync(); try{ if(window._volSync) _volSync(); }catch(e){} try{ const a=document.getElementById('stAdminSec'); if(a) a.style.display=(role==='st'?'block':'none'); }catch(e){} const rf=document.getElementById('rpForm'); if(rf) rf.style.display='none'; document.getElementById('setModal').classList.add('on'); };
+  _platSync(); try{ if(window._volSync) _volSync(); }catch(e){} try{ const a=document.getElementById('stCodeSec'); if(a) a.style.display=(role==='st'?'block':'none'); }catch(e){} const rf=document.getElementById('rpForm'); if(rf) rf.style.display='none'; document.getElementById('setModal').classList.add('on'); };
 window.closeSettings=function(){ document.getElementById('setModal').classList.remove('on'); };
 try{ applyPlatform(_platCur()); }catch(e){}
 
@@ -2388,10 +2390,11 @@ load(); render();
     <button class="rp-go" onclick="_doResetPw()">确认重置</button>
   </div>
   <div class="set-hint">玩家与说书人账号共用同一密码，重置后两者会同步更新。</div>
-  <div id="stAdminSec" style="display:none">
-    <div class="set-sec">说书人</div>
-    <button class="rp-open" id="stForceBtn" onclick="_stForceLogoutAll(this)">强制所有说书人下线</button>
-    <div class="set-hint">让当前所有在线的说书人页面立即登出（用于占用锁被卡住或需要清场时）。你自己也会被登出，可随后重新登录。</div>
+  <div id="stCodeSec" style="display:none">
+    <div class="set-sec">说书人口令</div>
+    <input id="setStCode" type="text" placeholder="设置 / 修改说书人口令（留空=取消口令）" autocomplete="off">
+    <button class="rp-open" id="setStCodeBtn" onclick="_setStCode(this)">保存说书人口令</button>
+    <div class="set-hint">登录说书人时，除账号密码外还需输入这个统一口令——只有知道口令的人才能进入魔典。修改后其他说书人下次登录需用新口令；已勾选「记住我」的设备不受影响。</div>
   </div>
   <div class="set-sec">更新内容</div>
   <div class="set-log" id="setLog"></div>
@@ -2412,9 +2415,10 @@ load(); render();
     <div class="sub">只有你能进入魔典与公布信息。</div>
     <div class="err" id="stErr"></div>
     <input id="stId" type="text" placeholder="说书人 ID（可用中文，如 说书人小明）" maxlength="20" autocomplete="off">
-    <input id="stPw" type="password" placeholder="密码（可留空）" onkeydown="if(event.key==='Enter')_stLogin()">
+    <input id="stPw" type="password" placeholder="密码（可留空）">
+    <input id="stCode" type="password" placeholder="说书人口令（由说书人统一设置）" onkeydown="if(event.key==='Enter')_stLogin()">
     <label style="display:flex;align-items:center;gap:7px;justify-content:center;font-size:12.5px;color:#b3a6c8;margin:2px 0 10px;cursor:pointer">
-      <input id="stRemember" type="checkbox" style="width:auto;margin:0"> 在本机记住我（下次免敲密码）
+      <input id="stRemember" type="checkbox" style="width:auto;margin:0"> 在本机记住我（下次免敲密码/口令）
     </label>
     <button class="go" onclick="_stLogin()">进入魔典</button>
     <button class="cancel" onclick="_closeGate('stGate')">取消</button>
@@ -2520,13 +2524,20 @@ load(); render();
     try{ const c=await a.auth().signInWithEmailAndPassword(em, oldFpw); await c.user.updatePassword(newFpw); ok=true; }catch(e){}
     try{ await a.auth().signOut(); }catch(e){} }catch(e){} return ok; }
 
-  window._stLogin=async function(){ const id=document.getElementById('stId').value.trim().toLowerCase(), pw=document.getElementById('stPw').value, err=document.getElementById('stErr');
+  async function _hashPass(s){ s=String(s||'');
+    try{ if(window.crypto&&crypto.subtle){ const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode('botc-st::'+s));
+      return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join(''); } }catch(e){}
+    let h=5381; for(let i=0;i<s.length;i++){ h=((h<<5)+h+s.charCodeAt(i))>>>0; } return 'f'+h.toString(16); }   // 回退哈希（非加密级，够用）
+  window._stLogin=async function(){ const id=document.getElementById('stId').value.trim().toLowerCase(), pw=document.getElementById('stPw').value, code=(document.getElementById('stCode')||{}).value||'', err=document.getElementById('stErr');
     if(!id){ err.textContent='请输入 ID'; return; }
     if(!/^[\p{L}\p{N}_]+$/u.test(id)){ err.textContent='ID 只能用中文/字母/数字/下划线（不能有空格）'; return; }
-    err.textContent='登录中…'; try{ localStorage.setItem('botc_stid',id); }catch(e){}
+    err.textContent='登录中…';
+    try{ const hs=(await db.ref('stPassHash').once('value')).val();   // 已设置说书人口令时，先校验口令（防止玩家偷登说书人）
+      if(hs){ const h=await _hashPass(code); if(h!==hs){ err.textContent='说书人口令不正确'; return; } } }catch(e){}
+    try{ localStorage.setItem('botc_stid',id); }catch(e){}
     const rem=!!document.getElementById('stRemember').checked; await _setPersist(rem);
     const email=idToLocal(id)+ST_DOM, fpw=fbPw(pw);
-    const done=()=>{ show('stGate',false); document.getElementById('stPw').value='';
+    const done=()=>{ show('stGate',false); document.getElementById('stPw').value=''; try{ document.getElementById('stCode').value=''; }catch(e){}
       try{ if(rem){ localStorage.setItem('botc_stpw',pw); localStorage.setItem('botc_lastrole','st'); } else localStorage.removeItem('botc_stpw'); }catch(e){}
       try{ _provisionOtherRole(id,fpw,PLAYER_DOM); }catch(e){} };   // 同 ID 玩家账号也用同一密码建好
     try{ await auth.signInWithEmailAndPassword(email,fpw); done(); }
@@ -2536,6 +2547,14 @@ load(); render();
         try{ await auth.createUserWithEmailAndPassword(email,fpw); await auth.currentUser.updateProfile({displayName:id}); toast('已创建说书人账号'); done(); }
         catch(e2){ err.textContent=(e2.code||'').includes('email-already-in-use')?'密码不对':authErr(e2); }
       } else err.textContent=authErr(e); } };
+  window._setStCode=async function(btn){ if(role!=='st'){ try{ if(typeof toast==='function') toast('请先登录说书人'); }catch(e){} return; }
+    const v=(document.getElementById('setStCode').value||'');
+    if(btn && btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn._o=btn.textContent; btn.textContent=(v?'确认设置口令？再点一次':'确认取消口令？再点一次'); btn.classList.add('armed');
+      clearTimeout(btn._t); btn._t=setTimeout(function(){ try{ btn.dataset.armed=''; btn.textContent=btn._o||'保存说书人口令'; btn.classList.remove('armed'); }catch(e){} },3000); return; }
+    if(btn){ clearTimeout(btn._t); btn.dataset.armed=''; btn.textContent=btn._o||'保存说书人口令'; btn.classList.remove('armed'); }
+    try{ const hs = v ? await _hashPass(v) : null; await db.ref('stPassHash').set(hs); document.getElementById('setStCode').value='';
+      try{ if(typeof toast==='function') toast(v?'✅ 说书人口令已更新':'✅ 已取消说书人口令'); }catch(e){} }
+    catch(e){ try{ if(typeof toast==='function') toast('保存失败：'+((e&&e.code)||'')); }catch(_){} } };
 
   /* 把 ID 转成 Firebase 邮箱能接受的本地部分：纯 ASCII 原样保留（老用户不变）；
      中文等非 ASCII 字符编码为 -<码点16进制>- ，'-' 在旧 ID 里不可能出现，故无冲突 */
@@ -2556,7 +2575,7 @@ load(); render();
         catch(e2){ err.textContent=(e2.code||'').includes('email-already-in-use')?'密码不对':authErr(e2); }
       } else err.textContent=authErr(e); } };
 
-  window._logout=function(){ try{ if(typeof _stHbStop==='function') _stHbStop(); }catch(e){}   // 退出：先停心跳，避免刚清锁又被心跳补回
+  window._logout=function(){ try{ if(typeof _stSessStop==='function') _stSessStop(); }catch(e){}   // 退出：先停会话监听，避免自己顶自己
     const finish=()=>{ try{ localStorage.removeItem('botc_ppw'); localStorage.removeItem('botc_stpw'); localStorage.removeItem('botc_lastrole'); localStorage.setItem('botc_remember',''); }catch(e){} try{ auth.signOut(); }catch(e){} };
     try{ const u=auth.currentUser; if(u && (u.email||'').endsWith(ST_DOM)){ db.ref('storytellerUid').transaction(cur=>{ const cu=(cur&&typeof cur==='object')?cur.uid:cur; return cu===u.uid?null:undefined; }).then(finish).catch(finish); return; } }catch(e){}   // 说书人退出：释放占用
     finish(); };
@@ -2608,8 +2627,7 @@ load(); render();
       const willAuto = !_autoTried && _remembered() && !!(_storedId('botc_pid')||_storedId('botc_stid'));
       try{ if(window._stSyncStop) _stSyncStop(); }catch(e){}   // 登出：停止说书人实时同步监听
       try{ if(typeof _presenceStop==='function') _presenceStop(); }catch(e){} window.__kicked=false;   // 登出：停止在线占位监听
-      try{ if(typeof _stHbStop==='function') _stHbStop(); }catch(e){}   // 登出：停止说书人占用锁心跳
-      try{ if(typeof _stForceStop==='function') _stForceStop(); }catch(e){}   // 登出：停止强制下线监听
+      try{ if(typeof _stSessStop==='function') _stSessStop(); }catch(e){}   // 登出：停止说书人会话监听
       _stateTransition(()=>{ role='anon'; document.getElementById('stBadge').classList.remove('on'); document.body.classList.remove('pl'); if(notesRef){notesRef.off();notesRef=null;} S=null; setMode('hall'); }, willAuto);
       if(willAuto) setTimeout(()=>{ if(!me) _fadeReveal(); }, 4000);   // 自动登录失败兜底：4s 后仍未登录则显示大厅
       if(window.__stBlockedMsg){ const m=window.__stBlockedMsg; window.__stBlockedMsg=''; setTimeout(()=>{ try{ if(typeof toast==='function') toast(m); }catch(e){} const se=document.getElementById('stErr'); if(se) se.textContent=m; }, 600); }   // 说书人已被占用：提示
@@ -2619,14 +2637,8 @@ load(); render();
     _stateTransition(()=>{ if((user.email||'').endsWith(ST_DOM)){ role='st'; enterSt(); } else { role='player'; enterPlayer(); } });
   }));
   function _storedId(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
-  function _enterStUI(){ document.getElementById('stBadge').classList.add('on'); document.body.classList.remove('pl'); document.getElementById('stName').textContent=(me&&me.displayName)||_storedId('botc_stid'); bindStPlayers(); bindStAccounts(); setMode('st'); try{ if(window._stCloudLoad) _stCloudLoad(); }catch(e){} try{ _presenceStart(); }catch(e){} try{ _stHbStart(); }catch(e){} try{ _stForceStart(); }catch(e){} }
-  function enterSt(){    /* 同一时间只允许一个说书人：抢占 storytellerUid（过期锁可接管），失败则提示并登出 */
-    _stLockClaim()
-      .then(res=>{ const val=res.snapshot.val(); const vu=(val&&typeof val==='object')?val.uid:val;
-        if(!res.committed || vu!==me.uid){ window.__stBlockedMsg=(val&&typeof val==='object'&&val.name)?('说书人「'+val.name+'」已登录，请等 TA 退出登录后再登录'):'已有其他说书人在线，请等 TA 退出登录后再登录'; try{ auth.signOut(); }catch(e){} return; }
-        try{ db.ref('storytellerUid').onDisconnect().remove(); }catch(e){}   // 断线/关闭页面自动释放，避免锁死
-        _enterStUI(); })
-      .catch(()=>{ _enterStUI(); }); }   // 出错兜底：仍进入，避免误锁
+  function _enterStUI(){ document.getElementById('stBadge').classList.add('on'); document.body.classList.remove('pl'); document.getElementById('stName').textContent=(me&&me.displayName)||_storedId('botc_stid'); bindStPlayers(); bindStAccounts(); setMode('st'); try{ if(window._stCloudLoad) _stCloudLoad(); }catch(e){} try{ _presenceStart(); }catch(e){} try{ _stSessStart(); }catch(e){} }
+  function enterSt(){ _enterStUI(); }   // 说书人登录始终成功；顶号逻辑见 _stSessStart（新登录顶掉旧页面）
   /* ===== 说书人整局存档：全体说书人「共用一套魔典」的实时双向同步（本地 localStorage ↔ 云端共享节点 stState/shared，以 ts 取新，带回声保护） ===== */
   var ST_SHARED='stState/shared';   // 单一共享节点：任意说书人、任意设备登录都读写同一份魔典
   let _stPushT=null, _stSyncTs=0, _stSyncRef=null;
@@ -2665,34 +2677,22 @@ load(); render();
     _presRef.set({sid:_mySid, ts:firebase.database.ServerValue.TIMESTAMP}).then(attach).catch(attach); }   // 先占位再监听，避免自踢
   function _presenceStop(){ try{ if(_presRef){ _presRef.off(); _presRef=null; } }catch(e){} }
   /* ===== 说书人占用锁「心跳 + 过期自动可接管」：防止异常关闭/断线/双设备导致锁死，别人永远登不进 ===== */
-  var _stHbT=null, ST_STALE_MS=40000; try{ db.ref('.info/serverTimeOffset').on('value',function(s){ window.__srvOff=s.val()||0; }); }catch(e){}
-  function _srvNow(){ return Date.now() + (window.__srvOff||0); }   // 用服务器时间校正本地钟差
-  function _stLockClaim(){ return db.ref('storytellerUid').transaction(function(cur){
-      if(cur){ var cu=(typeof cur==='object')?cur.uid:cur; var cts=(typeof cur==='object')?(cur.ts||0):0;
-        var fresh = cts && ((_srvNow()-cts) < ST_STALE_MS);   // 有 ts 且未过期才算「仍在线」
-        if(cu && cu!==me.uid && fresh) return; }   // 别人且未过期 → 放弃占用
-      return {uid:me.uid, name:(me&&me.displayName)||'', ts:firebase.database.ServerValue.TIMESTAMP}; }); }
-  function _stHbStart(){ _stHbStop(); _stHbT=setInterval(function(){ if(role!=='st'||!me||!me.uid){ return; }
-      _stLockClaim().then(function(){ try{ db.ref('storytellerUid').onDisconnect().remove(); }catch(e){} }).catch(function(){}); }, 15000); }
-  function _stHbStop(){ try{ if(_stHbT) clearInterval(_stHbT); }catch(e){} _stHbT=null; }
-  /* ===== 强制所有说书人下线：写一个时间戳，所有在线说书人页面收到比自己登录基线更新的值即登出（能盖过心跳的重新占用） ===== */
-  var _stForceRef=null, _forceBaseTs=0;
-  function _stForceStart(){ _stForceStop(); try{ _stForceRef=db.ref('stForceLogout');
-      _stForceRef.once('value').then(function(s){ _forceBaseTs=(+s.val()||0);
-        _stForceRef.on('value', function(ss){ const t=(+ss.val()||0); if(t>_forceBaseTs){ _forceBaseTs=t; _forceKicked(); } }); }).catch(function(){});
-    }catch(e){} }
-  function _stForceStop(){ try{ if(_stForceRef){ _stForceRef.off(); _stForceRef=null; } }catch(e){} }
-  function _forceKicked(){ try{ window.__stBlockedMsg='说书人已被强制下线，请重新登录'; }catch(e){}
-    try{ _stHbStop(); }catch(e){} try{ _stForceStop(); }catch(e){} try{ auth.signOut(); }catch(e){} }   // 轻登出：保留记住的凭据，且本页不会自动重登（避免立即抢回占用）
-  window._stForceLogoutAll=function(btn){
-    if(btn && btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn._o=btn.textContent; btn.textContent='确认强制下线？再点一次'; btn.classList.add('armed');
-      clearTimeout(btn._t); btn._t=setTimeout(function(){ try{ btn.dataset.armed=''; btn.textContent=btn._o||'强制所有说书人下线'; btn.classList.remove('armed'); }catch(e){} },3000); return; }
-    if(btn){ clearTimeout(btn._t); btn.dataset.armed=''; btn.textContent=btn._o||'强制所有说书人下线'; btn.classList.remove('armed'); }
-    db.ref('stForceLogout').set(firebase.database.ServerValue.TIMESTAMP)
-      .then(function(){ db.ref('storytellerUid').remove().catch(function(){}); })
-      .catch(function(e){ try{ if(typeof toast==='function') toast('操作失败：'+((e&&e.code)||'需说书人账号')); }catch(_){} }); };
+  /* ===== 说书人「顶号」模型：同一时间只允许一个说书人在线；新登录直接接管，旧页面被顶下线。
+       不再用占用锁把后来者挡在门外——所以永远不会出现「卡住后谁都登不进」的情况。 ===== */
+  var _stSid=null, _stSessRef=null;
+  function _stSessStart(){ _stSessStop(); if(!me||!me.uid) return; window.__stTaken=false;
+    _stSid=Date.now().toString(36)+Math.random().toString(36).slice(2,10);   // 本次登录的唯一会话号
+    var attach=function(){ _stSessRef.on('value', function(s){ var v=s.val(); if(v && v.sid && v.sid!==_stSid){ _stTakenOver(); } }); };   // 收到别人的会话号 → 说明被顶，本页下线
+    _stSessRef=db.ref('storytellerUid');
+    _stSessRef.set({uid:me.uid, sid:_stSid, name:(me&&me.displayName)||'', ts:firebase.database.ServerValue.TIMESTAMP})
+      .then(function(){ try{ _stSessRef.onDisconnect().remove(); }catch(e){} attach(); })
+      .catch(function(){ try{ attach(); }catch(e){} }); }
+  function _stSessStop(){ try{ if(_stSessRef){ _stSessRef.off(); _stSessRef=null; } }catch(e){} }
+  function _stTakenOver(){ if(window.__stTaken) return; window.__stTaken=true;
+    window.__stBlockedMsg='你的说书人已在其他设备或账号登录，本页已退出';
+    try{ _stSessStop(); }catch(e){} try{ auth.signOut(); }catch(e){} }   // 轻登出：保留记住的凭据；本页不会自动重登（避免又顶回去）
   function _presenceKick(){ if(window.__kicked) return; window.__kicked=true;
-    try{ _presenceStop(); }catch(e){} try{ _stHbStop(); }catch(e){} try{ _stForceStop(); }catch(e){} try{ if(window._stSyncStop) _stSyncStop(); }catch(e){} try{ if(notesRef){ notesRef.off(); notesRef=null; } }catch(e){}
+    try{ _presenceStop(); }catch(e){} try{ _stSessStop(); }catch(e){} try{ if(window._stSyncStop) _stSyncStop(); }catch(e){} try{ if(notesRef){ notesRef.off(); notesRef=null; } }catch(e){}
     let ov=document.getElementById('kickLayer');
     if(!ov){ ov=document.createElement('div'); ov.id='kickLayer';
       ov.innerHTML='<div class="kick-box"><div class="kick-t">此账号已在其他页面 / 设备登录</div><div class="kick-s">为避免多处同时操作产生冲突，本页已停用。<br>你在新页面看到的内容已从云端继承本页的最新进度。</div><button onclick="location.reload()">切回本页继续</button></div>';
@@ -3241,7 +3241,7 @@ load(); render();
     const gid='t'+Date.now();
     const seats=[]; for(let i=0;i<N;i++){ const t=seatToken(i); seats.push({name:(t&&t.name)?t.name:'', dead:false, cause:''}); }
     const g={ name:window.__botcGameName, count:N, day:night, seats:seats, locked:[...lockedRoles], dist:(customDist||DIST[N]||[0,0,0,0]), noms:[], clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null}, result:null, vote:null };
-    try{ await db.ref('storytellerUid').set({uid:me.uid, name:(me&&me.displayName)||'', ts:firebase.database.ServerValue.TIMESTAMP}); try{ db.ref('storytellerUid').onDisconnect().remove(); }catch(e){} await db.ref('games/'+gid+'/public').set(g);
+    try{ await db.ref('storytellerUid').set({uid:me.uid, sid:_stSid, name:(me&&me.displayName)||'', ts:firebase.database.ServerValue.TIMESTAMP}); try{ db.ref('storytellerUid').onDisconnect().remove(); }catch(e){} await db.ref('games/'+gid+'/public').set(g);
       /* 私密下发每位已登录玩家本局的角色（仅本人与说书人可读；酒鬼下发其自以为的镇民牌） */
       try{ const accSnap=await db.ref('accounts').once('value'); const accs=accSnap.val()||{}; const ru={};
         for(let i=0;i<N;i++){ const t=seatToken(i); const nm=(t&&t.name)?t.name:''; if(!nm) continue; const rid=(meta[i]&&meta[i].role)||''; if(!rid) continue; const acc=accs[rkey(nm)]; if(acc&&acc.uid) ru['games/'+gid+'/players/'+acc.uid+'/role']=rid; }
