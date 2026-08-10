@@ -1049,6 +1049,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.30.1', d:'2026-08-10', items:['修复：夜晚信息自动化中，恶魔选择「自杀」（星传）且没有红唇女郎自动继任时，此前会直接判好人胜利、说书人来不及指定继任爪牙。现在恶魔自杀且尚有存活爪牙时先不判负，进入「复核」子步让说书人指定一名爪牙继任为新恶魔（或确认无人继任才真死）；胜负判定也加了同样护栏（手动流程一并修复）。恶魔普通击杀命中镇长（弹刀）也会进入复核，确认实际死亡']},
   {v:'v2.30.0', d:'2026-08-10', items:['【新功能·夜晚信息自动化（第一版）】说书人魔典的夜晚步骤中，「爪牙相认 / 恶魔信息 / 投毒者 / 占卜师 / 恶魔夜杀」现在可一键把信息私密发送给对应玩家；玩家会在屏幕底部收到弹窗并点「确认」。需要选目标的（投毒、夜杀选1人；占卜选2人）由玩家在弹窗里下拉选择、提交，说书人「审核通过」后写入魔典；占卜会自动算出结果再发一条给玩家确认。信息内容自动生成、发送前说书人可修改（照顾中毒/醉酒给假信息）。按夜晚顺序逐步推进：前一步完成才解锁下一步，全部完成才能「结束本夜」。玩家掉线可由说书人「代确认/跳过」。其余角色暂沿用原有勾选方式']},
   {v:'v2.29.7', d:'2026-08-10', items:['修复：处决/猎人视频有时没有声音——改为等视频数据就绪(canplay)后再播放，且只在浏览器真正拦截自动播放时才退回静音（此前任何瞬时加载中断都会被误判成"要静音"，导致该次播放永久没声，表现为"有的能出声、有的不行"）；并在"点击进入"时预先解锁视频元素，提升带声音播放成功率','背景音乐在动画时的淡入淡出改用缓动曲线并略微加长，过渡更柔和不突兀']},
   {v:'v2.29.6', d:'2026-08-10', items:['背景音乐改为「播 5 分钟 → 静默 5 分钟」循环播放，避免全程有音乐略显吵闹；每次开始/停止都用 6 秒长淡入淡出，柔和不突兀。静音按钮、三档音量、动画期间静音等原有行为不变']},
@@ -1333,11 +1334,19 @@ function nightEditText(id,val){ nfGet(id).text=val; }
 function nightEditResult(id,val){ nfGet(id).resultText=val; }
 function nightApprove(id){ const f=nfGet(id); if(!f.pick||!f.pick.length){ try{toast('玩家还没提交选择');}catch(e){} return; }
   if(id==='poisoner'){ poisonPick(String(f.pick[0])); nfDone(id); }
-  else if(id==='imp'){ impKill(String(f.pick[0])); nfDone(id); }
+  else if(id==='imp'){ impKill(String(f.pick[0]));
+    const rec=impKills[night]||{};
+    const needReview = (rec.type==='starpass' && rec.newImp==null && _minSeats().some(i=>!isDeadSeat(i)))   // 自杀星传·无自动继任·有存活爪牙 → 需说书人指定继任
+                    || (rec.type==='normal' && rec.mayor);                                                    // 镇长弹刀 → 需确认实际死亡
+    if(needReview){ f.stage='review'; save(); render(); return; }
+    nfDone(id); }
   else if(id==='fortuneteller'){ ftPick(0,String(f.pick[0])); ftPick(1,String(f.pick[1])); if(typeof recordFt==='function') recordFt();
     const rtext=(f.resultText!=null&&f.resultText!=='')?f.resultText:ftResultText(); f.resultText=rtext; f.stage='result'; f.phase='result'; f.sid=(f.sid||0)+1;
     const seats=nightSendSeats(id); if(window.stNightSend) window.stNightSend(id,'result',rtext,null,seats,f.sid); }
   save(); render(); }
+function nightImpReviewDone(id){ const rec=impKills[night]||{};
+  if(rec.type==='starpass' && rec.newImp==null && _minSeats().some(i=>!isDeadSeat(i))){ try{toast('恶魔自杀：请先指定一名存活爪牙继任为新恶魔');}catch(e){} return; }
+  nfDone(id); save(); render(); }
 function nightRetract(id){ const f=nfGet(id); const kind=stepKind(id); f.pick=null; f.stage='sent'; f.phase='pick'; f.sid=(f.sid||0)+1;
   const seats=nightSendSeats(id); const pick={count:kind==='pick2info'?2:1, options:nightSeatOptions()};
   if(window.stNightSend) window.stNightSend(id,'pick',(f.text||nightAutoText(id)),pick,seats,f.sid); save(); render(); }
@@ -1369,6 +1378,12 @@ function nightPanel(id, active){
     h+='<div class="nf-btns"><button class="nf-ok"'+lock+' onclick="nightApprove(\''+id+'\')">审核通过（写入魔典）</button>'
       +'<button class="nf-re" onclick="nightRetract(\''+id+'\')">退回重选</button>'
       +'<button class="nf-skip" onclick="nightSkip(\''+id+'\')">跳过</button></div>';
+    return h+'</div>';
+  }
+  if(id==='imp' && stage==='review'){
+    h+='<div class="nf-status">恶魔行动复核（自杀继任 / 镇长弹刀），确认后完成本步：</div>';
+    h+='<div class="nf-imp">'+impKillUI()+'</div>';
+    h+='<div class="nf-btns"><button class="nf-ok" onclick="nightImpReviewDone(\''+id+'\')">✓ 完成本步</button></div>';
     return h+'</div>';
   }
   if(stage==='result'){
@@ -1674,7 +1689,8 @@ function checkWin(){
   const demonAlive = meta.some((m,i)=>m&&m.role&&RMAP[m.role].team==="dem" && !isDeadSeat(i));
   for(const d in executions){ const ex=executions[d];   // 圣徒被处决 → 好人落败
     if(ex>=0 && meta[ex] && meta[ex].role==="saint" && healthy(ex)) return {w:'evil', r:'圣徒被处决 → 好人落败'}; }
-  if(!demonAlive) return {w:'good', r:'恶魔已死 → 好人胜利'};
+  const _spRec=impKills[night]; const _starpassPending=_spRec && _spRec.type==='starpass' && _spRec.newImp==null && meta.some((m,i)=>m&&m.role&&RMAP[m.role]&&RMAP[m.role].team==='min' && !isDeadSeat(i));
+  if(!demonAlive && !_starpassPending) return {w:'good', r:'恶魔已死 → 好人胜利'};   // 恶魔自杀·星传待继任（尚有存活爪牙）时先不判好人胜，等说书人指定继任
   if(alive.length<=2) return {w:'evil', r:'仅剩 '+alive.length+' 名存活 → 邪恶胜利'};
   const my=meta.findIndex(m=>m&&m.role==="mayor");      // 镇长：3 人且今日无处决
   if(my>=0 && !isDeadSeat(my) && healthy(my) && alive.length===3 && executions[night]===-1)
