@@ -1051,6 +1051,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.37.1', d:'2026-08-10', items:['恶魔伪装比照酒鬼身份处理：伪装下拉只列「场上不存在的好人身份」（镇民+外来者，排除已在座位上的角色、酒鬼自以为的身份、以及其他伪装槽已选的）；选中的伪装身份牌会变半透明表示被占用；若某个伪装身份之后被分配到座位（或设为酒鬼身份），该伪装自动撤销、需重新选择']},
   {v:'v2.37.0', d:'2026-08-10', items:['角色设置改进：①唯一角色——同一身份场上只能有一个，把某角色拖到新座位会自动清空之前那个座位（其他角色同理）。②酒鬼流程理顺：直接把「酒鬼」牌拖到座位即成为「酒鬼·未定」，再在下方「酒鬼自以为是」下拉里选一个不在场的镇民作为其自以为的身份（该镇民牌会一并变半透明）；若该镇民之后被分配到别处，酒鬼的镇民身份自动清空、需重设。③「新的一局」按钮改为完整性门控：所有座位都分配角色、且酒鬼身份/恶魔伪装(3个)/红鲱鱼(有占卜师时)等都设好才可点，否则按钮下方提示第一项未完成的内容（如「座位 3 未安排角色」「恶魔伪装未设满 3 个」）']},
   {v:'v2.36.1', d:'2026-08-10', items:['守鸦人夜晚步骤的头部提示区分死因：本夜被恶魔击杀时显示绿色「被恶魔击杀 · 开始行动（选1人得知其角色）」；因处决等其他原因出局时仍显示「已出局，不再行动」（这种情况本就该跳过）']},
   {v:'v2.36.0', d:'2026-08-10', items:['夜晚信息自动化拓展（第四批）：守鸦人接入自动下发。守鸦人本夜被恶魔杀死才触发——说书人发「请选择一名玩家查看其角色」给该（已死）玩家，玩家选1人（不能选自己）提交，说书人审核通过后回一条结果（得知其真实角色），玩家确认后记入局内信息。中毒/醉酒时说书人可先设定要告知的假角色再发。守鸦人未死亡的夜晚该步自动标记为「无需行动」，不阻塞结束本夜。至此暗流涌动全部夜间角色均已接入自动化（间谍看魔典除外）']},
@@ -1261,18 +1262,20 @@ function setRedHerring(v){ redHerring = v===""? -1 : +v; render(); }
 function setDrunk(v){ const prev=meta.findIndex(m=>m&&m.isDrunk); if(prev>=0){ meta[prev].isDrunk=false; meta[prev].drunk=false; }
   if(v!==""){ ensureMeta(); meta[+v].isDrunk=true; meta[+v].drunk=true; } render(); }
 /* 把角色分配到座位：唯一角色——同一角色只能在场一个，重复分配会清空前一个座位（酒鬼保留身份标记、仅清自以为的镇民）。酒鬼特殊：先成为「未定身份的酒鬼」，再用下拉设自以为的镇民。 */
+function _clearBluff(rid){ for(let j=0;j<bluffs.length;j++){ if(bluffs[j]===rid){ bluffs[j]=""; } } }   // 该身份若是恶魔伪装 → 撤销该伪装（被分配到场上后不能再作伪装）
 function assignRoleToSeat(i, rid){ ensureMeta();
   if(rid==="drunk"){
     for(let k=0;k<N;k++){ if(k!==i && meta[k] && meta[k].isDrunk){ meta[k].isDrunk=false; meta[k].drunk=false; meta[k].role=null; } }   // 场上仅一个酒鬼
-    meta[i].isDrunk=true; meta[i].drunk=true; meta[i].role=null; return;
+    meta[i].isDrunk=true; meta[i].drunk=true; meta[i].role=null; _clearBluff('drunk'); try{refreshOverviewDecoys();}catch(e){} return;
   }
   for(let k=0;k<N;k++){ if(k!==i && meta[k] && meta[k].role===rid){ meta[k].role=null; } }   // 唯一：清掉其他座位上的同一角色（含酒鬼自以为的身份→酒鬼保留 isDrunk）
   meta[i].role=rid; meta[i].isDrunk=false; meta[i].drunk=false;
+  _clearBluff(rid); try{refreshOverviewDecoys();}catch(e){}
 }
-/* 设置酒鬼「自以为的镇民角色」（同样唯一：占用则清掉别处的同角色） */
+/* 设置酒鬼「自以为的镇民角色」（同样唯一：占用则清掉别处的同角色，并撤销同名伪装） */
 function setDrunkRole(v){ const d=meta.findIndex(m=>m&&m.isDrunk); if(d<0) return;
   if(v===""){ meta[d].role=null; }
-  else { for(let k=0;k<N;k++){ if(k!==d && meta[k] && meta[k].role===v){ meta[k].role=null; } } meta[d].role=v; }
+  else { for(let k=0;k<N;k++){ if(k!==d && meta[k] && meta[k].role===v){ meta[k].role=null; } } meta[d].role=v; _clearBluff(v); try{refreshOverviewDecoys();}catch(e){} }
   render(); }
 /* 开局完整性检查：返回未完成项（座位未分配 / 酒鬼身份未设 / 伪装不足3 / 有占卜师却没红鲱鱼）。空数组=可开局。 */
 function setupIssues(){ const out=[];
@@ -2408,9 +2411,11 @@ function chipEl(t){
 function inPlayRoles(){ const ids=meta.map(m=>m.role).filter(Boolean); const u=[...new Set(ids)];
   u.sort((a,b)=>ORDER.indexOf(RMAP[a].team)-ORDER.indexOf(RMAP[b].team)); return u; }
 function bluffSel(k){
-  const inplay=new Set(meta.map(m=> m && (m.isDrunk?'drunk':m.role)).filter(Boolean));
+  const occ=new Set();   // 已占用（不可再作本伪装槽）：座位角色+酒鬼自以为的镇民+酒鬼本身+其他伪装槽已选
+  meta.forEach(m=>{ if(!m) return; if(m.isDrunk){ occ.add('drunk'); if(m.role) occ.add(m.role); } else if(m.role) occ.add(m.role); });
+  (bluffs||[]).forEach((b,j)=>{ if(b && j!==k) occ.add(b); });
   let o='<option value="">伪装'+(k+1)+'</option>';
-  ROLES.filter(r=>(r.team==="tf"||r.team==="out")&&!inplay.has(r.id)).forEach(r=>{
+  ROLES.filter(r=>(r.team==="tf"||r.team==="out")&&!occ.has(r.id)).forEach(r=>{
     o+='<option value="'+r.id+'"'+(bluffs[k]===r.id?' selected':'')+'>'+r.name+'</option>'; });
   return '<select onchange="setBluff('+k+',this.value)">'+o+'</select>';
 }
@@ -2423,6 +2428,7 @@ function renderGrim(){
     const total=cd[0]+cd[1]+cd[2]+cd[3];
     const _setupIssues=setupIssues(); const ready=_setupIssues.length===0;
     const _usedSet=new Set(); meta.forEach(m=>{ if(!m) return; if(m.isDrunk){ _usedSet.add('drunk'); if(m.role) _usedSet.add(m.role); } else if(m.role) _usedSet.add(m.role); });   // 酒鬼占用「酒鬼」牌+其自以为的镇民牌（都半透明）
+    (bluffs||[]).forEach(b=>{ if(b) _usedSet.add(b); });   // 恶魔伪装选中的身份也占用（半透明）
     ORDER.forEach((team,idx)=>{
       h+='<div class="gsec" style="color:'+TEAMC[team]+';display:flex;align-items:center;justify-content:space-between;margin-top:6px">'
         +'<span>'+TEAMLABEL[team]+'</span>'
