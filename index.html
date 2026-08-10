@@ -1051,6 +1051,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.33.3', d:'2026-08-10', items:['小恶魔自杀传位：新恶魔现在会收到「你已成为新的小恶魔」的弹窗通知，需点确认，并记入其局内信息（离线也由说书人保底记录）。修复：传位后场上有两个「小恶魔」座位（死的旧恶魔+存活新恶魔）时，之后夜晚的恶魔信息/夜杀以及说书人魔典的恶魔状态都误取到已出局的旧恶魔（显示「恶魔已出局，不再行动」）——现在恶魔相关判定一律优先取存活的那个恶魔']},
   {v:'v2.33.2', d:'2026-08-10', items:['修复：跳过某个夜晚步骤后「结束本夜」仍点不动——门控改用步骤完成状态判定（跳过=已完成放行），不再依赖是否记录魔典。新增：角色已出局时，其夜晚步骤面板里除「跳过」外的按钮（发送/代确认）自动变灰，并提示「该角色已出局，本夜无行动，请点跳过」——出局角色当夜本就只能跳过']},
   {v:'v2.33.1', d:'2026-08-10', items:['夜晚面板把「代确认」与「跳过」拆成两个按钮，语义区分：「代确认」表示这一步确实发生（说书人替离线玩家确认信息或代为选择），会记入该玩家的局内信息与魔典；「跳过」表示这一步没有发生，不记入玩家局内信息、也不记魔典（仅标记完成以放行「结束本夜」）。修复：此前信息类角色（爪牙相认/厨师/共情者/送葬者等）被「代确认」时并未写入玩家局内信息，现已一并记录，与选择类角色行为一致']},
   {v:'v2.33.0', d:'2026-08-10', items:['夜晚信息自动化拓展（第一批）：厨师、共情者、送葬者现在也走自动下发流程——说书人在夜晚面板一键「发送给玩家」，玩家底部弹窗「确认收到」后即记入其局内信息，并同步写入魔典日志。中毒/醉酒时面板仍显示假值选择器，说书人设定的假值会同时用于下发文本与日志（健康则用真值）。厨师仅首夜、共情者每夜、送葬者次夜起（按昨日处决）']},
@@ -1252,7 +1253,8 @@ function nameAt(i){ const t=seatToken(i); return t?esc(t.name):('座位'+(i+1));
 function nearestLiving(i,dir){ for(let s=1;s<N;s++){ const j=((i+dir*s)%N+N)%N; if(j===i) break; if(seatAlive(j)) return j; } return -1; }
 function computeNightInfo(id){
   const seats=[]; meta.forEach((m,i)=>{ if(m.role===id) seats.push(i); }); if(!seats.length) return "";
-  const i=seats[0], m=meta[i];
+  let i=seats[0]; for(let _k=0;_k<seats.length;_k++){ if(!isDeadSeat(seats[_k])){ i=seats[_k]; break; } }   // 传位后可能有两个恶魔：优先取存活的那个
+  const m=meta[i];
   if(isDeadSeat(i)) return '<span class="ninfo-warn">✝ 已出局，不再行动</span>';
   const warn=(m.poison||m.drunk)?'<span class="ninfo-warn">⚠中毒/醉酒 · 信息不可靠（可真可假，由你定）</span>':'';
   const label=(team)=>teamSeats(team).map(j=>nameAt(j)+'＝'+RMAP[meta[j].role].name);
@@ -1321,7 +1323,7 @@ function stepKind(id){ if(NIGHT_AUTO_INFO.has(id)) return 'info'; if(NIGHT_AUTO_
 function stepAutomated(s){ const id=s.id; if(id==='imp') return night>=2; return !!stepKind(id); }   // 首夜恶魔是「恶魔信息(_demon)」而非击杀
 function nfKey(id){ return night+':'+id; }
 function nfGet(id){ const k=nfKey(id); return nightFlow[k]||(nightFlow[k]={stage:'idle'}); }
-function _demSeat(){ return meta.findIndex(m=>m&&m.role&&RMAP[m.role]&&RMAP[m.role].team==='dem'); }
+function _demSeat(){ let dead=-1; for(let i=0;i<N;i++){ const m=meta[i]; if(m&&m.role&&RMAP[m.role]&&RMAP[m.role].team==='dem'){ if(!isDeadSeat(i)) return i; dead=i; } } return dead; }   // 传位后优先返回存活的恶魔
 function _minSeats(){ const a=[]; meta.forEach((m,i)=>{ if(m&&m.role&&RMAP[m.role]&&RMAP[m.role].team==='min') a.push(i); }); return a; }
 function nightSendSeats(id){ if(id==='_minion') return _minSeats(); if(id==='_demon'){ const d=_demSeat(); return d>=0?[d]:[]; } if(id==='imp'){ const s=impSeat(); return s>=0?[s]:[]; } const s=meta.findIndex(m=>m&&m.role===id); return s>=0?[s]:[]; }
 function nightSeatOptions(){ const a=[]; for(let i=0;i<N;i++){ a.push({seat:i, name:(i+1)+'号 '+nameAt(i)+(isDeadSeat(i)?'（已出局）':'')}); } return a; }
@@ -1415,11 +1417,18 @@ function _nfRecordChoice(id){ if(!window.stRecordGameInfo) return;
     const seat=(nightSendSeats('fortuneteller')||[])[0]; if(seat==null) return;
     window.stRecordGameInfo(seat,'choice:ft:n'+night,'【占卜师】你选择占卜 '+(cur[0]+1)+'号 '+nameAt(cur[0])+' 和 '+(cur[1]+1)+'号 '+nameAt(cur[1])+'。',night,1); return; }
 }
+/* 传位后通知新恶魔：推送确认弹窗 + 记入其局内信息（key 与玩家自己确认写入的一致，幂等；离线也保底记录） */
+function _notifyNewImp(seat){ if(seat==null||seat<0) return;
+  const text='【恶魔】原小恶魔自杀传位，你已成为新的小恶魔（恶魔阵营）。从此刻起你的身份是小恶魔，之后每晚由你选择击杀目标。';
+  const key='info:'+night+':_newimp:info:1';
+  try{ if(window.stNightSend) window.stNightSend('_newimp','info',text,null,[seat],1); }catch(e){}   // 弹窗给新恶魔「确认收到」
+  try{ if(window.stRecordGameInfo) window.stRecordGameInfo(seat,key,text,night,0); }catch(e){} }
 function nfDone(id,skip){ const f=nfGet(id); f.stage='done';
   if(!skip){                                       // skip=跳过（未发生）：不置 nightChecks、不记魔典、不记玩家局内信息（门控用 f.stage 判定，不受影响）
     nightChecks[nfKey(id)]=true;
     if(id==='_minion'||id==='_demon'){ try{ recordSpecial(id,true); }catch(e){} }   // 纯信息步：完成时把「已告知」记入魔典日志
     try{ _nfRecordChoice(id); }catch(e){}   // 把玩家/说书人做出的选择记入该玩家的局内信息
+    if(id==='imp'){ const rec=impKills[night]; if(rec&&rec.type==='starpass'&&rec.newImp!=null){ try{ _notifyNewImp(rec.newImp); }catch(e){} } }   // 传位：通知新恶魔并记录
   }
   try{ if(window.stNightClear) window.stNightClear(id); }catch(e){} }   // 完成后清掉该玩家的夜晚弹窗与回复
 function _nfEscA(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
@@ -3352,7 +3361,9 @@ load(); render();
     db.ref('games/'+curGid+'/players/'+uid+'/gameInfo/'+k).set({key:k, n:(n==null?null:n), ord:(ord==null?1:ord), text:text, ts:firebase.database.ServerValue.TIMESTAMP}).catch(function(){}); };
   function recomputeNightReplies(all){ if(role!=='st') return; all=all||{}; let changed=false;
     Object.keys(all).forEach(function(uid){ const nd=all[uid]; const rep=nd&&nd.nightReply; if(!rep||typeof rep!=='object') return;
-      if(rep.n!==night) return; const f=nightFlow[night+':'+rep.stepId]; if(!f) return; if((f.sid||0)!==(rep.sid||0)) return;   // 只认本次下发(sid)对应的回复
+      if(rep.n!==night) return;
+      if(rep.stepId==='_newimp'){ if(rep.ack){ try{ db.ref('games/'+curGid+'/players/'+uid+'/night').remove().catch(function(){}); db.ref('games/'+curGid+'/players/'+uid+'/nightReply').remove().catch(function(){}); }catch(e){} } return; }   // 新恶魔通知非常规步骤：确认后清弹窗，不参与步骤门控
+      const f=nightFlow[night+':'+rep.stepId]; if(!f) return; if((f.sid||0)!==(rep.sid||0)) return;   // 只认本次下发(sid)对应的回复
       if(f.stage==='sent' && rep.phase==='info' && rep.ack){   // 信息步：多爪牙群发需全部确认才完成
         const seats=nightSendSeats(rep.stepId);
         f.ackSeats=seats.filter(function(si){ const u=_seatUid(si); const nd2=all[u]; const r2=nd2&&nd2.nightReply; return r2 && r2.stepId===rep.stepId && (r2.sid||0)===(f.sid||0) && r2.ack; });
