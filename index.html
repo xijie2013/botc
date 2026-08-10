@@ -1051,6 +1051,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.32.1', d:'2026-08-10', items:['修复：占卜师局内信息顺序颠倒——此前显示「占卜结果」在前、「你选择占卜谁」在后（因选择记录在确认结果时才写入、时间戳更晚）。现在每条局内信息带逻辑顺序（信息→选择→结果），按此排序，占卜师正确显示为先选人、后出结果']},
   {v:'v2.32.0', d:'2026-08-10', items:['玩家「局内信息」页除了确认过的信息外，现在也会记录该玩家自己做出的选择：投毒者毒了谁、恶魔杀了谁（含自杀传位）、占卜师占卜了哪两人。即便玩家离线、由说书人代为确认/代为选择，也会一并记录到该玩家的局内信息里。技术上把局内信息从「玩家写的数组」改为「按 key 写子节点的对象」，避免玩家写入与说书人写入互相覆盖（旧数据兼容显示，按夜晚顺序排序）']},
   {v:'v2.31.0', d:'2026-08-10', items:['昼夜流程完善：①「结束本夜」只能点一次，点后灰掉并自动跳到「白天」标签。② 白天标签新增「结束本日」按钮，同样只能点一次：处决结果出来后才能点，点后自动推进到下一夜、跳回「夜晚」标签，并作为清除投毒者中毒的时机。③ 猎人可在白天任意时间开枪，但一旦有人被处决、或选「今日无人处决」，本日猎人即锁定不能再开枪。④ 玩家端点墨水瓶从「我的座位备注」改为「局内信息」页（标题同步改为局内信息），显示本局从说书人处收到的全部信息——每次点「确认收到」时自动记录']},
   {v:'v2.30.4', d:'2026-08-10', items:['修复：投毒者的毒此前会一直保留、只在投毒者下次行动换目标时才转移，导致投毒者死亡后被毒的人永远中毒。现在毒只在施放的那一夜及当天有效，进入下一夜（傍晚·白天处决公布后）自动失效，与投毒者是否存活无关；说书人前后翻查各夜时，中毒标记也会按当夜正确显示']},
@@ -1375,16 +1376,16 @@ function nightForceSkip(id){ nfDone(id); save(); render(); }   // 无行动：�
 function _nfRecordChoice(id){ if(!window.stRecordGameInfo) return;
   if(id==='poisoner'){ const t=poisonPicks[night]; if(t==null) return;
     const seat=(nightSendSeats('poisoner')||[])[0]; if(seat==null) return;
-    window.stRecordGameInfo(seat,'choice:poison:n'+night,'【投毒者】你选择对 '+(t+1)+'号 '+nameAt(t)+' 下毒（当晚及次日中毒）。',night); return; }
+    window.stRecordGameInfo(seat,'choice:poison:n'+night,'【投毒者】你选择对 '+(t+1)+'号 '+nameAt(t)+' 下毒（当晚及次日中毒）。',night,1); return; }
   if(id==='imp'){ const rec=impKills[night]; if(!rec) return;
     const chooser=(rec.type==='starpass')?rec.target:rec.imp; if(chooser==null) return;   // 传刀时 target=恶魔自己，即做出选择的玩家
     const txt=(rec.type==='starpass')
       ? ('【恶魔】你选择自杀传位'+(rec.newImp!=null?('，由 '+(rec.newImp+1)+'号 '+nameAt(rec.newImp)+' 继任为新恶魔。'):'（由说书人指定继任爪牙）。'))
       : ('【恶魔】你选择击杀 '+(rec.target+1)+'号 '+nameAt(rec.target)+'。');
-    window.stRecordGameInfo(chooser,'choice:imp:n'+night,txt,night); return; }
+    window.stRecordGameInfo(chooser,'choice:imp:n'+night,txt,night,1); return; }
   if(id==='fortuneteller'){ const cur=ftPicks[night]; if(!cur||cur[0]==null||cur[1]==null) return;
     const seat=(nightSendSeats('fortuneteller')||[])[0]; if(seat==null) return;
-    window.stRecordGameInfo(seat,'choice:ft:n'+night,'【占卜师】你选择占卜 '+(cur[0]+1)+'号 '+nameAt(cur[0])+' 和 '+(cur[1]+1)+'号 '+nameAt(cur[1])+'。',night); return; }
+    window.stRecordGameInfo(seat,'choice:ft:n'+night,'【占卜师】你选择占卜 '+(cur[0]+1)+'号 '+nameAt(cur[0])+' 和 '+(cur[1]+1)+'号 '+nameAt(cur[1])+'。',night,1); return; }
 }
 function nfDone(id){ const f=nfGet(id); f.stage='done'; nightChecks[nfKey(id)]=true;
   if(id==='_minion'||id==='_demon'){ try{ recordSpecial(id,true); }catch(e){} }   // 纯信息步：完成时把「已告知」记入魔典日志
@@ -3269,7 +3270,8 @@ load(); render();
     if(S) S.nightReply=rep;
     if((nm.phase==='info'||nm.phase==='result') && nm.text && S){   // 记录收到的局内信息（信息/结果类，点「确认收到」时）
       const key=('info:'+nm.n+':'+nm.stepId+':'+nm.phase+':'+(nm.sid||0)).replace(/[.#$\[\]\/]/g,'_');   // 按 key 写子节点，避免与说书人写的选择记录互相覆盖
-      try{ notesRef.child('gameInfo').child(key).set({key:key, n:nm.n, text:nm.text, ts:firebase.database.ServerValue.TIMESTAMP}).catch(function(){}); }catch(e){} }
+      const ord=(nm.phase==='result')?2:0;   // 逻辑顺序：信息0 < 选择1 < 结果2（占卜先选人后出结果，不受写入时间影响）
+      try{ notesRef.child('gameInfo').child(key).set({key:key, n:nm.n, ord:ord, text:nm.text, ts:firebase.database.ServerValue.TIMESTAMP}).catch(function(){}); }catch(e){} }
     updateNightBar(); }
   window._nightAck=function(){ if(role==='player') _nightWriteReply(null); };
   window._nightPickChange=function(){ const nm=S&&S.night; if(!nm||!nm.pick) return; const w=document.getElementById('nbSuccWrap'); if(!w) return;
@@ -3301,10 +3303,10 @@ load(); render();
   window.stNightClear=function(id){ if(role!=='st'||!curGid) return; try{ (nightSendSeats(id)||[]).forEach(function(i){ const uid=_seatUid(i); if(!uid) return;
     db.ref('games/'+curGid+'/players/'+uid+'/night').remove().catch(function(){}); db.ref('games/'+curGid+'/players/'+uid+'/nightReply').remove().catch(function(){}); }); }catch(e){} };
   /* 说书人把某座位玩家做出的「选择」记入其局内信息（按 key 子节点写，玩家端订阅自身节点即时可见）。含玩家离线时说书人代操作。 */
-  window.stRecordGameInfo=function(seat, key, text, n){ if(role!=='st'||!curGid) return;
+  window.stRecordGameInfo=function(seat, key, text, n, ord){ if(role!=='st'||!curGid) return;
     if(seat==null || seat<0) return; const uid=_seatUid(seat); if(!uid) return;
     const k=String(key).replace(/[.#$\[\]\/]/g,'_');
-    db.ref('games/'+curGid+'/players/'+uid+'/gameInfo/'+k).set({key:k, n:(n==null?null:n), text:text, ts:firebase.database.ServerValue.TIMESTAMP}).catch(function(){}); };
+    db.ref('games/'+curGid+'/players/'+uid+'/gameInfo/'+k).set({key:k, n:(n==null?null:n), ord:(ord==null?1:ord), text:text, ts:firebase.database.ServerValue.TIMESTAMP}).catch(function(){}); };
   function recomputeNightReplies(all){ if(role!=='st') return; all=all||{}; let changed=false;
     Object.keys(all).forEach(function(uid){ const nd=all[uid]; const rep=nd&&nd.nightReply; if(!rep||typeof rep!=='object') return;
       if(rep.n!==night) return; const f=nightFlow[night+':'+rep.stepId]; if(!f) return; if((f.sid||0)!==(rep.sid||0)) return;   // 只认本次下发(sid)对应的回复
@@ -3494,7 +3496,7 @@ load(); render();
     const raw=(S&&S.gameInfo)||{};   // 兼容：新结构为对象（按 key 子节点），旧数据为数组
     const list=(Array.isArray(raw)?raw:Object.keys(raw).map(function(k){return raw[k];})).filter(function(g){return g&&(g.text!=null);});
     if(!list.length){ h+='<div style="font-size:11px;color:#8a6b3a">还没有收到信息。夜晚说书人发给你的信息，你点「确认收到」后会记录在这里。</div>'; return h; }
-    list.sort(function(a,b){ return ((a.n||0)-(b.n||0)) || ((a.ts||0)-(b.ts||0)); });
+    list.sort(function(a,b){ return ((a.n||0)-(b.n||0)) || ((a.ord==null?1:a.ord)-(b.ord==null?1:b.ord)) || ((a.ts||0)-(b.ts||0)); });
     list.forEach(function(g){ h+='<div class="nb-note"><b>第 '+(g.n||'?')+' 夜</b>：'+E(g.text||'')+'</div>'; });
     return h;
   }
