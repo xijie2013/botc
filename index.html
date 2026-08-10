@@ -230,10 +230,10 @@
     border:1px solid rgba(74,43,107,.35); color:#43286b; background:rgba(240,235,250,.5);}
   .voter.on{background:#7a1f8f; color:#fff; border-color:#7a1f8f;}
   .voter.ghost{border-style:dashed;}
-  .voter.raising{border-color:#2e9d4f; box-shadow:0 0 0 2px rgba(46,157,79,.5); background:rgba(46,157,79,.16);}
+  .voter.raising{border-color:#43286b; box-shadow:0 0 0 2px rgba(67,40,107,.55); background:rgba(67,40,107,.18);}
   .voter.disabled{opacity:.3; cursor:not-allowed; text-decoration:line-through;}
   .votectl{display:flex; justify-content:flex-end; align-items:center; gap:8px; margin-top:5px;}
-  .votectl .hcnt{color:#2e7d43; font-weight:700; font-size:.88em; margin-right:auto;}
+  .votectl .hcnt{color:#43286b; font-weight:700; font-size:.88em; margin-right:auto;}
   .regbtn.pub{background:#7a1f8f; color:#fff; font-weight:800;}
   .votectl .revok{color:#2e7d43; font-weight:700; font-size:.9em;}
   .onblock{color:#b0402e; font-weight:800;}
@@ -999,6 +999,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.20.0', d:'2026-08-10', items:['玩家笔记举手按钮去掉手掌图标（「举手」「放下」前不再有✋）','说书人魔典里有人举手时的高亮由绿色改为魔典深紫色（座位号高亮＋「N 人举手中」文字同色）','去掉「N 人举手中」与「停止计票」前的小图标','说明：座位死亡/处决/恶魔击杀/中毒/守护等状态本就使用你提供的 PNG 素材（魔典、大厅、玩家笔记均是），未发现别处用表情替代素材']},
   {v:'v2.19.0', d:'2026-08-10', items:['修复：说书人「重置角色」后，大厅与玩家笔记里的公开状态（座位死亡、处决、恶魔击杀、胜负横幅、提名、举手等）也会一并清零，不再残留上一局的状态']},
   {v:'v2.18.0', d:'2026-08-10', items:['同一账号（玩家或说书人）同一时间只在一个页面活动：在新页面/设备登录后，会自动继承云端最新进度，旧页面则显示「已在其他页面登录」的遮罩并停用（点「切回本页继续」可把控制权夺回本页）；彻底避免多设备同时操作互相冲突/抢控制']},
   {v:'v2.17.0', d:'2026-08-10', items:['说书人整局存档改为「实时双向同步」：同一账号在多台设备上会实时保持一致，任一台的改动会立刻同步到另一台（谁最后操作以谁为准），不再各看各的、也不再互相覆盖抢控制；本机当前所在的标签/视图不会被强制跳转','（提示：需要所有设备都刷新到最新版本才能生效）']},
@@ -2075,8 +2076,8 @@ function renderGrim(){
       for(let s=0;s<N;s++){ const voted=nom.voters.includes(s), dead=isDeadSeat(s), raising=active&&hands[s]&&!voted;
         h+='<span class="voter'+(voted?' on':'')+(dead?' ghost':'')+(raising?' raising':'')+'" title="'+nameAt(s)+(dead?'（已出局）':'')+(raising?'（正在举手）':'')+'" onclick="toggleVote('+day+','+idx+','+s+')">'+(s+1)+'</span>'; }
       h+='</div>';
-      if(!nom.tallied){ h+='<div class="votectl">'+(active?'<span class="hcnt">✋ '+handCnt+' 人举手中</span>':'')
-          +'<span class="regbtn pub" onclick="_voteTally('+day+','+idx+')">⏹ 停止计票</span></div>'; }
+      if(!nom.tallied){ h+='<div class="votectl">'+(active?'<span class="hcnt">'+handCnt+' 人举手中</span>':'')
+          +'<span class="regbtn pub" onclick="_voteTally('+day+','+idx+')">停止计票</span></div>'; }
       else { h+='<div class="votectl"><span class="revok">✓ 已计票 · '+v+' 票</span><span class="regbtn" onclick="_voteReopen('+day+','+idx+')">重新计票</span></div>'; }
       h+='</div>'; });
     const neSet=new Set(noms.map(x=>x.nominee)), nrSet=new Set(noms.map(x=>x.nominator));
@@ -2892,8 +2893,8 @@ load(); render();
     bar.classList.add('on');
     const on=myHandOn(), dead=!!(pub.seats&&pub.seats[seat]&&pub.seats[seat].dead), used=dead&&ghostUsedPub(seat);
     const gtag=dead?'（鬼票）':'';   /* 鬼票只在按钮文字后加标记，不再另起描述 */
-    if(used){ bar.innerHTML='<button class="vb-yes" disabled>✋ 举手（鬼票已用完）</button>'; return; }
-    bar.innerHTML='<button class="vb-yes'+(on?' act':'')+'" onclick="_raiseHand('+(on?'false':'true')+')">✋ '+(on?'放下':'举手')+gtag+'</button>'; }
+    if(used){ bar.innerHTML='<button class="vb-yes" disabled>举手（鬼票已用完）</button>'; return; }
+    bar.innerHTML='<button class="vb-yes'+(on?' act':'')+'" onclick="_raiseHand('+(on?'false':'true')+')">'+(on?'放下':'举手')+gtag+'</button>'; }
 
   /* 说书人：开启一轮举手 */
   window._voteOpen=function(day,by,to){ if(role!=='st'||!curGid) return;
