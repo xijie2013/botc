@@ -124,6 +124,12 @@
   #setModal .fs-seg button.on{background:#e9c46a; color:#1a1226; border-color:#e9c46a;}
   #setModal .fs-seg button.s1{font-size:13px;} #setModal .fs-seg button.s2{font-size:15px;} #setModal .fs-seg button.s3{font-size:17px;}
   #setModal .set-hint{font-size:11.5px; color:#8f82ab; margin-top:6px; line-height:1.5;}
+  #setModal .vol-row{display:flex; align-items:center; gap:10px; margin:8px 0;}
+  #setModal .vol-row label{flex:0 0 64px; font-size:13px; color:#e9dcc4;}
+  #setModal .vol-row input[type=range]{flex:1; -webkit-appearance:none; appearance:none; height:5px; border-radius:3px; background:rgba(233,196,106,.28); outline:none; cursor:pointer;}
+  #setModal .vol-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; appearance:none; width:16px; height:16px; border-radius:50%; background:#e9c46a; border:1px solid #7a5320; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.5);}
+  #setModal .vol-row input[type=range]::-moz-range-thumb{width:16px; height:16px; border-radius:50%; background:#e9c46a; border:1px solid #7a5320; cursor:pointer;}
+  #setModal .vol-row .vol-n{flex:0 0 42px; text-align:right; font-size:12.5px; color:#ffd76b; font-weight:700;}
   #setModal .rp-open{width:100%; padding:9px 0; border-radius:10px; border:1px solid rgba(233,196,106,.4); background:rgba(255,252,244,.08); color:#e9c46a; font-weight:700; cursor:pointer;}
   #setModal .rp-open:hover{background:rgba(233,196,106,.16);}
   #setModal #rpForm{margin-top:9px; display:flex; flex-direction:column; gap:7px;}
@@ -1009,6 +1015,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.27.0', d:'2026-08-10', items:['玩家笔记「清除所有标记」现在会连同座位备注一起清除（身份、状态标记、座位备注全部清空）','设置里新增三档音量调节：音效音量、动画音量（处决/射杀等视频）、背景音乐音量，0~100% 独立可调、本地记住；左上角静音按钮仍可一键临时静音全部']},
   {v:'v2.26.0', d:'2026-08-10', items:['说书人魔典改为「全体共用一套」：任意说书人账号、在任意设备登录，读写的都是同一份魔典（客人名单、座位、身份、公布记录等），实时双向同步','修复新设备登录会把魔典清空的问题：登录时一律以云端已保存的魔典为准，只有云端为空时才用本地初始化，避免空数据覆盖大家的进度']},
   {v:'v2.25.0', d:'2026-08-10', items:['修复说书人「占用锁」偶发锁死：异常关闭页面、断线、手机休眠或同一账号在两处登录时，旧的占用可能不会被自动释放，导致「明明已退出仍显示在线、别人登不进」。现在占用锁带心跳（在线时每 15 秒续期），超过约 40 秒无心跳即视为离线，任何说书人都可直接登录接管；正常点「退出」会立即释放']},
   {v:'v2.24.0', d:'2026-08-10', items:['「清除所有标记」按钮改用玩家笔记主题色（浅黄底 + 深金字/边），确认态为深金色','扩大防误选范围：整个界面（中间钟表表盘、左上角设置/全屏/刷新按钮、页面标题、下方标签等）都不再被误选中高亮，仅输入框内文字可正常选择']},
@@ -1091,7 +1098,7 @@ window._prefetchExec=function(){ if(_execPrefetched) return; _execPrefetched=tru
 window.openSettings=function(){ document.getElementById('setVer').textContent=APP_VERSION;
   const log=document.getElementById('setLog'); const c=CHANGELOG[0];
   log.innerHTML='<div class="cl-item"><span class="cl-v">'+c.v+'</span><span class="cl-d">'+c.d+'</span><ul>'+c.items.map(i=>'<li>'+i+'</li>').join('')+'</ul></div>';
-  _platSync(); const rf=document.getElementById('rpForm'); if(rf) rf.style.display='none'; document.getElementById('setModal').classList.add('on'); };
+  _platSync(); try{ if(window._volSync) _volSync(); }catch(e){} const rf=document.getElementById('rpForm'); if(rf) rf.style.display='none'; document.getElementById('setModal').classList.add('on'); };
 window.closeSettings=function(){ document.getElementById('setModal').classList.remove('on'); };
 try{ applyPlatform(_platCur()); }catch(e){}
 
@@ -1603,6 +1610,7 @@ function playExec(idx, full, srcOverride){ const v=document.getElementById('exec
   try{ v.src=src; }catch(e){}
   v.style.filter=''; v.style.transition='';   // 清除上一次的“变黑”，恢复初始
   v.style.display='block'; v.currentTime=0; v.muted=!!window.__muted;   // 全局静音时不出声
+  try{ v.volume=Math.max(0,Math.min(1,(window.__vol&&typeof window.__vol.anim==='number')?window.__vol.anim:1)); }catch(e){}   // 动画音量档位
   void v.offsetWidth; v.classList.add('show');   // 触发淡入（透明度）
   v.ontimeupdate=function(){ if(cut!==Infinity && v.currentTime>=cut) endExec('dark'); };   // 非恶魔：截断→定格并逐渐变黑
   v.onended=function(){ endExec('fade'); };                                                 // 恶魔：播完→仅淡出→接胜利
@@ -1629,6 +1637,16 @@ window.toggleMute=function(){ window.__muted=!window.__muted;
 };
 (function(){ try{ window.__muted = localStorage.getItem('botc_muted')==='1'; }catch(e){}
   const el=document.getElementById('muteBtn'); if(el) el.innerHTML=window.__muted?_MUTE_OFF:_MUTE_ON; })();
+/* ---------- 三档音量：音效 / 动画 / 背景音乐（0~100%，本地记住；左上角静音按钮临时静音全部） ---------- */
+window.__vol={sfx:1,anim:1,bgm:1};
+(function(){ try{ const s=JSON.parse(localStorage.getItem('botc_vol')||'{}'); if(s&&typeof s==='object'){ ['sfx','anim','bgm'].forEach(k=>{ if(typeof s[k]==='number') window.__vol[k]=Math.max(0,Math.min(1,s[k])); }); } }catch(e){} })();
+window.setVol=function(kind,val){ const f=Math.max(0,Math.min(1,(+val||0)/100));
+  if(kind!=='sfx'&&kind!=='anim'&&kind!=='bgm') return; window.__vol[kind]=f;
+  try{ localStorage.setItem('botc_vol', JSON.stringify(window.__vol)); }catch(e){}
+  const cap=kind.charAt(0).toUpperCase()+kind.slice(1); const n=document.getElementById('vol'+cap+'N'); if(n) n.textContent=Math.round(f*100)+'%';
+  if(kind==='anim'){ const v=document.getElementById('execVideo'); if(v&&!window.__muted){ try{ v.volume=f; }catch(e){} } }   // 立即应用到正在播放的视频
+  if(kind==='bgm'){ try{ if(window._applyBgmVol) _applyBgmVol(); }catch(e){} } };   // 立即应用到背景音乐
+window._volSync=function(){ [['sfx','volSfx'],['anim','volAnim'],['bgm','volBgm']].forEach(p=>{ const f=window.__vol[p[0]]; const el=document.getElementById(p[1]); if(el) el.value=Math.round(f*100); const n=document.getElementById(p[1]+'N'); if(n) n.textContent=Math.round(f*100)+'%'; }); };
 /* ---------- 中央时钟 ---------- */
 var CLK={dayStart:null, nom:null, offset:0, _tick:null, _loadTs:Date.now(), _realBusy:false, _nomSeenTs:0, _outTimer:null, _busyTimer:null, _nomLock:false};
 var _clkEls=null;
@@ -2354,6 +2372,11 @@ load(); render();
     <button data-plat="pc" onclick="setPlatform('pc')">PC端</button>
   </div>
   <div class="set-hint">选择你的设备类型。目前两者显示一致，后续会根据移动端表现单独优化部分画面。</div>
+  <div class="set-sec">音量</div>
+  <div class="vol-row"><label>音效</label><input type="range" id="volSfx" min="0" max="100" step="1" oninput="setVol('sfx',this.value)"><span class="vol-n" id="volSfxN">100%</span></div>
+  <div class="vol-row"><label>动画</label><input type="range" id="volAnim" min="0" max="100" step="1" oninput="setVol('anim',this.value)"><span class="vol-n" id="volAnimN">100%</span></div>
+  <div class="vol-row"><label>背景音乐</label><input type="range" id="volBgm" min="0" max="100" step="1" oninput="setVol('bgm',this.value)"><span class="vol-n" id="volBgmN">100%</span></div>
+  <div class="set-hint">分别控制事件音效、处决/射杀等动画视频、背景音乐的音量。左上角静音按钮会临时静音全部声音。</div>
   <div class="set-sec">账号</div>
   <button class="rp-open" onclick="_openResetPw()">重置我的密码</button>
   <div id="rpForm" style="display:none">
@@ -2714,7 +2737,7 @@ load(); render();
   const BGM_VOL=0.5, BGM_CF=2.4, BGM_LOOP_CF=10;   // 目标音量 / 切换交叉淡化秒数 / 循环交叉淡化秒数（提前10s开始，接缝更自然）
   let _bgA=null,_bgB=null,_bgCur=null,_bgSrc='',_bgWant='',_bgUnlocked=false,_bgDuckF=1;
   function _bgMuted(){ return !!window.__muted; }
-  function _bgTargetVol(){ return (_bgMuted()?0:BGM_VOL)*_bgDuckF; }
+  function _bgTargetVol(){ const mul=(window.__vol&&typeof window.__vol.bgm==='number')?window.__vol.bgm:1; return (_bgMuted()?0:BGM_VOL*mul)*_bgDuckF; }
   function _bgFade(el,to,ms){ if(!el) return; if(el._fr) cancelAnimationFrame(el._fr); const from=el.volume||0, t0=performance.now();
     const step=t=>{ const k=ms<=0?1:Math.min(1,(t-t0)/ms); el.volume=Math.max(0,Math.min(1,from+(to-from)*k));
       if(k<1){ el._fr=requestAnimationFrame(step); } else { el._fr=0; if(to<=0){ try{ el.pause(); }catch(e){} } } };
@@ -2737,13 +2760,14 @@ load(); render();
   window._applyBgmMute=function(){ if(!_bgA) return;
     if(_bgMuted()){ if(_bgCur) _bgFade(_bgCur,0,500); }
     else if(_bgUnlocked){ _bgCross(_bgWant||BGM.anon,true); } };
+  window._applyBgmVol=function(){ if(!_bgCur) return; if(!_bgCur.paused && !_bgMuted()) _bgFade(_bgCur,_bgTargetVol(),300); };   // 拖动背景音乐音量时即时应用
   window._bgDuck=function(on){ _bgDuckF = on?0.16:1; if(_bgCur && !_bgCur.paused && !_bgMuted()) _bgFade(_bgCur,_bgTargetVol(),450); };
   (function(){ function unlock(){ if(_bgUnlocked) return; _bgUnlocked=true; try{ updateBgm(); }catch(e){} }
     ['pointerdown','keydown','touchstart'].forEach(ev=>window.addEventListener(ev,unlock,{passive:true})); })();
 
   /* ===== 一次性事件音效（尊重静音；播放在背景音乐之上） ===== */
   let _sfxSpinEl=null, _sfxWinEl=null;
-  function _sfxPlay(file, vol){ if(window.__muted) return null; try{ const a=new Audio(encodeURI('assets/'+file)); a.volume=(vol==null?0.8:vol); const p=a.play(); if(p&&p.catch)p.catch(()=>{}); return a; }catch(e){ return null; } }
+  function _sfxPlay(file, vol){ if(window.__muted) return null; try{ const mul=(window.__vol&&typeof window.__vol.sfx==='number')?window.__vol.sfx:1; if(mul<=0) return null; const a=new Audio(encodeURI('assets/'+file)); a.volume=Math.max(0,Math.min(1,(vol==null?0.8:vol)*mul)); const p=a.play(); if(p&&p.catch)p.catch(()=>{}); return a; }catch(e){ return null; } }
   window._sfx=function(kind){
     if(kind==='inkwell') _sfxPlay('sfx-inkwell.mp3',0.7);
     else if(kind==='pen-return') _sfxPlay('sfx-pen-return.mp3',0.7);
@@ -3119,7 +3143,7 @@ load(); render();
   window._nbCross=function(tok){ ensureS(); if(!Array.isArray(S.crossed)) S.crossed=[]; const ix=S.crossed.indexOf(tok); if(ix>=0) S.crossed.splice(ix,1); else S.crossed.push(tok); saveNotes(); renderNotes(); };   // 单击划掉/恢复
   window._nbClearAll=function(btn){ ensureS();
     if(btn && !btn.classList.contains('confirm')){ btn.classList.add('confirm'); btn.textContent='确认清除？再点一次'; setTimeout(function(){ try{ btn.classList.remove('confirm'); btn.textContent='清除所有标记'; }catch(_){}} ,2500); return; }
-    (S.seats||[]).forEach(st=>{ if(st){ st.role=''; st.status=[]; } });   // 清除所有座位的身份与状态标记（保留座位备注）
+    (S.seats||[]).forEach(st=>{ if(st){ st.role=''; st.status=[]; st.note=''; } });   // 清除所有座位的身份、状态标记与座位备注
     S.crossed=[]; saveNotes(); renderNotes();
   };
   let _pnoteSeat=-1, _noteSaveT=null;
