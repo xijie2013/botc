@@ -239,7 +239,7 @@
   .chip .x{cursor:pointer; font-size:1.05em; line-height:1; color:#a5744a; border-radius:50%; width:14px; height:14px; display:inline-flex; align-items:center; justify-content:center;}
   .chip .x:hover{background:#b0402e; color:#fff;}
   .chip.sel .x{color:#fff3d8;}
-  .ptag{font-size:calc(1.2 * var(--sw) / 100); padding:2px 8px; border-radius:14px; height:fit-content;
+  .ptag{font-size:calc(1.05 * var(--sw) / 100); padding:2px 8px; border-radius:14px; height:fit-content;   /* 过往客人名册名字 = 「当前客人名册」标题字号（与当前名册一致） */
     border:1px dashed rgba(122,83,32,.45); background:rgba(255,250,235,.4); color:#6b4a1e; cursor:pointer; user-select:none; white-space:nowrap;}
   .ptag:hover{background:#6b4a1e; color:#f3e6c4;}
   .ptag.active{opacity:.4; cursor:default;}
@@ -446,7 +446,7 @@
     box-shadow:0 1px 2px rgba(0,0,0,.15);}
   .rchip:hover{filter:brightness(.95); transform:translateY(-1px);}
   .rchip.used{opacity:.38;}
-  .dstep{display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; margin:0 3px; border-radius:5px; border:1px solid rgba(122,83,32,.5); background:rgba(255,252,244,.7); color:#6b4a1e; cursor:pointer; font-weight:800; user-select:none; vertical-align:middle; font-size:13px;}
+  .dstep{display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; margin:0 3px; border-radius:5px; border:1px solid rgba(122,83,32,.5); background:rgba(255,252,244,.7); color:#6b4a1e; cursor:pointer; font-weight:800; user-select:none; vertical-align:middle; font-size:13px; position:relative; top:calc(-0.5 * var(--sw) / 1280);}   /* 阵营人数 −/＋ 上移 0.5px */
   .dstep:hover{background:#e9c46a; color:#3a2a12;}
 
   /* ======= RIGHT: seats ======= */
@@ -1145,6 +1145,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.14', d:'2026-08-10', items:['①「过往客人名册」的名字字号（此前是独立的 .ptag=1.2·sw，上一版漏改）也改为与「当前客人名册」标题一致（1.05·sw）——顺带解决了它字大导致名字放不下、右侧留空却换行的问题。②魔典/角色设置里，镇民/外来者/爪牙/恶魔 标题右侧的 −/＋ 按钮统一上移 0.5px']},
   {v:'v2.41.13', d:'2026-08-10', items:['①「第 X 夜」「共 X 人」文字与数字改为上移 2.5px（较上版下移 0.5px）。②说书人大厅里「当前客人名册」「过往客人名册」下列出的客人名字（chip）字号，从 1.25 改为与「当前客人名册」标题一致（1.05·sw）']},
   {v:'v2.41.12', d:'2026-08-10', items:['再微调：「第 X 夜」「共 X 人」文字与数字改为上移 3px（较上版下移 2px）；标题改为上移 1.5px（较上版下移 1.5px）']},
   {v:'v2.41.11', d:'2026-08-10', items:['微调（位移均按 1280 基准像素、随舞台缩放）：①「第 X 夜」「共 X 人」的文字与数字上移 5px（两侧 −/＋、◀/▶ 按钮位置不变）；②标题上移 3px；③标签(tab)上下内边距 3px→4.2px，高度增约 10%']},
