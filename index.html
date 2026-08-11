@@ -1149,6 +1149,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.21', d:'2026-08-11', items:['修复玩家角色卡开/收动画与「等比缩放」不兼容：角色卡与右上角卡背都在被 transform:scale(S) 缩放的舞台里，之前计算平移用的是缩放后的视口像素、却施加在卡牌未缩放的局部坐标上（会再被 S 放大），导致 S≠1（尤其全屏放大）时平移过头，看起来像从屏幕外掀开、又收到屏幕外角落、还跳一下。现在平移量先除以舞台缩放系数换算成局部像素，开/收都精准对准右上角卡背，收回不再跳。']},
   {v:'v2.41.20', d:'2026-08-11', items:['①白天「＋提名」下拉菜单宽度改为 100px（参考尺寸），夜晚下拉仍为 80px 不变。②停止计票前也不能选择「处决 / 今日无人处决」：计票进行中改为显示提示、隐藏这两个按钮（confirmExecute 也加了兜底拦截）。③背景音乐与处决视频之间的淡入淡出加长（压低 1.5s、恢复 2.2s），过渡更柔和不突兀。']},
   {v:'v2.41.19', d:'2026-08-11', items:['①确定处决/今日无人处决后，处决按钮也一并隐藏（连同已锁定的提名），本日不能再改判。②修复处决动画播放时背景音乐没有压低：同一次公开数据更新里，动画刚把 BGM 压低就被结算判定（无胜负时）立刻恢复了——现在动画播放期间不撤销压制，视频结束再恢复。③修复玩家角色卡「收回角落」时会跳一下：收回改用与「掀开」相同的 FLIP 手法（先冻结当前形态再动画）、时长/缓动与翻面一致，精准落回角落卡背。④魔典/白天投票改为「同一时刻只允许一个投票进行」：只有「停止计票」后玩家才上处决台、也才允许开启新的提名；有投票进行时其它提名暂不能重新计票；重新计票会载入该提名现存的票数，新提名从空票开始。']},
   {v:'v2.41.18', d:'2026-08-11', items:['①左上角设置弹窗的滚动条去掉白色默认背景：改为暗色透明轨道 + 金色细滑块（同其它面板风格）。②玩家笔记/标记：状态标记与角色标记的样式统一为与「魔典/角色设置」的角色牌一模一样——同字号/字重、圆角彩色边框、投影阴影；状态标记的边框颜色对应其在座位图上的光晕色（中毒绿/醉酒黄/守护灰/已开枪蓝/红鲱鱼红/主人金），角色标记边框用对应阵营色。③夜晚选人下拉菜单宽度改为 80px（参考尺寸）。']},
@@ -3348,6 +3349,10 @@ load(); render();
   let _rcState='';   /* ''|'intro'|'open'|'anim' */
   function roleImg(rid){ return 'assets/roles/'+rid+'.png'; }
   function _rcEls(){ return { layer:document.getElementById('roleCardLayer'), card:document.getElementById('roleCard'), cc:document.getElementById('cornerCard'), hint:document.getElementById('rcHint') }; }
+  /* 舞台缩放系数 S（=min(vw/1280,vh/720)，同 --uiscale）。#roleCard/#cornerCard 都在 .stage 里，被 transform:scale(S) 缩放，
+     getBoundingClientRect 返回的是缩放后的视口像素，而 translate 施加在卡牌自身(未缩放)局部坐标里、会再被 S 放大，
+     故位移量必须先 / S 换算成局部像素，否则 S≠1（尤其全屏放大）时会平移过头、看起来从屏幕外开/收。scale 是比值不受 S 影响。 */
+  function _stageScale(){ let s=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--uiscale')); if(!s||!isFinite(s)||s<=0) s=1; return s; }
   function _ensureRoleImg(fi, rid, cb){ const url=roleImg(rid);   // 先把新角色图加载好再回调，避免入场时先闪上一局的卡面
     if(!fi){ cb(); return; }
     if(fi.getAttribute('src')===url && fi.complete && fi.naturalWidth){ cb(); return; }
@@ -3382,8 +3387,8 @@ load(); render();
     card.classList.add('flip'); card.style.transition='none'; card.style.transform=''; card.style.opacity='1';
     if(hint) hint.style.display='none';
     layer.classList.add('on'); void card.offsetWidth;
-    const cr=card.getBoundingClientRect(), sr=cc.getBoundingClientRect();
-    const dx=(sr.left+sr.width/2)-(cr.left+cr.width/2), dy=(sr.top+sr.height/2)-(cr.top+cr.height/2), sc=sr.width/cr.width;
+    const cr=card.getBoundingClientRect(), sr=cc.getBoundingClientRect(), S=_stageScale();
+    const dx=((sr.left+sr.width/2)-(cr.left+cr.width/2))/S, dy=((sr.top+sr.height/2)-(cr.top+cr.height/2))/S, sc=sr.width/cr.width;   // 位移换算到卡牌局部坐标（/S），与舞台等比缩放兼容
     cc.style.display='none';
     card.style.transform='translate('+dx+'px,'+dy+'px) scale('+sc+')'; void card.offsetWidth;
     card.style.transition='transform .7s cubic-bezier(.4,.05,.2,1)'; card.classList.remove('flip'); card.style.transform='';
@@ -3396,8 +3401,8 @@ load(); render();
     try{ if(window._sfx) _sfx('card-close'); }catch(e){}   // 收起卡牌
     cc.style.visibility='hidden'; cc.style.display='block';
     card.style.transition='none';   // 先冻结当前形态，避免读到入场/掀开动画的中间态，导致起点错位、看起来跳一下
-    const cr=card.getBoundingClientRect(), sr=cc.getBoundingClientRect();
-    const dx=(sr.left+sr.width/2)-(cr.left+cr.width/2), dy=(sr.top+sr.height/2)-(cr.top+cr.height/2), sc=sr.width/cr.width;
+    const cr=card.getBoundingClientRect(), sr=cc.getBoundingClientRect(), S=_stageScale();
+    const dx=((sr.left+sr.width/2)-(cr.left+cr.width/2))/S, dy=((sr.top+sr.height/2)-(cr.top+cr.height/2))/S, sc=sr.width/cr.width;   // 位移换算到卡牌局部坐标（/S），与舞台等比缩放兼容
     void card.offsetWidth;   // 提交起始态（与「掀开」同一 FLIP 手法）
     card.style.opacity='1'; card.style.transition='transform .7s cubic-bezier(.4,.05,.2,1)'; card.classList.add('flip');   // 时长/缓动与「掀开」及翻面(.7s)一致 → 收回顺滑、精准落到角落卡背，不再跳
     card.style.transform='translate('+dx+'px,'+dy+'px) scale('+sc+')';
