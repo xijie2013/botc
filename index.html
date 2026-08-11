@@ -1175,6 +1175,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.31', d:'2026-08-11', items:['把拖放统一为一套「指针事件」系统：删除原来的桌面端 HTML5 原生拖放与另加的触屏垫片，改为鼠标/触屏/手写笔共用同一条指针事件路径（`pointerdown/move/up`）。可拖元素统一用 `data-drag` 标记、座位用 `data-seat` 作落点，用位移阈值区分「点按」与「拖动」，拖动后抑制随之而来的 click。行为在各端一致，逻辑只有一份。（猎手十字弩箭头本就是指针事件，保持不变。）']},
   {v:'v2.41.30', d:'2026-08-11', items:['触摸屏拖放支持：魔典里的角色标签、客人名册、玩家笔记里的状态/角色标记、座位身份，现在都能用手指拖到座位/名册上（桌面端的原生拖放在触屏不触发，这里新增了一套 touch 拖放垫片，用位移阈值区分「点按」与「拖动」，可拖元素在拖动时不再误滚动页面）。猎手的十字弩箭头本就用指针事件，触屏可用。']},
   {v:'v2.41.29', d:'2026-08-11', items:['①猎手开枪请求不再占用魔典白天面板（改由屏幕下方的蓝色弹窗确认/驳回）。②删除猎手开枪后的「撤销」按钮。③占卜师不在场（被替换/移除）时，红鲱鱼标记也随之消失。④猎手拖拽的发光箭头改为白色箭头 + 蓝色荧光。']},
   {v:'v2.41.28', d:'2026-08-11', items:['①恶魔描述句尾加句号。②处决信息改为「第X天：【处决信息】xxx（xx号）被处决。」（白天事件抬头为「第X天」而非「第X夜」）。③猎人开枪信息：猎人只得知中/没中，不再泄露红唇女郎是谁；未命中只记在猎人局内信息，命中则为公共信息（全员收到「xxx向xxx开枪→xxx死亡」），抬头为「第X天」。④红唇女郎接任弹窗不再压住处决视频（视频在最上层，弹窗在视频播放期间收起、结束后再出现）、文案精简、抬头按昼夜显示。⑤红唇女郎点确认接任后，说书人会收到底部弹窗告知（类似猎人请求弹窗）。⑥猎人击杀触发红唇继任时也发送接任通知（与处决一致）。⑦有红唇继任时（_swSeat 非空）强制不播完整变身动画、只播前半段，避免误触发「恶魔死亡」的完整动画。']},
@@ -1351,7 +1352,6 @@ async function shuffle(){ if(!await uiConfirm("确定随机排座？将打乱当
 async function clearSeats(){ if(!await uiConfirm("确定清空所有座位？")) return; tokens.forEach(t=>t.seat=null); render(); }
 function moveToken(id,seat){ const tok=tokens.find(t=>t.id===id); if(!tok)return;
   if(seat!==null){ const occ=tokens.find(t=>t.seat===seat); if(occ&&occ.id!==id) occ.seat=tok.seat; } tok.seat=seat; }
-function dropOn(seat,e){ const id=+e.dataTransfer.getData("text"); moveToken(id,seat); selected=null; render(); }
 function seatClick(i){ if(selected!==null){ moveToken(selected,i); selected=null; render(); return; } const t=seatToken(i); if(t){ selected=t.id; render(); } }
 function toggleDead(i){ const wasDead=isDeadSeat(i);
   const t=seatToken(i); if(t){ t.dead=!t.dead; } else { ensureMeta(); meta[i].dead=!meta[i].dead; }
@@ -2682,8 +2682,7 @@ function chipEl(t){
   const d=document.createElement("div");
   d.className="chip"+(selected===t.id?" sel":"")+(t.seat!==null?" seated":"");
   const _online=!!(window._acctOnline && window._acctOnline(t.name));   // 已登录且在线 → 绿点
-  d.innerHTML=(_online?'<span class="odot" title="已登录（在线）">●</span> ':'')+esc(t.name)+' <span class="x" title="移出">✕</span>'; d.draggable=true; d.setAttribute('data-drag', t.id);
-  d.addEventListener("dragstart",e=>e.dataTransfer.setData("text",t.id));
+  d.innerHTML=(_online?'<span class="odot" title="已登录（在线）">●</span> ':'')+esc(t.name)+' <span class="x" title="移出">✕</span>'; d.setAttribute('data-drag', t.id);   // 拖拽由统一指针系统处理（data-drag）
   d.addEventListener("click",e=>{ if(e.target.classList.contains("x")){e.stopPropagation();removeToken(t.id);return;}
     e.stopPropagation(); selected=(selected===t.id?null:t.id); render(); });
   return d;
@@ -2716,7 +2715,7 @@ function renderGrim(){
       h+='<div class="rlist">';
       ROLES.filter(r=>r.team===team).forEach(r=>{
         const used=_usedSet.has(r.id), locked=lockedRoles.has(r.id);
-        h+='<div class="rchip'+(used?' used':'')+(locked?' locked':'')+'" draggable="true" data-role="'+r.id+'" data-drag="role:'+r.id+'" title="单击锁定/解锁 · '+esc(r.ab)+
+        h+='<div class="rchip'+(used?' used':'')+(locked?' locked':'')+'" data-role="'+r.id+'" data-drag="role:'+r.id+'" title="单击锁定/解锁 · '+esc(r.ab)+
            '" style="border-color:'+TEAMC[r.team]+';color:'+TEAMC[r.team]+'">'+r.name+'</div>';
       });
       h+='</div>';
@@ -2757,7 +2756,6 @@ function renderGrim(){
     if(!ready){ h+='<div class="rrow" style="border:none;color:#b0402e;font-size:calc(1.02 * var(--sw) / 100);margin-top:4px">⚠ 还不能开局：'+esc(_setupIssues[0])+(_setupIssues.length>1?('（还有 '+(_setupIssues.length-1)+' 项待完成）'):'')+'</div>'; }
     c.innerHTML=h;
     c.querySelectorAll('.rchip').forEach(el=>{
-      el.addEventListener('dragstart',e=>e.dataTransfer.setData("text","role:"+el.dataset.role));
       el.addEventListener('click',()=>toggleLock(el.dataset.role));
     });
     return;
@@ -2925,9 +2923,6 @@ function renderSeats(){
           s.style.background="url('"+deathCauseIcon(i)+"') "+pos+" / "+sz+" no-repeat, radial-gradient(circle at 50% 35%, rgba(48,34,58,.9), rgba(22,15,30,.95))"; } }
       s.innerHTML=html;
       s.addEventListener("click",()=>seatClick(i));
-      s.addEventListener("dragover",e=>{e.preventDefault();s.classList.add("over");});
-      s.addEventListener("dragleave",()=>s.classList.remove("over"));
-      s.addEventListener("drop",e=>{e.preventDefault();s.classList.remove("over");dropOn(i,e);});
     } else {
       const m=meta[i]||blankMeta(); const role=m.role?RMAP[m.role]:null;
       if(role) s.classList.add(isEvil(role.team)?"evil":"good");
@@ -2959,11 +2954,6 @@ function renderSeats(){
         else { s._ct=setTimeout(()=>{ s._ct=null; toggleBubble(i); }, 230); } });
       s.addEventListener("mouseenter",()=>showHover(i));
       s.addEventListener("mouseleave",hideHover);
-      s.addEventListener("dragover",e=>{e.preventDefault();s.classList.add("over");});
-      s.addEventListener("dragleave",()=>s.classList.remove("over"));
-      s.addEventListener("drop",e=>{e.preventDefault();s.classList.remove("over");
-        const d=e.dataTransfer.getData("text");
-        if(d&&d.indexOf("role:")===0){ const rid=d.slice(5); assignRoleToSeat(i, rid); render(); }});
     }
     zone.appendChild(s);
   }
@@ -3071,16 +3061,12 @@ document.getElementById("mRole").addEventListener("change",updAlign);
 document.getElementById("mask").addEventListener("click",e=>{ if(e.target.id==="mask") closeEditor(); });
 
 /* pool as drop target */
-const poolEl=document.getElementById("pool");
-poolEl.addEventListener("dragover",e=>{e.preventDefault();poolEl.classList.add("over");});
-poolEl.addEventListener("dragleave",()=>poolEl.classList.remove("over"));
-poolEl.addEventListener("drop",e=>{e.preventDefault();poolEl.classList.remove("over");
-  const id=+e.dataTransfer.getData("text"); moveToken(id,null); selected=null; render();});
+const poolEl=document.getElementById("pool");   // 拖回名册(移出座位)由统一指针系统处理（#pool 为落点）
 
-/* ===== 触摸屏拖拽垫片：把 [data-drag] 元素（角色标签/客人/笔记标记/座位身份）用手指拖到座位/名册，
-   等效桌面端 HTML5 拖放（后者在触屏不触发）。只处理 touch，不改动鼠标行为；用位移阈值区分「点按」与「拖动」。 ===== */
+/* ===== 统一拖拽系统（指针事件，鼠标/触屏/手写笔同一套）：把 [data-drag] 元素（角色标签/客人/笔记标记/座位身份）
+   拖到座位/名册。取代原生 HTML5 拖放（原生在触屏不触发）。用位移阈值区分「点按」与「拖动」，拖动后抑制随之而来的 click。 ===== */
 (function(){
-  let _dg=null; const TH=8;
+  let _dg=null, _suppressClick=false; const TH=6;
   function _mkGhost(el){ const g=el.cloneNode(true); g.className=(g.className||'')+' drag-ghost';
     g.style.position='fixed'; g.style.zIndex='99999'; g.style.pointerEvents='none'; g.style.opacity='.88'; g.style.margin='0'; g.style.left='-9999px'; g.style.top='-9999px';
     g.removeAttribute('data-drag'); document.body.appendChild(g); return g; }
@@ -3098,21 +3084,22 @@ poolEl.addEventListener("drop",e=>{e.preventDefault();poolEl.classList.remove("o
       else if(payload.indexOf('seatrole:')===0){ try{ if(window._plTouchDrop) window._plTouchDrop(-1, payload); }catch(e){} } return; }
     if(payload.indexOf('seatrole:')===0){ try{ if(window._plTouchDrop) window._plTouchDrop(-1, payload); }catch(e){} }   // 拖到空白处=删除座位身份
   }
-  document.addEventListener('touchstart', function(e){ if(_dg) return; if(e.touches.length!==1) return;
-    const el=e.target.closest&&e.target.closest('[data-drag]'); if(!el) return; const t=e.touches[0];
-    _dg={ el:el, payload:el.getAttribute('data-drag')||'', ghost:null, dragging:false, sx:t.clientX, sy:t.clientY };
-  }, {passive:true});
-  document.addEventListener('touchmove', function(e){ if(!_dg) return; const t=e.touches[0];
-    if(!_dg.dragging){ if(Math.hypot(t.clientX-_dg.sx, t.clientY-_dg.sy)<TH) return; _dg.dragging=true; _dg.ghost=_mkGhost(_dg.el); }
-    e.preventDefault(); _posGhost(_dg.ghost, t.clientX, t.clientY);
-    _clearOver(); const seat=_seatUnder(t.clientX,t.clientY); const pool=seat?null:_poolUnder(t.clientX,t.clientY);
+  document.addEventListener('pointerdown', function(e){ if(_dg) return; if(e.button>0) return; _suppressClick=false;
+    const el=e.target.closest&&e.target.closest('[data-drag]'); if(!el) return;
+    _dg={ el:el, payload:el.getAttribute('data-drag')||'', ghost:null, dragging:false, sx:e.clientX, sy:e.clientY, pid:e.pointerId };
+  });   // 不 preventDefault：保留点击；用位移阈值判定是否拖动
+  document.addEventListener('pointermove', function(e){ if(!_dg || e.pointerId!==_dg.pid) return;
+    if(!_dg.dragging){ if(Math.hypot(e.clientX-_dg.sx, e.clientY-_dg.sy)<TH) return; _dg.dragging=true; _dg.ghost=_mkGhost(_dg.el); }
+    e.preventDefault(); _posGhost(_dg.ghost, e.clientX, e.clientY);
+    _clearOver(); const seat=_seatUnder(e.clientX,e.clientY); const pool=seat?null:_poolUnder(e.clientX,e.clientY);
     if(seat) seat.classList.add('over'); else if(pool) pool.classList.add('over');
-  }, {passive:false});
-  document.addEventListener('touchend', function(e){ if(!_dg) return; const dg=_dg; _dg=null;
+  });
+  function _end(e){ if(!_dg || (e&&e.pointerId!==_dg.pid)) return; const dg=_dg; _dg=null;
     if(dg.ghost){ try{ dg.ghost.remove(); }catch(_){} } _clearOver();
-    if(dg.dragging){ if(e.cancelable) e.preventDefault(); const t=e.changedTouches[0]; try{ _drop(t.clientX, t.clientY); }catch(_){} }
-  }, {passive:false});
-  document.addEventListener('touchcancel', function(){ if(!_dg) return; if(_dg.ghost){ try{ _dg.ghost.remove(); }catch(_){} } _clearOver(); _dg=null; }, {passive:true});
+    if(dg.dragging){ _suppressClick=true; try{ _drop(e.clientX, e.clientY); }catch(_){} } }   // 有过拖动 → 抑制随后的 click（避免误触点按逻辑）
+  document.addEventListener('pointerup', _end);
+  document.addEventListener('pointercancel', function(e){ if(!_dg || (e&&e.pointerId!==_dg.pid)) return; if(_dg.ghost){ try{ _dg.ghost.remove(); }catch(_){} } _clearOver(); _dg=null; });
+  document.addEventListener('click', function(e){ if(_suppressClick){ _suppressClick=false; e.stopPropagation(); e.preventDefault(); } }, true);
 })();
 
 let rt; window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(render,80);});
@@ -4191,25 +4178,9 @@ load(); render();
         s.addEventListener('click',e=>{ e.stopPropagation(); seatTap(i,sx,sy,sd); });
         s.addEventListener('mouseenter',()=>showSeatNote(i));
         s.addEventListener('mouseleave',hideSeatNote);
-        /* 拖标记/角色到座位 → 添加；把座位身份拖出座位范围 → 删除 */
-        s.setAttribute('draggable','true');
-        if(mine&&mine.role&&RMAP[mine.role]) s.setAttribute('data-drag','seatrole:'+i);   // 触屏：座位身份可拖出删除
+        /* 拖标记/角色到座位=添加、把座位身份拖出=删除；均由统一指针系统处理（data-drag=座位身份、data-seat=落点） */
+        if(mine&&mine.role&&RMAP[mine.role]) s.setAttribute('data-drag','seatrole:'+i);
         else s.removeAttribute('data-drag');
-        s.addEventListener('dragstart',e=>{ if(mine&&mine.role&&RMAP[mine.role]){ try{ e.dataTransfer.setData('text','seatrole:'+i); e.dataTransfer.effectAllowed='move';
-            const rr=RMAP[mine.role]; const g=document.createElement('div'); g.textContent=rr.name;   // 仅身份标记作为拖拽虚影
-            g.style.cssText='position:fixed;left:-1000px;top:-1000px;padding:3px 9px;border-radius:12px;font-size:13px;font-weight:800;white-space:nowrap;background:#fff;border:1.5px solid '+TEAMC[rr.team]+';color:'+TEAMC[rr.team]+';box-shadow:0 2px 6px rgba(0,0,0,.35);z-index:99999';
-            document.body.appendChild(g); e.dataTransfer.setDragImage(g, g.offsetWidth/2, g.offsetHeight/2); setTimeout(function(){ try{g.remove();}catch(_){}} ,0);
-            s._dragRect=s.getBoundingClientRect();
-          }catch(_){} } else { e.preventDefault(); } });
-        s.addEventListener('dragend',e=>{ const rc=s._dragRect; s._dragRect=null; if(!rc) return;   // 鼠标离开原座位范围即删除身份
-          const out=(e.clientX<rc.left||e.clientX>rc.right||e.clientY<rc.top||e.clientY>rc.bottom);
-          if(out){ ensureS(); if(S.seats[i]&&S.seats[i].role){ S.seats[i].role=''; saveNotes(); drawSeats(); } } });
-        s.addEventListener('dragover',e=>{ e.preventDefault(); e.stopPropagation(); s.classList.add('over'); });
-        s.addEventListener('dragleave',()=>s.classList.remove('over'));
-        s.addEventListener('drop',e=>{ e.preventDefault(); e.stopPropagation(); s.classList.remove('over');
-          const d=(e.dataTransfer.getData('text')||''); ensureS(); const st=S.seats[i]; if(!st) return;
-          if(d.indexOf('prole:')===0){ st.role=d.slice(6); saveNotes(); drawSeats(); }
-          else if(d.indexOf('pstat:')===0){ const k=d.slice(6); if(!st.status) st.status=[]; if(st.status.indexOf(k)<0){ st.status.push(k); saveNotes(); drawSeats(); } } });
         /* 点自己加的状态标记 → 移除（死亡除外） */
         s.querySelectorAll('.shieldbadge[data-mk]').forEach(bel=>{ const k=bel.dataset.mk; if(k==='dead') return;
           bel.addEventListener('click',e=>{ e.stopPropagation(); ensureS(); const st=S.seats[i]; if(!st||!st.status) return; const ix=st.status.indexOf(k); if(ix>=0){ st.status.splice(ix,1); saveNotes(); drawSeats(); } }); });
@@ -4257,11 +4228,11 @@ load(); render();
   function markTabHTML(){ ensureS(); const crossed=new Set(S.crossed||[]);
     let h='<div class="nb-sec">状态标记 · 拖到座位上添加；单击划掉</div><div>';
     h+=STAT_ORDER.map(k=>{ const b=BADGE[k]; const gc=(MARK[k]&&MARK[k][3])||'rgba(122,83,32,.4)'; const ic=MARK[k]?'<img src="'+MARK[k][1]+'" draggable="false" style="width:17px;height:17px;object-fit:contain;vertical-align:middle;margin-right:2px">':'';
-      return '<span class="nbtok'+(crossed.has('stat:'+k)?' crossed':'')+'" draggable="true" data-drag="pstat:'+k+'" ondragstart="_nbDragStart(event,\'pstat:'+k+'\')" onclick="_nbCross(\'stat:'+k+'\')" style="border-color:'+gc+'">'+ic+b.t+'</span>'; }).join('')+'</div>';
+      return '<span class="nbtok'+(crossed.has('stat:'+k)?' crossed':'')+'" data-drag="pstat:'+k+'" onclick="_nbCross(\'stat:'+k+'\')" style="border-color:'+gc+'">'+ic+b.t+'</span>'; }).join('')+'</div>';
     h+='<div class="nb-sec">在场角色 · 拖到座位上记录猜测；单击划掉</div><div>';
     const locked=new Set(pub.locked||[]); const rs=ROLES.filter(r=>!locked.has(r.id)).map(r=>r.id);
     h+=rs.map(id=>{ const r=RMAP[id]; if(!r) return '';
-      return '<span class="nbtok'+(crossed.has('role:'+id)?' crossed':'')+'" draggable="true" data-drag="prole:'+id+'" ondragstart="_nbDragStart(event,\'prole:'+id+'\')" onclick="_nbCross(\'role:'+id+'\')" style="border-color:'+TEAMC[r.team]+';color:'+TEAMC[r.team]+'">'+r.name+'</span>'; }).join('')+'</div>';
+      return '<span class="nbtok'+(crossed.has('role:'+id)?' crossed':'')+'" data-drag="prole:'+id+'" onclick="_nbCross(\'role:'+id+'\')" style="border-color:'+TEAMC[r.team]+';color:'+TEAMC[r.team]+'">'+r.name+'</span>'; }).join('')+'</div>';
     h+='<button class="nb-clearall" onclick="_nbClearAll(this)">清除所有标记</button>';
     return h;
   }
@@ -4283,8 +4254,7 @@ load(); render();
         h+='<div class="nb-role" style="'+(off?'opacity:.4;':'')+'"><b style="color:'+TEAMC[t]+'">'+r.name+(off?' · 未启用':'')+'</b><div style="color:#1c150e;margin-top:2px">'+E(r.ab||'')+'</div></div>'; }); });
     return h;
   }
-  window._nbDragStart=function(ev, payload){ try{ ev.dataTransfer.setData('text', payload); ev.dataTransfer.effectAllowed='copy'; }catch(e){} };   // 拖动标记/角色到座位
-  /* 触屏拖拽落点路由（玩家笔记）：由全局触摸垫片在 touchend 时调用，等效桌面端座位 drop/dragend */
+  /* 拖拽落点路由（玩家笔记）：由统一指针拖拽系统在放开时调用（座位=添加身份/状态；拖出=删除座位身份） */
   window._plTouchDrop=function(idx, payload){ if(role!=='player'&&mode!=='notes'){} ensureS();
     if(payload.indexOf('seatrole:')===0){ const from=+payload.slice(9);   // 座位身份拖出（落在别的座位/名册/空白）=删除
       if(idx!==from && S.seats[from] && S.seats[from].role){ S.seats[from].role=''; saveNotes(); drawSeats(); } return; }
