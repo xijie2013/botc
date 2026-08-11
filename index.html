@@ -32,7 +32,7 @@
     /* 舞台采用「固定 1280×720 设计基准 + 整体 transform 缩放」：舞台里所有元素（不论 px / % / var(--sw)）
        都随舞台一起等比缩放，任何屏幕上截图放大后完全重叠、layout 不变。--sw/--sh 即设计基准像素。
        缩放由 JS _fitStage() 计算 scale=min(vw/1280, vh/720)，舞台可视尺寸 = min(100vw,177.78vh)，与旧版一致。 */
-    --sw: 1280px; --sh: 720px; }
+    --sw: 1280px; --sh: 720px; --uiscale: 1; }
   *{box-sizing:border-box;}
   html,body{margin:0;height:100%;}
   body{
@@ -169,7 +169,7 @@
   #setModal{position:fixed; inset:0; z-index:210; display:none; align-items:center; justify-content:center; background:rgba(10,6,16,.64); padding:16px; overflow-y:auto;}
   #setModal.on{display:flex;}
   #setModal .setbox{width:min(92vw,430px); max-height:calc(100dvh - 28px); overflow-y:auto; background:linear-gradient(180deg,#2b2038,#20172a);
-    border:2px solid #e9c46a; border-radius:14px; padding:18px 20px 18px; color:#e9dcc4; box-shadow:0 14px 44px rgba(0,0,0,.6), inset 0 0 34px rgba(233,196,106,.06);}
+    border:2px solid #e9c46a; border-radius:14px; padding:18px 20px 18px; color:#e9dcc4; box-shadow:0 14px 44px rgba(0,0,0,.6), inset 0 0 34px rgba(233,196,106,.06); zoom:var(--uiscale);}
   #setModal h3{margin:0 0 12px; color:#e9c46a; font-size:17px; letter-spacing:2px; display:flex; justify-content:space-between; align-items:center;}
   #setModal .cX{cursor:pointer; color:#9a8fb3; font-weight:700;}
   #setModal .set-ver{font-size:13px; color:#c9b6e6; margin-bottom:4px;}
@@ -500,7 +500,7 @@
   /* editor modal */
   .mask{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:50;}
   .mask.on{display:flex;}
-  .modal{background:#221a30; border:1px solid #3a2d4e; border-radius:12px; padding:16px; width:340px; max-width:92vw; color:#efe6d2;}
+  .modal{background:#221a30; border:1px solid #3a2d4e; border-radius:12px; padding:16px; width:340px; max-width:92vw; color:#efe6d2; zoom:var(--uiscale);}
   .modal h3{margin:0 0 10px; color:#e9c46a; font-size:16px;}
   .modal label{display:block; font-size:12px; color:#bdb0d0; margin:8px 0 3px;}
   .modal input[type=text],.modal select,.modal textarea{width:100%; padding:7px; border:1px solid #3a2d4e; border-radius:6px;
@@ -517,7 +517,7 @@
   .cfmask.on{display:flex;}
   .cfbox{width:min(86vw,360px); max-height:calc(100dvh - 24px); overflow-y:auto; background:linear-gradient(180deg,#2b2038,#20172a); border:2px solid #e9c46a; border-radius:14px;
     padding:20px 22px 18px; color:#efe6d2; text-align:center; box-shadow:0 14px 44px rgba(0,0,0,.6), inset 0 0 34px rgba(233,196,106,.07);
-    animation:cfin .18s ease;}
+    zoom:var(--uiscale); animation:cfin .18s ease;}
   @keyframes cfin{from{transform:translateY(14px) scale(.96); opacity:.2} to{transform:none; opacity:1}}
   .cf-title{font-size:16px; font-weight:800; color:#e9c46a; letter-spacing:2px; margin-bottom:10px;}
   .cf-title::before,.cf-title::after{content:"❖"; color:rgba(233,196,106,.55); margin:0 8px; font-size:12px;}
@@ -638,7 +638,7 @@
     background:rgba(10,6,16,.72); backdrop-filter:blur(3px);}
   .gate.on{display:flex;}
   .gatebox{width:min(92vw,360px); max-height:calc(100dvh - 24px); overflow-y:auto; background:linear-gradient(180deg,#2b2038,#20172a); border:2px solid #e9c46a; border-radius:16px;
-    padding:24px 22px 20px; text-align:center; box-shadow:0 14px 44px rgba(0,0,0,.6), inset 0 0 34px rgba(233,196,106,.07);}
+    padding:24px 22px 20px; text-align:center; box-shadow:0 14px 44px rgba(0,0,0,.6), inset 0 0 34px rgba(233,196,106,.07); zoom:var(--uiscale);}
   .gatebox .ink{width:96px; height:96px; margin-bottom:6px; filter:drop-shadow(0 6px 14px rgba(0,0,0,.55));}
   .gatebox h2{margin:6px 0 4px; font-size:20px; color:#e9c46a; letter-spacing:2px;}
   .gatebox .sub{font-size:12.5px; color:#b3a6c8; line-height:1.6; margin-bottom:16px;}
@@ -649,13 +649,14 @@
   .gatebox .go:hover{background:#f2d489;}
   .gatebox .cancel{display:block; margin:12px auto 0; color:#9a8fb3; background:none; border:none; font-size:12.5px; cursor:pointer;}
   .gatebox .err{color:#f0a89e; font-size:12.5px; min-height:16px; margin:2px 0 8px;}
-  #fbToast{position:fixed; top:14px; left:50%; transform:translateX(-50%); z-index:200; background:#e9c46a; color:#1a1226;
+  #fbToast{position:fixed; top:14px; left:50%; transform:translateX(-50%) scale(var(--uiscale)); transform-origin:center top; z-index:200; background:#e9c46a; color:#1a1226;
     padding:9px 16px; border-radius:20px; font-size:13px; font-weight:700; box-shadow:0 4px 14px rgba(0,0,0,.4); display:none;}
   #fbToast.on{display:block;}
-  #voteBar{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:120; display:none;
+  #voteBar{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); transform-origin:center bottom; z-index:120; display:none;
     max-width:min(92vw,460px); text-align:center; color:#f3e6c4; animation:vbIn .35s ease both;}
   #voteBar.on{display:block;}
-  @keyframes vbIn{from{opacity:0; transform:translate(-50%,14px);}to{opacity:1; transform:translate(-50%,0);}}
+  /* 弹条同比缩放：把 scale 烘进入场关键帧（both 会保留末态），配合 transform-origin:center bottom 锚在底部 */
+  @keyframes vbIn{from{opacity:0; transform:translate(-50%,14px) scale(var(--uiscale));}to{opacity:1; transform:translate(-50%,0) scale(var(--uiscale));}}
   #voteBar .vb-line{font-size:14px; font-weight:700; margin-bottom:8px; color:#ffe9b8;}
   #voteBar .vb-wait{font-size:13px; color:#c9b6e6; letter-spacing:1px;}
   #voteBar .vb-btns{display:flex; gap:10px; justify-content:center;}
@@ -666,7 +667,7 @@
   #voteBar .vb-hint{font-size:12px; margin-bottom:7px; color:#e9c46a;}
   #voteBar .vb-hint .vb-ghost.used{color:#f0a89e;}
   /* ===== 夜晚信息自动化：玩家底部弹窗 ===== */
-  #nightBar{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:121; display:none;
+  #nightBar{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); transform-origin:center bottom; z-index:121; display:none;
     max-width:min(94vw,480px); text-align:center; color:#f3e6c4; animation:vbIn .35s ease both;
     background:linear-gradient(180deg,rgba(52,32,66,.98),rgba(28,16,38,.98)); border:1.5px solid rgba(233,196,106,.6);
     border-radius:16px; padding:14px 18px; box-shadow:0 10px 30px rgba(0,0,0,.55);}
@@ -730,7 +731,7 @@
   #cfgModal{position:fixed; inset:0; z-index:150; display:none; align-items:center; justify-content:center; background:rgba(10,6,16,.62);}
   #cfgModal.on{display:flex;}
   #cfgModal .cbox{width:min(92vw,420px); max-height:80vh; overflow:auto; background:linear-gradient(180deg,#2b2038,#20172a);
-    border:2px solid #b9a0d6; border-radius:14px; padding:18px; color:#efe6d2; box-shadow:0 14px 44px rgba(0,0,0,.6);}
+    border:2px solid #b9a0d6; border-radius:14px; padding:18px; color:#efe6d2; box-shadow:0 14px 44px rgba(0,0,0,.6); zoom:var(--uiscale);}
   #cfgModal h3{margin:0 0 12px; color:#c3aede; font-size:16px; display:flex; justify-content:space-between; align-items:center;}
   #cfgModal .cX{cursor:pointer; color:#9a8fb3; font-weight:700;}
   .cfgitem{border:1px solid #3a2d4e; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; align-items:center; gap:8px;}
@@ -1125,7 +1126,9 @@ function toggleFull(){
 /* 整台等比缩放：固定 1280×720 设计基准，按视口 min(vw/1280,vh/720) 缩放，可视尺寸与旧版一致，舞台内一切元素同比缩放 */
 function _fitStage(){ const st=document.getElementById('stage'); if(!st) return;
   const W=window.innerWidth||document.documentElement.clientWidth, H=window.innerHeight||document.documentElement.clientHeight;
-  const s=Math.min(W/1280, H/720); st.style.transform='scale('+s+')'; }
+  const s=Math.min(W/1280, H/720); st.style.transform='scale('+s+')';
+  try{ document.documentElement.style.setProperty('--uiscale', s); }catch(e){}   // 居中弹窗用 zoom:var(--uiscale) 同比缩放（不与其自身 transform 居中/入场动画冲突）
+}
 window._fitStage=_fitStage;
 window.addEventListener('resize', _fitStage);
 window.addEventListener('orientationchange', function(){ setTimeout(_fitStage, 60); });
@@ -1139,6 +1142,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.1', d:'2026-08-10', items:['弹窗也纳入等比缩放：确认框/座位编辑/设置/存档配置/登录页用 zoom:var(--uiscale) 同比放大缩小，投票条/夜晚信息条/顶部提示条用 transform scale 同比；缩放系数与舞台一致，随视口实时更新，屏幕越大弹窗越大、比例与 layout 恒定（居中/入场动画不受影响）。移动端过小屏的适配留待后续独立 layout']},
   {v:'v2.41.0', d:'2026-08-10', items:['全局等比缩放：舞台改为固定 1280×720 设计基准 + 整体 transform 缩放（scale=min(视口宽/1280,高/720)），舞台内所有元素（文字/图标/按钮/座位/面板，不论此前用 px 还是比例单位）现在都随舞台一起等比放大缩小，layout 恒定——任意尺寸屏幕截图后按比例放大将完全重叠，不再出现「有的缩放有的不缩放」导致的错位。舞台可视尺寸与旧版一致（仍是 16:9 适配），全屏/非全屏、横竖屏都实时重算。（居中弹窗/确认框/登录页等视口级浮层仍按视口自适应，属正常模态）']},
   {v:'v2.40.1', d:'2026-08-10', items:['间谍魔典右下角图标放大到与说书人魔典书本图标同样大小。修复说书人右上角魔典书本按钮：打开态此前用 vw 单位、合上态用比例单位，导致非全屏下打开/合上大小与位置对不上——现统一改用同一比例单位(var(--sw))，两态一致']},
   {v:'v2.40.0', d:'2026-08-10', items:['新功能·猎手十字弩：猎手玩家开局获得一把「弩」，固定在屏幕右下角（复用十字弩图标）。白天可拖动它——拖拽时会拉出一条抛物线的发光箭头，拖到某个座位上松手，弹出「是否向该玩家开枪」确认；猎手确认后请求发给说书人，说书人在「白天」面板「确认开枪」（也可「代猎手开枪」或「驳回」），随后自动回执给猎手：命中则播放射杀动画并提示「恶魔死亡」，否则提示「无事发生」。十字弩在夜晚、当日处决出结果后、以及开过枪之后都会变灰不可用（灰亮状态由说书人端实时下发）']},
