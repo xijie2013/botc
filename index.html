@@ -264,7 +264,7 @@
   .grimoire{position:absolute; left:8.3%; top:23.5%; width:23.4%; height:54.7%;
     display:flex; flex-direction:column; gap:6px; color:var(--ink);}
   .gtabs{display:flex; gap:4px; flex:0 0 auto;}
-  .gtabs button{flex:1; padding:5px 2px; font-size:calc(18 * var(--sw) / 1280); font-weight:800;   /* 标签 18px（基准，随舞台缩放） */
+  .gtabs button{flex:1; padding:3px 2px; line-height:1.15; font-size:calc(16 * var(--sw) / 1280); font-weight:800;   /* 标签 16px、上下内边距收紧（更矮约20%） */
     border:1px solid rgba(74,43,107,.4); background:rgba(240,235,250,.6); color:#43286b; border-radius:6px; cursor:pointer;}
   .gtabs button.on{background:#b9a0d6; color:#2e1a47;}
   .grimoire.logview .gtabs, .grimoire.logview .bottom-bar{display:none;}   /* 墨水瓶进入日志：隐藏三标签与底栏 */
@@ -549,7 +549,7 @@
   .stage.grim .nameitem{background:rgba(240,235,250,.5); border-color:rgba(74,43,107,.3); color:#3a2456;}
   /* 玩家书本 3 个 tab */
   .nbtabs{display:flex; gap:4px; flex:0 0 auto;}
-  .nbtabs button{flex:1; padding:5px 2px; font-size:calc(18 * var(--sw) / 1280); font-weight:800; border-radius:6px; cursor:pointer;   /* 标签统一 18px */
+  .nbtabs button{flex:1; padding:3px 2px; line-height:1.15; font-size:calc(16 * var(--sw) / 1280); font-weight:800; border-radius:6px; cursor:pointer;   /* 标签 16px、上下内边距收紧（更矮约20%） */
     border:1px solid rgba(122,83,32,.4); background:rgba(255,250,235,.6); color:#6b4a1e;}
   .nbtabs button.on{background:rgba(184,134,11,.32); color:#6b4a1e; border-color:rgba(122,83,32,.6);}
   #notesPanel .nbcontent{flex:1; min-height:0; overflow:auto; padding-right:3px; font-size:calc(1 * var(--sw) / 100); color:#3a2a12;}
@@ -1142,6 +1142,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.10', d:'2026-08-10', items:['所有标签（tab）字号从 18 改为 16；并收紧上下内边距（5px→3px）＋行高，标签整体高度减小约 20%，去掉过大的上下留白']},
   {v:'v2.41.9', d:'2026-08-10', items:['「共 X 人」「第 X 夜」的数字 X 再放大到 22px（随舞台等比缩放）']},
   {v:'v2.41.8', d:'2026-08-10', items:['字号再上调（全局统一，随舞台等比缩放）：所有标题→20px、所有标签→18px、「共 X 人」「第 X 夜」文字→18px、数字 X→20px']},
   {v:'v2.41.7', d:'2026-08-10', items:['把上一版字号调整改为全局统一（影响魔典/大厅/玩家笔记等所有视图，均为 1280 基准像素、随舞台等比缩放）：所有标题→18px；所有标签（魔典 角色设置/夜晚/白天、旧局记录、玩家笔记 标记/提名/概览）→14px；计数控件「共 X 人」「第 X 夜」文字→14px、数字 X→18px']},
