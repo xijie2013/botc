@@ -412,13 +412,13 @@
   /* 魔典底栏：夜数(第一页)放大，发牌/重置按钮变窄 */
   .grimoire .bottom-bar .night-ctl{flex:1; margin:0; gap:5px; flex-wrap:nowrap; white-space:nowrap; font-size:calc(18 * var(--sw) / 1280);}   /* 「第…夜」文字 18px */
   .grimoire .bottom-bar .night-ctl button{flex:0 0 auto; width:min(25px, calc(1.85 * var(--sw) / 100)); height:min(25px, calc(1.85 * var(--sw) / 100)); font-size:min(14px, calc(1.0 * var(--sw) / 100));}
-  .grimoire .bottom-bar .night-ctl b{font-size:calc(20 * var(--sw) / 1280);}   /* 夜数数字 X 20px */
+  .grimoire .bottom-bar .night-ctl b{font-size:calc(22 * var(--sw) / 1280);}   /* 夜数数字 X 22px */
   .grimoire .bottom-bar .btn{flex:0 0 auto; padding:7px 9px;}   /* 与「保存本局/查看存档」同款：沿用 .btn 基础字号，不再缩小 */
   .ledger .bottom-bar, .grimoire .bottom-bar{margin-bottom:2.5px;}
   /* 酒馆底栏：人数放大，随机排座/清空座位变窄 */
   .ledger .bottom-bar .count{flex:1; justify-content:center; gap:5px; flex-wrap:nowrap; white-space:nowrap; font-size:calc(18 * var(--sw) / 1280); color:#6b4a1e; font-weight:800;}   /* 「共…人」文字 18px */
   .ledger .bottom-bar .count button{flex:0 0 auto; width:min(25px, calc(1.85 * var(--sw) / 100)); height:min(25px, calc(1.85 * var(--sw) / 100)); font-size:min(14px, calc(1.0 * var(--sw) / 100));}
-  .ledger .bottom-bar .count b{color:#8a5f28; font-size:calc(20 * var(--sw) / 1280);}   /* 人数数字 X 20px（与夜数一致） */
+  .ledger .bottom-bar .count b{color:#8a5f28; font-size:calc(22 * var(--sw) / 1280);}   /* 人数数字 X 22px（与夜数一致） */
   .ledger .bottom-bar .btn{flex:0 0 auto; padding:7px 9px;}   /* 与「保存本局/查看存档」同款：沿用 .btn 基础字号，不再缩小 */
   /* 背景墨水瓶热区：点击导出玩家笔记；悬停时墨口飘出光点（酒馆=金，魔典=紫） */
   .inkhotspot{position:absolute; left:39.4%; top:70.5%; width:8.6%; height:18%; cursor:pointer; z-index:6;}
@@ -1142,6 +1142,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.9', d:'2026-08-10', items:['「共 X 人」「第 X 夜」的数字 X 再放大到 22px（随舞台等比缩放）']},
   {v:'v2.41.8', d:'2026-08-10', items:['字号再上调（全局统一，随舞台等比缩放）：所有标题→20px、所有标签→18px、「共 X 人」「第 X 夜」文字→18px、数字 X→20px']},
   {v:'v2.41.7', d:'2026-08-10', items:['把上一版字号调整改为全局统一（影响魔典/大厅/玩家笔记等所有视图，均为 1280 基准像素、随舞台等比缩放）：所有标题→18px；所有标签（魔典 角色设置/夜晚/白天、旧局记录、玩家笔记 标记/提名/概览）→14px；计数控件「共 X 人」「第 X 夜」文字→14px、数字 X→18px']},
   {v:'v2.41.6', d:'2026-08-10', items:['按要求调整魔典字号（均为 1280 基准像素，随舞台等比缩放）：魔典标题→18px、标签(角色设置/夜晚/白天)→14px、「第…夜」文字→14px、夜数数字 X→18px']},
