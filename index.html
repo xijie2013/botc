@@ -169,7 +169,8 @@
   #setModal{position:fixed; inset:0; z-index:210; display:none; align-items:center; justify-content:center; background:rgba(10,6,16,.64); padding:16px; overflow-y:auto;}
   #setModal.on{display:flex;}
   #setModal .setbox{width:min(92vw,430px); max-width:calc(80vw / var(--uiscale)); max-height:calc(80dvh / var(--uiscale)); overflow-y:auto; background:linear-gradient(180deg,#2b2038,#20172a);
-    border:2px solid #e9c46a; border-radius:14px; padding:18px 20px 18px; color:#e9dcc4; box-shadow:0 14px 44px rgba(0,0,0,.6), inset 0 0 34px rgba(233,196,106,.06); zoom:var(--uiscale);}
+    border:2px solid #e9c46a; border-radius:14px; padding:18px 20px 18px; color:#e9dcc4; box-shadow:0 14px 44px rgba(0,0,0,.6), inset 0 0 34px rgba(233,196,106,.06); zoom:var(--uiscale); scrollbar-width:thin; scrollbar-color:rgba(233,196,106,.4) transparent;}
+  #setModal .setbox::-webkit-scrollbar{width:6px;} #setModal .setbox::-webkit-scrollbar-track{background:transparent;} #setModal .setbox::-webkit-scrollbar-thumb{background:rgba(233,196,106,.4); border-radius:3px;}   /* 去掉滚动条白色默认背景，改用暗色透明轨道+金色滑块 */
   #setModal h3{margin:0 0 12px; color:#e9c46a; font-size:17px; letter-spacing:2px; display:flex; justify-content:space-between; align-items:center;}
   #setModal .cX{cursor:pointer; color:#9a8fb3; font-weight:700;}
   #setModal .set-ver{font-size:13px; color:#c9b6e6; margin-bottom:4px;}
@@ -285,7 +286,7 @@
   .nstep input{margin-top:3px;} .nstep .nn{color:#6a4e8f; font-size:.92em;}
   .impkill{margin:2px 0 5px 2px; font-size:calc(.95 * var(--sw) / 100); color:#43286b; display:flex; align-items:center; gap:5px; flex-wrap:wrap;}   /* 取消左缩进，与角色名对齐，留出横向空间避免换行 */
   .impkill select{font-size:calc(.9 * var(--sw) / 100); padding:2px 5px; border:1px solid rgba(74,43,107,.5); border-radius:5px; background:rgba(255,252,244,.9); color:#3a2a12; font-family:inherit;
-    width:calc(10.5 * var(--sw) / 100); text-overflow:ellipsis; white-space:nowrap; overflow:hidden;}   /* 固定宽度：下拉宽度不再随玩家名/状态（已出局/自己等）变化，layout 稳定；超长名字在收起态省略号，展开列表仍显示完整 */
+    width:calc(6.25 * var(--sw) / 100); text-overflow:ellipsis; white-space:nowrap; overflow:hidden;}   /* 固定宽度 80px（参考尺寸）：下拉宽度不再随玩家名/状态（已出局/自己等）变化，layout 稳定；超长名字在收起态省略号，展开列表仍显示完整 */
   .impkill.warn{color:#b0402e; font-weight:700;}
   .impkill.done{color:#2e7d43; font-weight:700;}
   .regbtn{display:inline-block; margin-left:5px; padding:1px 9px; border-radius:10px; cursor:pointer; font-size:.92em;
@@ -560,11 +561,11 @@
   #notesPanel .nbcontent{flex:1; min-height:0; overflow:auto; padding-right:3px; font-size:calc(1 * var(--sw) / 100); color:#3a2a12;}
   #notesPanel .nbcontent::-webkit-scrollbar{width:6px;} #notesPanel .nbcontent::-webkit-scrollbar-thumb{background:rgba(74,43,107,.35); border-radius:3px;}
   .nb-sec{font-weight:800; color:#6b4a1e; margin:8px 0 4px; letter-spacing:.5px;}
-  .nbtok{display:inline-flex; align-items:center; gap:4px; font-size:calc(1 * var(--sw) / 100); padding:4px 9px; border-radius:14px; margin:0 4px 4px 0;
-    border:1px solid rgba(122,83,32,.4); background:rgba(255,252,244,.85); color:#3a2a12; cursor:pointer; user-select:none;}
+  .nbtok{display:inline-flex; align-items:center; gap:4px; font-size:calc(1.02 * var(--sw) / 100); font-weight:700; padding:3px 9px; border-radius:14px; margin:0 5px 5px 0;
+    border:1.5px solid rgba(122,83,32,.4); background:rgba(255,252,244,.85); color:#3a2a12; cursor:grab; user-select:none; white-space:nowrap; box-shadow:0 1px 2px rgba(0,0,0,.15);}   /* 与魔典/角色设置的 .rchip 一致：同字号/字重、彩色边框、阴影 */
+  .nbtok:hover{filter:brightness(.95); transform:translateY(-1px);}
   .nbtok.on{background:var(--gold); color:#fff; border-color:var(--gold); box-shadow:0 0 6px rgba(184,134,11,.5);}
   .nbtok.used{opacity:.4;}
-  .nbtok{cursor:grab;}
   .nbtok.crossed{opacity:.45; text-decoration:line-through;}
   /* 防止拖拽/点击时误选中界面文字与图片（整站禁用文本选择，仅输入框可选） */
   body{ -webkit-user-select:none; -moz-user-select:none; user-select:none; -webkit-touch-callout:none; }
@@ -1147,6 +1148,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.18', d:'2026-08-11', items:['①左上角设置弹窗的滚动条去掉白色默认背景：改为暗色透明轨道 + 金色细滑块（同其它面板风格）。②玩家笔记/标记：状态标记与角色标记的样式统一为与「魔典/角色设置」的角色牌一模一样——同字号/字重、圆角彩色边框、投影阴影；状态标记的边框颜色对应其在座位图上的光晕色（中毒绿/醉酒黄/守护灰/已开枪蓝/红鲱鱼红/主人金），角色标记边框用对应阵营色。③夜晚选人下拉菜单宽度改为 80px（参考尺寸）。']},
   {v:'v2.41.17', d:'2026-08-11', items:['①魔典/白天：删除多余的「管家 xxx 的主人：…」提示行。②处决面板：点「处决」或「今日无人处决」都会先弹确认弹窗，确认后才执行；本日处决一旦确定，就不能再新增提名（提名表单收起，addNomination 也加了兜底拦截）。③夜晚选人下拉菜单改为固定宽度：不再随玩家名字长短或「已出局/自己」等状态标识变化，layout 保持稳定（收起态过长省略号，展开列表仍显示完整名字）']},
   {v:'v2.41.16', d:'2026-08-10', items:['①当前客人名册：玩家已登录且在线时，名字前显示绿点（登录写 accounts/{key}/online=true，断线/登出自动清；说书人实时显示）。过往名册的「已注册账号=紫点」保持不变。②左上角设置等所有居中弹窗：最多占视口 80% 高/宽（四周至少 10% 边距），超出则内部滚动——上限按缩放系数换算，仍与整体等比缩放一致。③夜晚面板里选人那行（如图书管理员「外来者[下拉] 另一人：[下拉]」）取消左缩进、与角色名对齐，留出横向空间避免换行']},
   {v:'v2.41.15', d:'2026-08-10', items:['精简夜晚/白天面板文案：①删除洗衣妇「镇民候选…」、图书管理员「外来者/无外来者→告知没有外来者」、调查员「爪牙候选…」、占卜师「读为恶魔…」这些冗长的候选提示（中毒/醉酒警告保留）。②删除「（等前一步完成后再发送）」「完成本夜所有流程后可点亮」「处决结果出来后可点亮」三处引导提示。③白天：「今日无人处决」按钮移到「暂无人达处决票数（或平票）」右侧同一行，有人上处决台后两者一起消失']},
@@ -4079,12 +4081,12 @@ load(); render();
   }
   function markTabHTML(){ ensureS(); const crossed=new Set(S.crossed||[]);
     let h='<div class="nb-sec">状态标记 · 拖到座位上添加；单击划掉</div><div>';
-    h+=STAT_ORDER.map(k=>{ const b=BADGE[k]; const ic=MARK[k]?'<img src="'+MARK[k][1]+'" draggable="false" style="width:17px;height:17px;object-fit:contain;vertical-align:middle;margin-right:2px">':'';
-      return '<span class="nbtok'+(crossed.has('stat:'+k)?' crossed':'')+'" draggable="true" ondragstart="_nbDragStart(event,\'pstat:'+k+'\')" onclick="_nbCross(\'stat:'+k+'\')">'+ic+b.t+'</span>'; }).join('')+'</div>';
+    h+=STAT_ORDER.map(k=>{ const b=BADGE[k]; const gc=(MARK[k]&&MARK[k][3])||'rgba(122,83,32,.4)'; const ic=MARK[k]?'<img src="'+MARK[k][1]+'" draggable="false" style="width:17px;height:17px;object-fit:contain;vertical-align:middle;margin-right:2px">':'';
+      return '<span class="nbtok'+(crossed.has('stat:'+k)?' crossed':'')+'" draggable="true" ondragstart="_nbDragStart(event,\'pstat:'+k+'\')" onclick="_nbCross(\'stat:'+k+'\')" style="border-color:'+gc+'">'+ic+b.t+'</span>'; }).join('')+'</div>';
     h+='<div class="nb-sec">在场角色 · 拖到座位上记录猜测；单击划掉</div><div>';
     const locked=new Set(pub.locked||[]); const rs=ROLES.filter(r=>!locked.has(r.id)).map(r=>r.id);
     h+=rs.map(id=>{ const r=RMAP[id]; if(!r) return '';
-      return '<span class="nbtok'+(crossed.has('role:'+id)?' crossed':'')+'" draggable="true" ondragstart="_nbDragStart(event,\'prole:'+id+'\')" onclick="_nbCross(\'role:'+id+'\')" style="color:'+TEAMC[r.team]+'">'+r.name+'</span>'; }).join('')+'</div>';
+      return '<span class="nbtok'+(crossed.has('role:'+id)?' crossed':'')+'" draggable="true" ondragstart="_nbDragStart(event,\'prole:'+id+'\')" onclick="_nbCross(\'role:'+id+'\')" style="border-color:'+TEAMC[r.team]+';color:'+TEAMC[r.team]+'">'+r.name+'</span>'; }).join('')+'</div>';
     h+='<button class="nb-clearall" onclick="_nbClearAll(this)">清除所有标记</button>';
     return h;
   }
