@@ -21,7 +21,6 @@
   };
   try { firebase.initializeApp(firebaseConfig); } catch(e){ console.warn('firebase init', e); }
   /* 登录用的隐藏邮箱域（玩家只输 ID，不涉及真实邮箱） */
-  const ST_EMAIL   = "storyteller@st.botc-clocktower.app";  // 旧版固定说书人账号（仍兼容）
   const ST_DOM     = "@st.botc-clocktower.app";              // 说书人 ID + 此域
   const PLAYER_DOM = "@p.botc-clocktower.app";               // 玩家 ID + 此域
   /* 访客模式开关：默认 true，说书人本地渲染在确认身份前不运行，避免与大厅/玩家渲染冲突 */
@@ -466,14 +465,8 @@
   .seat .nm{line-height:1.1; color:#fff6df; font-weight:700; word-break:break-all; max-width:88%; text-shadow:0 1px 2px rgba(0,0,0,.65);}
   .seat .deathcause{line-height:1.05; margin-top:1px; color:#ff9a8a; font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,.7);}
   .seat.hascause{opacity:1!important; filter:none!important;}
-  .seat .stbtn img{width:100%; height:100%; object-fit:contain; opacity:.4; pointer-events:none;}
-  .seat .stbtn.on img{opacity:1;}
   .seat .shieldbadge{position:absolute; z-index:3; pointer-events:none; filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));}
   .seat .shieldbadge img{width:100%; height:100%; object-fit:contain;}
-  .seat .votehand{position:absolute; left:50%; bottom:-9px; transform:translateX(-50%); z-index:5; pointer-events:none;
-    font-size:17px; line-height:1; padding:1px 5px; border-radius:11px; font-weight:800;}
-  .seat .votehand.up{color:#eafff0; background:rgba(30,120,60,.92); box-shadow:0 0 8px rgba(46,190,90,.8), 0 1px 3px rgba(0,0,0,.5);}
-  .seat .votehand.no{color:#f0e6d6; background:rgba(70,55,90,.9); box-shadow:0 1px 3px rgba(0,0,0,.5);}
   /* 举手：手掌圆形徽章铺满座位背景（正常/鬼票两张图） */
   .seat .handfill{position:absolute; inset:0; border-radius:50%; z-index:1; overflow:hidden; pointer-events:none;}
   .seat .handfill img{width:100%; height:100%; object-fit:cover; display:block;}
@@ -481,17 +474,6 @@
   /* 举手图标只作背景：姓名/角色抬到其上（编号本就是绝对定位徽章+z-index:2，不要改成relative以免移位） */
   .seat.raised .nm, .seat.raised .role, .seat.raised .vrole, .seat.raised .deathcause{position:relative; z-index:2;}
   .seat .role{line-height:1.05; font-weight:800; margin-top:1px; text-shadow:0 1px 2px rgba(0,0,0,.6); white-space:nowrap;}
-  .seat .st{position:absolute; bottom:-7%; right:-7%; display:flex; gap:2px; z-index:2;}
-  .seat .st span{background:#1a1220; border:1px solid rgba(233,196,106,.6); border-radius:7px; font-size:10px; padding:0 3px; color:#e9c46a;}
-  /* grimoire status buttons (top-right of seat) */
-  .seat .stbtns{position:absolute; top:-7%; right:-7%; display:flex; flex-direction:column; gap:2px; z-index:3;}
-  .seat .stbtn{position:absolute; z-index:3; display:flex; align-items:center; justify-content:center; cursor:pointer;
-    filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));}
-  .seat .stbtn:hover{filter:brightness(1.2) drop-shadow(0 1px 2px rgba(0,0,0,.55));}
-  .seat .stbtn.on{filter:drop-shadow(0 0 3px rgba(255,220,120,.7));}
-  .seat .stbtn.dead.on{filter:drop-shadow(0 0 4px rgba(255,70,55,.95));}
-  .seat .stbtn.poison.on{filter:drop-shadow(0 0 4px rgba(90,235,100,.95));}
-  .seat .stbtn.drunk.on{filter:drop-shadow(0 0 4px rgba(255,205,60,.95));}
   .seat.filled{border-color:#e9c46a; background:radial-gradient(circle at 50% 35%, rgba(90,60,110,.9), rgba(45,28,60,.95));}
   .seat.good{border-color:#4a86c8;} .seat.evil{border-color:#cf4436;}
   .seat.over{border-color:#ffd76b; transform:translate(-50%,-50%) scale(1.09); box-shadow:0 0 0 3px rgba(255,215,107,.5),0 4px 12px rgba(0,0,0,.5);}
@@ -1123,26 +1105,6 @@ function load(){
 }
 function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 function seatToken(i){ return tokens.find(t=>t.seat===i); }
-async function exportPlayerNotes(){
-  const names=[], roles=[]; let missing=0;
-  for(let i=0;i<N;i++){
-    const t=seatToken(i); names.push(t&&t.name?t.name:'');
-    const m=meta[i]||{}; const rid = m.isDrunk?'drunk':(m.role||'');
-    if(!rid) missing++; else roles.push(rid);
-  }
-  if(missing>0 && !await uiConfirm('还有 '+missing+' 个座位没有分配角色，仍要导出吗？（玩家速览只会包含已分配的角色）')) return;
-  // 按阵营排序，打乱座位↔角色的对应，避免泄露答案
-  const rank={tf:0,out:1,min:2,dem:3};
-  roles.sort((a,b)=> (rank[RMAP[a].team]-rank[RMAP[b].team]) || a.localeCompare(b));
-  // 本局速览集合（与魔典"本局速览"完全一致）：按阵营顺序展开
-  const gs=gameOverviewSet(); const overview=[];
-  ORDER.forEach(team=>{ ROLES.filter(r=>r.team===team && gs.has(r.id)).forEach(r=>overview.push(r.id)); });
-  const nm = await uiPrompt('给这局起个名字（玩家会看到）：','本局',{title:'命名本局'});
-  if(nm===null) return;
-  const g={ name: nm||'本局', count:N, names, roles, overview, dist:(customDist||DIST[N]||[0,0,0,0]) };
-  const enc = btoa(unescape(encodeURIComponent(JSON.stringify(g))));
-  window.open('player-notes.html#g='+enc, '_blank');
-}
 
 function toggleFull(){
   const el=document.documentElement;
@@ -1168,6 +1130,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.36', d:'2026-08-11', items:['清理死代码 + 精简两处提示：①删除 16 个从未被调用的函数/常量（HAND_SVG 未用的举手SVG、exportPlayerNotes、ghostUsedAnywhere、impSuccessorOptions、inPlayRoles、poolEl、scheduleRouletteOut、seatEvil、setDrunk、setListMode、slayerUndo 及其专用的 _clearSlayerPubFromAll、toggleDead/togglePoison/toggleDrunk、旧固定说书人账号 ST_EMAIL）——多为历次重构后遗留、无任何入口触发。②删除对应的死 CSS：座位旧「状态按钮」`.stbtn/.stbtns`、旧状态角标容器 `.seat .st`、以及从不渲染的 `.votehand`。③死因表 CAUSE 精简为只留 img（此前的 t 文本与 emoji 图标 ⚖️/🩸/🎯 字段从未被读取）。④「已开始新的一局」toast 去掉 ✅。⑤「结束本夜 · 天亮了，钟表开始走时」精简为「天亮了」。（纯清理，无功能变化。）']},
   {v:'v2.41.35', d:'2026-08-11', items:['①删除猎手请求 toast 里的 🎯 图标（「猎手请求开枪，请到白天面板确认」）。②所有底部弹窗宽度统一固定 350px：此前只有夜晚信息条/猎手请求条/红唇接任条是 350px，现在把投票条(#voteBar)与猎手开枪结果条(#slayerResult)也改为固定 350px（内部下拉仍固定 120px）。③删除未使用的顶部胜负横幅 #winBanner（一直是空 div、无任何 JS 写入，从不显示；胜负已由结算动画与笔记/魔典里的横幅呈现）。']},
   {v:'v2.41.34', d:'2026-08-11', items:['修复拖放失效（自 v2.41.31 统一指针事件后一直存在的 bug）：松手结算函数 `_end` 先把拖拽状态 `_dg` 置成了 null，随后 `_drop` 又去读 `_dg.payload` → 抛异常被 try/catch 静默吞掉，导致所有拖放（魔典角色标签拖到座位、令牌移动、玩家笔记里状态/身份标记拖到座位）放手后都没生效。现在 `_drop` 改为显式接收 payload 参数、不再依赖已被清空的 `_dg`。（用无头 Chromium 真机指针/触摸事件回归验证：鼠标与触屏拖放均正确落点。）']},
   {v:'v2.41.33', d:'2026-08-11', items:['卡背也做成等比：右上角/翻面用的通用卡背 cardback.png 此前被 720×1188 卡框（object-fit:fill）竖向压扁约 11%，金色圆角边框与中央钟楼/眼睛徽记都变扁。现在把卡背原生重做为 720×1188——不整体拉伸，只从徽记下方的空白紫色区（避开下圆角，取纯紫直边处）抽掉底部约 265px（≈10%）高度，顶部与上下圆角边框完全不动、接缝无痕，圆角边框与徽记都保持原比例。（仅替换 assets/cardback.png 素材，未改 layout。）']},
@@ -1350,13 +1313,6 @@ async function clearSeats(){ if(!await uiConfirm("确定清空所有座位？"))
 function moveToken(id,seat){ const tok=tokens.find(t=>t.id===id); if(!tok)return;
   if(seat!==null){ const occ=tokens.find(t=>t.seat===seat); if(occ&&occ.id!==id) occ.seat=tok.seat; } tok.seat=seat; }
 function seatClick(i){ if(selected!==null){ moveToken(selected,i); selected=null; render(); return; } const t=seatToken(i); if(t){ selected=t.id; render(); } }
-function toggleDead(i){ const wasDead=isDeadSeat(i);
-  const t=seatToken(i); if(t){ t.dead=!t.dead; } else { ensureMeta(); meta[i].dead=!meta[i].dead; }
-  const nowDead=isDeadSeat(i);
-  if(nowDead&&!wasDead) demonDied(i); else if(!nowDead&&wasDead) demonRevived(i);
-  render(); }
-function togglePoison(i){ ensureMeta(); meta[i].poison=!meta[i].poison; render(); }
-function toggleDrunk(i){ ensureMeta(); meta[i].drunk=!meta[i].drunk; render(); }
 
 /* ---------- grimoire ops ---------- */
 async function dealRoles(){
@@ -1408,7 +1364,6 @@ function setBluff(k,v){ bluffs[k]=v; refreshOverviewDecoys(); render(); }
 
 /* ---------- 夜晚信息自动计算 ---------- */
 function seatAlive(i){ const t=seatToken(i), m=meta[i]||{}; return !(t?t.dead:m.dead); }
-function seatEvil(i){ const m=meta[i]; return !!(m&&m.role&&isEvil(RMAP[m.role].team)); }
 /* 判定阵营（含间谍/陌客误判）：间谍可判善良、陌客可判邪恶，其余按真实阵营 */
 function effReg(i){ const m=meta[i]; if(!m||!m.role) return 'good';
   if(m.reg==='good'||m.reg==='evil') return m.reg;
@@ -1418,8 +1373,6 @@ function effReg(i){ const m=meta[i]; if(!m||!m.role) return 'good';
 function regEvil(i){ return effReg(i)==='evil'; }
 function setReg(i,v){ ensureMeta(); meta[i].reg=v; render(); }
 function setRedHerring(v){ redHerring = v===""? -1 : +v; render(); }
-function setDrunk(v){ const prev=meta.findIndex(m=>m&&m.isDrunk); if(prev>=0){ meta[prev].isDrunk=false; meta[prev].drunk=false; }
-  if(v!==""){ ensureMeta(); meta[+v].isDrunk=true; meta[+v].drunk=true; } render(); }
 /* 把角色分配到座位：唯一角色——同一角色只能在场一个，重复分配会清空前一个座位（酒鬼保留身份标记、仅清自以为的镇民）。酒鬼特殊：先成为「未定身份的酒鬼」，再用下拉设自以为的镇民。 */
 function _clearBluff(rid){ for(let j=0;j<bluffs.length;j++){ if(bluffs[j]===rid){ bluffs[j]=""; } } }   // 该身份若是恶魔伪装 → 撤销该伪装（被分配到场上后不能再作伪装）
 function assignRoleToSeat(i, rid){ ensureMeta();
@@ -1532,9 +1485,6 @@ function ravenPlayerResult(){ const rec=ravenPicks[night]||{}; if(rec.t==null) r
   const rn=(shown&&RMAP[shown])?RMAP[shown].name:'（未知）';
   return '【守鸦人】你得知 '+nameAt(rec.t)+' 的真实角色是：'+rn+'。'; }
 function _resultDefaultText(id){ return id==='ravenkeeper'?ravenPlayerResult():ftResultText(); }   // 结果类步骤的默认文本（占卜/守鸦人）
-function impSuccessorOptions(){ const sw=meta.findIndex(m=>m&&m.role==='scarletwoman'); const swAlive=sw>=0 && !isDeadSeat(sw) && healthy(sw); const aliveNow=countAlive();
-  if(swAlive && aliveNow>=5) return [{seat:sw, name:(sw+1)+'号 '+nameAt(sw)+'（红唇女郎·强制继任）'}];   // 红唇女郎存活且5人以上 → 只能传她
-  return _minSeats().filter(i=>!isDeadSeat(i)).map(i=>({seat:i, name:(i+1)+'号 '+nameAt(i)})); }
 function nightAutoText(id){
   if(id==='_minion'){ const d=_demSeat(); const dn=d>=0?((d+1)+'号 '+nameAt(d)):'（未定）'; const ms=_minSeats().map(i=>(i+1)+'号 '+nameAt(i)); return '【爪牙信息】你的恶魔是：'+dn+'。同伙爪牙：'+(ms.join('、')||'无其他爪牙')+'。'; }
   if(id==='_demon'){ const ms=_minSeats().map(i=>(i+1)+'号 '+nameAt(i)); const bl=(bluffs||[]).filter(Boolean).map(x=>RMAP[x]?RMAP[x].name:x); return '【恶魔信息】你的爪牙：'+(ms.join('、')||'无')+'。可伪装的身份（不在场好人）：'+(bl.join('、')||'（说书人未设置）')+'。'; }
@@ -2167,7 +2117,6 @@ window.applyResult=function(res){
 const EXEC_VIDEOS=['assets/exec1.mp4','assets/exec2.mp4','assets/exec3.mp4'];
 const SLAYER_VIDEO='assets/slayer.mp4';   // 猎人成功射杀恶魔时播放（完整播放→淡出→若胜利则接胜利动画）
 /* 举手图标：金色圆底 + 手掌，铺满座位背景 */
-const HAND_SVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23 5.5V20c0 2.2-1.8 4-4 4h-7.3c-1.08 0-2.1-.43-2.85-1.19L1 14.83s1.26-1.23 1.3-1.25c.22-.19.49-.29.79-.29.22 0 .42.06.6.16.04.01 4.31 2.46 4.31 2.46V4c0-.83.67-1.5 1.5-1.5S12 3.17 12 4v7h1V1.5c0-.83.67-1.5 1.5-1.5S16 .67 16 1.5V11h1V2.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5V11h1V5.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5z"/></svg>';
 /* 各视频「变身（变成恶魔）」开始的秒数：非恶魔被处决时播到此处即停。三个视频可不同，按需修改。 */
 const EXEC_CUT=[6.2, 5.5, 7];
 const EXEC_HOLD_MS=3000;   // 截断/结尾后：定格最后一帧并在这段时间内逐渐变黑
@@ -2247,7 +2196,7 @@ window._volSync=function(){ [['sfx','volSfx'],['anim','volAnim'],['bgm','volBgm'
 var CLK={dayStart:null, nom:null, offset:0, _tick:null, _loadTs:Date.now(), _realBusy:false, _nomSeenTs:0, _outTimer:null, _busyTimer:null, _nomLock:false};
 var _clkEls=null;
 var CLK_PIVOT={hour:{px:0.4938,py:0.8345,ar:0.14038}, minute:{px:0.4969,py:0.7931,ar:0.12173}};
-var CLK_HOLD=8000, CLK_DAY_MS=20*60*1000;
+var CLK_DAY_MS=20*60*1000;
 var CLK_SPIN_H=2500, CLK_TURN_H=1, CLK_SPIN_M=4000, CLK_TURN_M=2;   /* 时针1圈2.5s先落位；分针2圈4s后落位 */
 function clockServerNow(){ return Date.now()+(CLK.offset||0); }
 function clockGeo(){ const st=document.getElementById('stage'); if(!st) return null;
@@ -2291,8 +2240,6 @@ function clockUpdate(snap){ if(!_clkEls) return; const a=dayAngles(clockServerNo
     clkSetHand(_clkEls.hHour, a.hour, {dur:snap?0:1});
     clkSetHand(_clkEls.hMin, a.minute, {dur:snap?0:1}); }
 }
-function scheduleRouletteOut(nom){ const delay=Math.max(0,(nom.ts+CLK_HOLD)-clockServerNow());
-  clearTimeout(CLK._outTimer); CLK._outTimer=setTimeout(endRoulette, delay); }
 function startRoulette(nom){ if(!_clkEls) return; const N2=clockSeatCount()||1; CLK._realBusy=true; CLK._nomLock=true;
   clearTimeout(CLK._outTimer);   /* 锁定指向提名者/被提名者，直到说书人停止计票 */
   _clkEls.hHour.classList.add('blue'); _clkEls.hHour.classList.remove('red');
@@ -2356,10 +2303,6 @@ window.clockApplyState=function(c){ c=c||{};
 window._clockVoteState=function(v){};
 /* ---------- 白天：提名 / 投票 / 处决 ---------- */
 function dayThreshold(){ return Math.ceil(countAlive()/2); }
-function ghostUsedAnywhere(seat){   // 鬼票只由「死后投出的票」消耗（记录在各提名的 ghostVoters 里）
-  for(const d in nominations){ for(const nom of nominations[d]){ if(nom.ghostVoters && nom.ghostVoters.includes(seat)) return true; } }
-  return false;
-}
 function onBlock(day){ const noms=nominations[day]||[]; const thr=dayThreshold(); let best=-1,bestV=0,tie=false;
   noms.forEach(nom=>{ if(!nom.tallied) return;   // 只有「停止计票」的提名才计入上处决台判定
     const v=nom.voters.length; if(v>=thr){ if(v>bestV){bestV=v;best=nom.nominee;tie=false;} else if(v===bestV){tie=true;} } });
@@ -2412,14 +2355,7 @@ function slayerFire(v){ if(v===""||slayerShot||executions[night]!==undefined) re
   if(window._syncNoms) window._syncNoms(); if(window._syncSeats) window._syncSeats();
   if(hit && window._pubSlayer) window._pubSlayer();   // 猎人成功射杀恶魔→播放动画（红唇继任也播）
   render(); }
-function slayerUndo(){ if(!slayerShot) return; const t=slayerShot.target; const day=slayerShot.day;
-  if(slayerShot.hit){ const _sw=(meta[t]&&meta[t]._swSeat!=null)?meta[t]._swSeat:null;
-    demonRevived(t); killSeat(t,false); histSet(t,'death',null);
-    if(_sw!=null) try{ _clearSwTakeover(_sw, day); }catch(e){} }   // 撤销猎人击杀 → 撤销红唇接任通知
-  try{ _clearSlayerPubFromAll(day); }catch(e){}   // 撤销 → 清掉全员的猎人开枪公共记录
-  slayerShot=null; if(window._syncNoms) window._syncNoms(); if(window._syncSeats) window._syncSeats(); render(); }
 /* 说书人开枪结算（猎手请求 或 说书人代开枪都走这里）：射击 + 把结果回给猎手玩家 + 记局内信息 */
-function _clearSlayerPubFromAll(day){ allSeats().forEach(function(i){ try{ if(window.stRemoveGameInfo) window.stRemoveGameInfo(i,'slayerpub:day:'+day); }catch(e){} }); }
 function _stFireSlayer(target){ if(target==null||target==='') return;
   slayerFire(String(target));
   const sh=slayerShot;
@@ -2609,7 +2545,6 @@ function setView(){ view=(view==="seat"?"grim":"seat");
   else { try{ if(window._sfx) _sfx('grimoire-close'); }catch(e){} }   // 合上魔典：合书声
   render(); }
 function setGtab(t){ gtab=t; render(); }
-function setListMode(m){ listMode=m; render(); }
 function toggleLock(id){ if(lockedRoles.has(id)) lockedRoles.delete(id); else lockedRoles.add(id); render(); }
 /* ---------- 自定义阵营数量 ---------- */
 function setDistCount(idx,delta){ const cd=(customDist||DIST[N]).slice();
@@ -2684,8 +2619,6 @@ function chipEl(t){
     e.stopPropagation(); selected=(selected===t.id?null:t.id); render(); });
   return d;
 }
-function inPlayRoles(){ const ids=meta.map(m=>m.role).filter(Boolean); const u=[...new Set(ids)];
-  u.sort((a,b)=>ORDER.indexOf(RMAP[a].team)-ORDER.indexOf(RMAP[b].team)); return u; }
 function bluffSel(k){
   const occ=new Set();   // 已占用（不可再作本伪装槽）：座位角色+酒鬼自以为的镇民+酒鬼本身+其他伪装槽已选
   meta.forEach(m=>{ if(!m) return; if(m.isDrunk){ occ.add('drunk'); if(m.role) occ.add(m.role); } else if(m.role) occ.add(m.role); });
@@ -3058,7 +2991,6 @@ document.getElementById("mRole").addEventListener("change",updAlign);
 document.getElementById("mask").addEventListener("click",e=>{ if(e.target.id==="mask") closeEditor(); });
 
 /* pool as drop target */
-const poolEl=document.getElementById("pool");   // 拖回名册(移出座位)由统一指针系统处理（#pool 为落点）
 
 /* ===== 统一拖拽系统（指针事件，鼠标/触屏/手写笔同一套）：把 [data-drag] 元素（角色标签/客人/笔记标记/座位身份）
    拖到座位/名册。取代原生 HTML5 拖放（原生在触屏不触发）。用位移阈值区分「点按」与「拖动」，拖动后抑制随之而来的 click。 ===== */
@@ -3202,7 +3134,7 @@ load(); render();
 
   const BADGE={ dead:{g:'💀',t:'出局'}, poison:{g:'🧪',t:'中毒'}, drunk:{g:'🍺',t:'醉酒'}, shield:{g:'🛡️',t:'守护'}, crossbow:{g:'🏹',t:'已开枪'}, master:{g:'👑',t:'主人'}, herring:{g:'🐟',t:'红鲱鱼'} };
   const STAT_ORDER=['poison','drunk','shield','crossbow','herring','master'];
-  const CAUSE={ exec:{t:'处决',g:'⚖️',img:'assets/s-execution.png'}, claw:{t:'恶魔爪击',g:'🩸',img:'assets/g3-demonkill.png'}, slay:{t:'猎人击杀',g:'🎯',img:'assets/mk-slayer.png'} };
+  const CAUSE={ exec:{img:'assets/s-execution.png'}, claw:{img:'assets/g3-demonkill.png'}, slay:{img:'assets/mk-slayer.png'} };   // 座位死因背景图（t/g 文本与 emoji 字段此前未使用，已删）
   /* 与魔典一致的座位状态图标：[固定角度, 图片, 缩放, 光晕色] */
   const MARK={ poison:[60,'assets/mk-poison.png',1,'#3fd44f'], drunk:[90,'assets/s-drunk.png',1,'#ffe14d'],
     shield:[120,'assets/mk-shield.png',1,'#d8dae2'], crossbow:[150,'assets/mk-crossbow.png',1.2,'#4aa8ff'],
@@ -4345,7 +4277,7 @@ load(); render();
         for(let i=0;i<N;i++){ const t=seatToken(i); const nm=(t&&t.name)?t.name:''; if(!nm) continue; const rid=(meta[i]&&meta[i].role)||''; if(!rid) continue; const acc=accs[rkey(nm)]; if(acc&&acc.uid) ru['games/'+gid+'/players/'+acc.uid+'/role']=rid; }
         if(Object.keys(ru).length) await db.ref().update(ru);
       }catch(e){}
-      await db.ref('currentGame').set(gid); toast('✅ 已开始新的一局');
+      await db.ref('currentGame').set(gid); toast('已开始新的一局');
       /* 清理：删掉除当前局外的所有旧牌局（含旧笔记），云端只留当前一局，避免累积 */
       try{ const snap=await db.ref('games').once('value'); const all=snap.val()||{};
         const dels=Object.keys(all).filter(k=>k!==gid).map(k=>db.ref('games/'+k).remove().catch(()=>{}));
@@ -4361,7 +4293,7 @@ load(); render();
     catch(e){ toast('公布失败：'+(e.code||'')); } };
   window.stDawn=async function(){ if(role!=='st'){ toast('请先登录说书人'); return; } if(!curGid){ toast('先点开新局'); return; }
     const p=buildPublic(); try{ await db.ref('games/'+curGid+'/public').update({seats:p.seats,noms:p.noms,day:p.day,count:p.count,
-        vote:null, clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null}}); toast('结束本夜 · 天亮了，钟表开始走时'); }
+        vote:null, clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null}}); toast('天亮了'); }
     catch(e){ toast('更新失败：'+(e.code||'')); } };
 
   /* ---------- 名单实时自动同步（说书人改动→自动推送公开名单，不含死亡/提名） ---------- */
