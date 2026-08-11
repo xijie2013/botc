@@ -210,7 +210,7 @@
     display:flex; align-items:center; justify-content:center; z-index:4;
     font-weight:800; color:#5a3d16; letter-spacing:3px;
     font-size:calc(20 * var(--sw) / 1280); text-shadow:0 1px 0 rgba(255,255,255,.5);   /* 标题统一 20px（所有视图，随舞台缩放） */
-    transform:translateY(calc(-3 * var(--sw) / 1280));   /* 标题上移 3px */
+    transform:translateY(calc(-1.5 * var(--sw) / 1280));   /* 标题上移 1.5px */
   }
 
   /* ======= LEFT (seat view): ledger ======= */
@@ -414,14 +414,14 @@
   .grimoire .bottom-bar .night-ctl{flex:1; margin:0; gap:5px; flex-wrap:nowrap; white-space:nowrap; font-size:calc(18 * var(--sw) / 1280);}   /* 「第…夜」文字 18px */
   .grimoire .bottom-bar .night-ctl button{flex:0 0 auto; width:min(25px, calc(1.85 * var(--sw) / 100)); height:min(25px, calc(1.85 * var(--sw) / 100)); font-size:min(14px, calc(1.0 * var(--sw) / 100));}
   .grimoire .bottom-bar .night-ctl b{font-size:calc(22 * var(--sw) / 1280);}   /* 夜数数字 X 22px */
-  .grimoire .bottom-bar .night-ctl span{position:relative; top:calc(-5 * var(--sw) / 1280);}   /* 「第…夜」文字与数字上移 5px，按钮不动 */
+  .grimoire .bottom-bar .night-ctl span{position:relative; top:calc(-3 * var(--sw) / 1280);}   /* 「第…夜」文字与数字上移 3px，按钮不动 */
   .grimoire .bottom-bar .btn{flex:0 0 auto; padding:7px 9px;}   /* 与「保存本局/查看存档」同款：沿用 .btn 基础字号，不再缩小 */
   .ledger .bottom-bar, .grimoire .bottom-bar{margin-bottom:2.5px;}
   /* 酒馆底栏：人数放大，随机排座/清空座位变窄 */
   .ledger .bottom-bar .count{flex:1; justify-content:center; gap:5px; flex-wrap:nowrap; white-space:nowrap; font-size:calc(18 * var(--sw) / 1280); color:#6b4a1e; font-weight:800;}   /* 「共…人」文字 18px */
   .ledger .bottom-bar .count button{flex:0 0 auto; width:min(25px, calc(1.85 * var(--sw) / 100)); height:min(25px, calc(1.85 * var(--sw) / 100)); font-size:min(14px, calc(1.0 * var(--sw) / 100));}
   .ledger .bottom-bar .count b{color:#8a5f28; font-size:calc(22 * var(--sw) / 1280);}   /* 人数数字 X 22px（与夜数一致） */
-  .ledger .bottom-bar .count span{position:relative; top:calc(-5 * var(--sw) / 1280);}   /* 「共…人」文字与数字上移 5px，按钮不动 */
+  .ledger .bottom-bar .count span{position:relative; top:calc(-3 * var(--sw) / 1280);}   /* 「共…人」文字与数字上移 3px，按钮不动 */
   .ledger .bottom-bar .btn{flex:0 0 auto; padding:7px 9px;}   /* 与「保存本局/查看存档」同款：沿用 .btn 基础字号，不再缩小 */
   /* 背景墨水瓶热区：点击导出玩家笔记；悬停时墨口飘出光点（酒馆=金，魔典=紫） */
   .inkhotspot{position:absolute; left:39.4%; top:70.5%; width:8.6%; height:18%; cursor:pointer; z-index:6;}
@@ -1145,6 +1145,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.12', d:'2026-08-10', items:['再微调：「第 X 夜」「共 X 人」文字与数字改为上移 3px（较上版下移 2px）；标题改为上移 1.5px（较上版下移 1.5px）']},
   {v:'v2.41.11', d:'2026-08-10', items:['微调（位移均按 1280 基准像素、随舞台缩放）：①「第 X 夜」「共 X 人」的文字与数字上移 5px（两侧 −/＋、◀/▶ 按钮位置不变）；②标题上移 3px；③标签(tab)上下内边距 3px→4.2px，高度增约 10%']},
   {v:'v2.41.10', d:'2026-08-10', items:['所有标签（tab）字号从 18 改为 16；并收紧上下内边距（5px→3px）＋行高，标签整体高度减小约 20%，去掉过大的上下留白']},
   {v:'v2.41.9', d:'2026-08-10', items:['「共 X 人」「第 X 夜」的数字 X 再放大到 22px（随舞台等比缩放）']},
