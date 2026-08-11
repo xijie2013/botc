@@ -61,7 +61,7 @@
 
   /* view toggle icon (top-right) */
   .view-toggle{position:absolute; top:2.5%; right:2%; z-index:30;
-    width:calc(5.52 * var(--sw) / 100); height:calc(5.52 * var(--sw) / 100);
+    width:calc(6.624 * var(--sw) / 100); height:calc(6.624 * var(--sw) / 100);   /* 魔典图标放大 20%（5.52→6.624）*/
     border:none; background:transparent; cursor:pointer; padding:0;
     outline:none; -webkit-tap-highlight-color:transparent; appearance:none; -webkit-appearance:none;
     filter:drop-shadow(0 2px 5px rgba(0,0,0,.6)); transition:transform .12s;}
@@ -70,7 +70,7 @@
   /* 暗流涌动界面（书页合上）按钮：往左下移动一点 */
   .stage:not(.grim) .view-toggle{top:3.5%; right:2.5%;}
   /* 魔典界面（书页打开）按钮放大 20%（与合上态同用 var(--sw) 比例单位，避免非全屏下打开/关闭大小位置不一致） */
-  .stage.grim .view-toggle{width:calc(6.624 * var(--sw) / 100); height:calc(6.624 * var(--sw) / 100);}
+  .stage.grim .view-toggle{width:calc(7.9488 * var(--sw) / 100); height:calc(7.9488 * var(--sw) / 100);}   /* 打开态同步放大 20%（6.624→7.9488）*/
   .view-toggle img{width:100%; height:100%; object-fit:contain; display:block;}
 
   /* 玩家本局角色卡（右上角卡背 + 入场/翻开动画） */
@@ -100,7 +100,7 @@
     font-size:calc(2.1 * var(--sh) / 100); text-shadow:0 1px 5px rgba(0,0,0,.85); pointer-events:none;}
   /* ===== 间谍魔典（右下角图标 + 只读魔典遮罩，1:1 复刻说书人魔典 layout） ===== */
   #spyGrimIcon{position:absolute; bottom:3.5%; right:2.5%; z-index:130; cursor:pointer;
-    width:calc(6.624 * var(--sw) / 100); aspect-ratio:1/1; filter:drop-shadow(0 3px 8px rgba(0,0,0,.6)); transition:transform .14s;}
+    width:calc(7.9488 * var(--sw) / 100); aspect-ratio:1/1; filter:drop-shadow(0 3px 8px rgba(0,0,0,.6)); transition:transform .14s;}   /* 间谍魔典图标放大 20%（6.624→7.9488）*/
   #spyGrimIcon img{width:100%; height:100%; object-fit:contain; display:block;}
   #spyGrimIcon:hover{transform:scale(1.07);}
   #spyGrimIcon.pulse{animation:spygPulse 1.1s ease-in-out 2;}
@@ -117,8 +117,11 @@
   .spyg-banner{color:#43286b !important; text-shadow:0 1px 0 rgba(255,255,255,.35);}
   /* 左侧面板：复用 .grimoire 定位/样式，放夜切换 + 座位一览表（玩家/身份/状态；间谍不看日志） */
   .spyg-grim{z-index:4; justify-content:flex-start;}
-  #spyGrimTabs{flex-wrap:wrap; flex:0 0 auto;}
-  #spyGrimTabs button{flex:0 0 auto; padding:5px 12px;}
+  /* 间谍魔典夜晚切换：照搬说书人魔典底栏 .grimoire .bottom-bar .night-ctl 的尺寸/字号/风格（◀ 第X夜 ▶）*/
+  #spyGrimTabs{flex:0 0 auto; gap:5px; margin:1px 0 3px; flex-wrap:nowrap; white-space:nowrap; font-size:calc(18 * var(--sw) / 1280);}
+  #spyGrimTabs button{flex:0 0 auto; width:min(25px, calc(1.85 * var(--sw) / 100)); height:min(25px, calc(1.85 * var(--sw) / 100)); font-size:min(14px, calc(1.0 * var(--sw) / 100));}
+  #spyGrimTabs b{font-size:calc(22 * var(--sw) / 1280);}
+  #spyGrimTabs span{position:relative; top:calc(-2.5 * var(--sw) / 1280);}
   .spyg-list{flex:1; min-height:0; overflow:auto; margin-top:6px; padding-right:3px; color:#43286b; font-size:calc(1 * var(--sw) / 100);}
   .spyg-list::-webkit-scrollbar{width:6px;} .spyg-list::-webkit-scrollbar-thumb{background:rgba(74,43,107,.35); border-radius:3px;}
   .spyg-lrow{display:flex; align-items:baseline; gap:7px; padding:4px 2px; border-bottom:1px solid rgba(122,83,32,.16);}
@@ -827,7 +830,7 @@
       <div class="spyg-stage">
         <div class="banner-title spyg-banner">间谍魔典</div>
         <div class="grimoire spyg-grim">
-          <div class="gtabs" id="spyGrimTabs"></div>
+          <div class="night-ctl" id="spyGrimTabs"></div>
           <div class="spyg-list" id="spyGrimList"></div>
         </div>
         <div class="table-zone" id="spyGrimSeats"></div>
@@ -1149,6 +1152,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.22', d:'2026-08-11', items:['①酒鬼自带醉酒标识：说书人魔典与间谍魔典的座位上，酒鬼（含「自以为身份」的酒鬼、未定身份的酒鬼）现在都会显示醉酒图标（此前仅在手动勾选醉酒时才显示）。②魔典/夜晚：前一步未完成时，后一步的「代确认」与「跳过」也不可点（与「发送给玩家」一致）；本步激活时即使角色已出局仍可「跳过」。③间谍魔典的夜晚切换从一排标签改为与说书人魔典底栏一致的「◀ 第 X 夜 ▶」控件（格式/大小/字体/风格照搬魔典）。④大厅/说书人魔典/间谍视角的魔典图标（打开与关闭）放大 20%。']},
   {v:'v2.41.21', d:'2026-08-11', items:['修复玩家角色卡开/收动画与「等比缩放」不兼容：角色卡与右上角卡背都在被 transform:scale(S) 缩放的舞台里，之前计算平移用的是缩放后的视口像素、却施加在卡牌未缩放的局部坐标上（会再被 S 放大），导致 S≠1（尤其全屏放大）时平移过头，看起来像从屏幕外掀开、又收到屏幕外角落、还跳一下。现在平移量先除以舞台缩放系数换算成局部像素，开/收都精准对准右上角卡背，收回不再跳。']},
   {v:'v2.41.20', d:'2026-08-11', items:['①白天「＋提名」下拉菜单宽度改为 100px（参考尺寸），夜晚下拉仍为 80px 不变。②停止计票前也不能选择「处决 / 今日无人处决」：计票进行中改为显示提示、隐藏这两个按钮（confirmExecute 也加了兜底拦截）。③背景音乐与处决视频之间的淡入淡出加长（压低 1.5s、恢复 2.2s），过渡更柔和不突兀。']},
   {v:'v2.41.19', d:'2026-08-11', items:['①确定处决/今日无人处决后，处决按钮也一并隐藏（连同已锁定的提名），本日不能再改判。②修复处决动画播放时背景音乐没有压低：同一次公开数据更新里，动画刚把 BGM 压低就被结算判定（无胜负时）立刻恢复了——现在动画播放期间不撤销压制，视频结束再恢复。③修复玩家角色卡「收回角落」时会跳一下：收回改用与「掀开」相同的 FLIP 手法（先冻结当前形态再动画）、时长/缓动与翻面一致，精准落回角落卡背。④魔典/白天投票改为「同一时刻只允许一个投票进行」：只有「停止计票」后玩家才上处决台、也才允许开启新的提名；有投票进行时其它提名暂不能重新计票；重新计票会载入该提名现存的票数，新提名从空票开始。']},
@@ -1685,8 +1689,8 @@ function nightPanel(id, active){
     const txt=(f.text!=null&&f.text!=='')?f.text:nightAutoText(id);
     h+='<textarea class="nf-ta" oninput="nightEditText(\''+id+'\',this.value)"'+lock+'>'+_nfEscA(txt)+'</textarea>';
     h+='<div class="nf-btns"><button class="nf-send"'+lock+' onclick="nightSend(\''+id+'\')">发送给玩家</button>'
-      +'<button class="nf-ok"'+(dead?' disabled':'')+' onclick="nightProxyConfirm(\''+id+'\')">代确认</button>'
-      +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button></div>';
+      +'<button class="nf-ok"'+lock+' onclick="nightProxyConfirm(\''+id+'\')">代确认</button>'   // 代确认同「发送」门控：前一步未完成(非激活)或角色已出局→禁用
+      +'<button class="nf-skip"'+(active?'':' disabled')+' onclick="nightSkipStep(\''+id+'\')">跳过</button></div>';   // 跳过：前一步未完成(非激活)→禁用；本步激活时即使角色已出局也可跳过
     if(dead) h+='<div class="nf-hint">该角色已出局，本夜无行动，请点「跳过」。</div>';
     return h+'</div>';
   }
@@ -1926,7 +1930,7 @@ function _spySeatSnap(){
     const prot=!!isProtected(i);
     const o={ i:i, name:(t&&t.name)?t.name:'', label:label, col:col,
       evil: role?isEvil(role.team):false, good: role?!isEvil(role.team):false, dead:dead,
-      bPoison:!!m.poison, bDrunk:!!m.drunk, bShield:!!(prot||m.mShield),
+      bPoison:!!m.poison, bDrunk:!!(m.drunk||m.isDrunk||m.role==='drunk'), bShield:!!(prot||m.mShield),   /* 酒鬼自带醉酒标识 */
       bShot:!!((m.role==='slayer'&&slayerShot)||m.mShot),
       master:(butlerPicks[night]===i), herring:(redHerring===i), protectedBg:prot };
     if(dead){ o.claw=(deathCauseLabel(i)==='夜晚死亡'); o.deadIcon=deathCauseIcon(i); }
@@ -2856,7 +2860,7 @@ function renderSeats(){
         const gf=glow?'filter:drop-shadow(0 0 2px '+glow+') drop-shadow(0 0 4px '+glow+');':'';
         return '<div class="shieldbadge" title="'+t+'" style="width:'+bd+'px;height:'+bd+'px;left:'+(bx-bd/2)+'px;top:'+(by-bd/2)+'px;'+gf+'"><img src="'+ic+'"></div>'; };
       const RA=[30,60,90,120,150];   // 右侧固定 5 等距槽位：骷髅/毒/酒/盾/弩
-      [[dead,'assets/mk-dead.png','出局',1,'#000'],[m.poison,'assets/mk-poison.png','中毒',1,'#3fd44f'],[m.drunk,'assets/s-drunk.png','醉酒',1,'#ffe14d'],[isProtected(i)||m.mShield,'assets/mk-shield.png','守护/免疫',1,'#d8dae2'],[(m.role==="slayer"&&slayerShot)||m.mShot,'assets/mk-crossbow.png','猎人已开枪',1.2,'#4aa8ff']]
+      [[dead,'assets/mk-dead.png','出局',1,'#000'],[m.poison,'assets/mk-poison.png','中毒',1,'#3fd44f'],[(m.drunk||m.isDrunk||m.role==='drunk'),'assets/s-drunk.png','醉酒',1,'#ffe14d'],[isProtected(i)||m.mShield,'assets/mk-shield.png','守护/免疫',1,'#d8dae2'],[(m.role==="slayer"&&slayerShot)||m.mShot,'assets/mk-crossbow.png','猎人已开枪',1.2,'#4aa8ff']]   /* 酒鬼(isDrunk 或原始 drunk 牌)自带醉酒标识 */
         .forEach((b,k)=>{ if(b[0]) html+=badge(RA[k],b[1],b[2],b[3],b[4]); });
       if(butlerPicks[night]===i) html+=badge(0,'assets/mk-master.png','管家的主人',1.1,'#f5c542');     // 正上方：王冠·金
       if(redHerring===i) html+=badge(180,'assets/mk-herring.png','红鲱鱼',1.2,'#ff4a3a');             // 正下方：红鲱鱼·红
@@ -3450,9 +3454,14 @@ load(); render();
     if(lay.classList.contains('on')){ try{ if(window._sfx) _sfx('grimoire-close'); }catch(e){} } lay.classList.remove('on');
     const im=document.getElementById('spyGrimIconImg'); if(im) im.src='assets/book-closed.png'; };
   window._spyPickNight=function(n){ _spySel=+n; _spyRender(); };
+  /* ◀ ▶ 在有快照的夜晚之间切换（_spyNights 可能不连续，按数组顺序移动、越界钳制，与魔典 stepNight 的钳制手感一致） */
+  window._spyStepNight=function(dir){ const ci=_spyNights.indexOf(_spySel); if(ci<0){ _spySel=_spyNights[_spyNights.length-1]; _spyRender(); return; }
+    const ni=Math.max(0, Math.min(_spyNights.length-1, ci+(dir<0?-1:1))); _spySel=_spyNights[ni]; _spyRender(); };
   function _spyRender(){ if(!_spyG) return; const snap=_spyG[_spySel]; if(!snap) return;
-    const tb=document.getElementById('spyGrimTabs');   // 夜切换标签（复用 .gtabs 样式）
-    if(tb){ tb.innerHTML=_spyNights.map(function(n){ return '<button class="'+(n===_spySel?'on':'')+'" onclick="window._spyPickNight&&_spyPickNight('+n+')">第 '+n+' 夜</button>'; }).join(''); }
+    const tb=document.getElementById('spyGrimTabs');   // 夜切换：改为与说书人魔典底栏一致的 ◀ 第X夜 ▶
+    if(tb){ tb.innerHTML='<button title="上一夜" onclick="window._spyStepNight&&_spyStepNight(-1)">◀</button>'
+      +'<span>第 <b>'+_spySel+'</b> 夜</span>'
+      +'<button title="下一夜" onclick="window._spyStepNight&&_spyStepNight(1)">▶</button>'; }
     const lst=document.getElementById('spyGrimList');   // 左侧座位一览：玩家 / 身份 / 状态（与座位图信息一致，只是列表更好看）
     if(lst){ let h='<div class="spyg-lrow spyg-lhead"><span class="c1">玩家</span><span class="c2">身份</span><span class="c3">状态</span></div>';
       (snap.seats||[]).forEach(function(o){
