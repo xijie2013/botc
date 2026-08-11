@@ -286,7 +286,8 @@
   .nstep input{margin-top:3px;} .nstep .nn{color:#6a4e8f; font-size:.92em;}
   .impkill{margin:2px 0 5px 2px; font-size:calc(.95 * var(--sw) / 100); color:#43286b; display:flex; align-items:center; gap:5px; flex-wrap:wrap;}   /* 取消左缩进，与角色名对齐，留出横向空间避免换行 */
   .impkill select{font-size:calc(.9 * var(--sw) / 100); padding:2px 5px; border:1px solid rgba(74,43,107,.5); border-radius:5px; background:rgba(255,252,244,.9); color:#3a2a12; font-family:inherit;
-    width:calc(6.25 * var(--sw) / 100); text-overflow:ellipsis; white-space:nowrap; overflow:hidden;}   /* 固定宽度 80px（参考尺寸）：下拉宽度不再随玩家名/状态（已出局/自己等）变化，layout 稳定；超长名字在收起态省略号，展开列表仍显示完整 */
+    width:calc(6.25 * var(--sw) / 100); text-overflow:ellipsis; white-space:nowrap; overflow:hidden;}   /* 夜晚下拉固定宽度 80px（参考尺寸）：不随玩家名/状态（已出局/自己等）变化，layout 稳定；超长名字收起态省略号，展开列表仍显示完整 */
+  #nomNr, #nomNe{width:calc(7.8125 * var(--sw) / 100);}   /* 白天「＋提名」下拉宽度 100px（参考尺寸），比夜晚略宽 */
   .impkill.warn{color:#b0402e; font-weight:700;}
   .impkill.done{color:#2e7d43; font-weight:700;}
   .regbtn{display:inline-block; margin-left:5px; padding:1px 9px; border-radius:10px; cursor:pointer; font-size:.92em;
@@ -1148,6 +1149,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.20', d:'2026-08-11', items:['①白天「＋提名」下拉菜单宽度改为 100px（参考尺寸），夜晚下拉仍为 80px 不变。②停止计票前也不能选择「处决 / 今日无人处决」：计票进行中改为显示提示、隐藏这两个按钮（confirmExecute 也加了兜底拦截）。③背景音乐与处决视频之间的淡入淡出加长（压低 1.5s、恢复 2.2s），过渡更柔和不突兀。']},
   {v:'v2.41.19', d:'2026-08-11', items:['①确定处决/今日无人处决后，处决按钮也一并隐藏（连同已锁定的提名），本日不能再改判。②修复处决动画播放时背景音乐没有压低：同一次公开数据更新里，动画刚把 BGM 压低就被结算判定（无胜负时）立刻恢复了——现在动画播放期间不撤销压制，视频结束再恢复。③修复玩家角色卡「收回角落」时会跳一下：收回改用与「掀开」相同的 FLIP 手法（先冻结当前形态再动画）、时长/缓动与翻面一致，精准落回角落卡背。④魔典/白天投票改为「同一时刻只允许一个投票进行」：只有「停止计票」后玩家才上处决台、也才允许开启新的提名；有投票进行时其它提名暂不能重新计票；重新计票会载入该提名现存的票数，新提名从空票开始。']},
   {v:'v2.41.18', d:'2026-08-11', items:['①左上角设置弹窗的滚动条去掉白色默认背景：改为暗色透明轨道 + 金色细滑块（同其它面板风格）。②玩家笔记/标记：状态标记与角色标记的样式统一为与「魔典/角色设置」的角色牌一模一样——同字号/字重、圆角彩色边框、投影阴影；状态标记的边框颜色对应其在座位图上的光晕色（中毒绿/醉酒黄/守护灰/已开枪蓝/红鲱鱼红/主人金），角色标记边框用对应阵营色。③夜晚选人下拉菜单宽度改为 80px（参考尺寸）。']},
   {v:'v2.41.17', d:'2026-08-11', items:['①魔典/白天：删除多余的「管家 xxx 的主人：…」提示行。②处决面板：点「处决」或「今日无人处决」都会先弹确认弹窗，确认后才执行；本日处决一旦确定，就不能再新增提名（提名表单收起，addNomination 也加了兜底拦截）。③夜晚选人下拉菜单改为固定宽度：不再随玩家名字长短或「已出局/自己」等状态标识变化，layout 保持稳定（收起态过长省略号，展开列表仍显示完整名字）']},
@@ -2408,6 +2410,7 @@ function slayerUI(){
   return h+'<div class="rrow" style="border:none">代猎手开枪：<select onchange="_stFireSlayer(this.value)">'+opts+'</select></div>';
 }
 async function confirmExecute(seat){   /* 处决 / 今日无人处决 都先弹确认弹窗，确认后才执行 */
+  if(voteInProgress(night)) return;   // 计票进行中不允许处决/无人处决（需先停止计票）
   const msg = seat<0 ? '确认「今日无人处决」？确认后本日将不能再新增提名。'
                      : '确认处决 '+nameAt(seat)+'？确认后本日将不能再新增提名。';
   const ok = await uiConfirm(msg,{title:'确认处决',ok:'确认执行',cancel:'取消'});
@@ -2733,6 +2736,7 @@ function renderGrim(){
     }
     h+='<div class="gsec">处决</div>';
     if(executions[day]!==undefined){ /* 已处决/无人处决 → 不再显示处决按钮（下方有结果 ✓） */ }
+    else if(voting) h+='<div class="rrow" style="border:none;opacity:.6">请先「停止计票」，再决定处决 / 今日无人处决</div>';   /* 计票进行中 → 不可选处决/无人处决 */
     else if(block>=0) h+='<div class="rrow" style="border:none">上台：<b class="onblock">'+nameAt(block)+'</b> <span class="regbtn" onclick="confirmExecute('+block+')">处决</span></div>';
     else h+='<div class="rrow" style="border:none;display:flex;align-items:center;gap:10px"><span style="opacity:.7">暂无人达处决票数（或平票）</span><span class="regbtn" onclick="confirmExecute(-1)">今日无人处决</span></div>';   /* 「今日无人处决」与提示同行；有人上台(block>=0)后两者一起消失 */
     const ex=executions[day];
@@ -3585,7 +3589,7 @@ load(); render();
   function _bgApply(fadeMs){ if(!_bgCur || _bgMuted()) return; const t=_bgTargetVol();
     if(t>0 && _bgUnlocked && _bgCur.paused){ const pr=_bgCur.play(); if(pr&&pr.catch) pr.catch(()=>{}); }   // 需要发声却曾被淡到0而暂停 → 先从暂停处续播（不从头重放）
     _bgFade(_bgCur, t, fadeMs); }   // 淡到当前应有音量；淡到0时 _bgFade 会自动 pause
-  window._bgDuck=function(on){ _bgDuckF = on?0:1; _bgApply(on?650:850); };   // 动画期间背景音乐完全静音，结束后续播淡回（加长+缓动，过渡更柔和）
+  window._bgDuck=function(on){ _bgDuckF = on?0:1; _bgApply(on?1500:2200); };   // 动画期间背景音乐完全静音，结束后续播淡回；淡入淡出加长（压低1.5s / 恢复2.2s）过渡更柔和不突兀
   /* 背景音乐播放周期：播 BGM_ON_MS 后静默 BGM_OFF_MS，循环往复，避免一直有音乐吵人；切换用 BGM_CYCLE_FADE 长淡入淡出，柔和 */
   function _bgCycleTick(){ _bgCycleOn=!_bgCycleOn; _bgCycleF=_bgCycleOn?1:0; _bgApply(BGM_CYCLE_FADE);
     _bgCycleTid=setTimeout(_bgCycleTick, _bgCycleOn?BGM_ON_MS:BGM_OFF_MS); }
