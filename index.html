@@ -446,6 +446,9 @@
     60%{transform:translate(calc(-50% + var(--dx,30px)*.6 + 5px), calc(-50% - var(--dy,90px)*.6)) scale(1);}
     100%{opacity:0; transform:translate(calc(-50% + var(--dx,30px)), calc(-50% - var(--dy,90px))) scale(1.15);}
   }
+  /* 触屏拖拽：可拖元素禁用触摸手势（避免拖动时误触发滚动/缩放，使自定义 touch 拖放可靠）；拖动虚影 */
+  [data-drag]{ touch-action:none; }
+  .drag-ghost{ pointer-events:none; box-shadow:0 8px 22px rgba(0,0,0,.45); }
   /* role roster (draggable) */
   .rlist{display:flex; flex-wrap:wrap; gap:5px; margin-bottom:4px;}
   .rchip{padding:3px 9px; border-radius:14px; font-size:calc(1.02 * var(--sw) / 100); font-weight:700;
@@ -1172,6 +1175,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.30', d:'2026-08-11', items:['触摸屏拖放支持：魔典里的角色标签、客人名册、玩家笔记里的状态/角色标记、座位身份，现在都能用手指拖到座位/名册上（桌面端的原生拖放在触屏不触发，这里新增了一套 touch 拖放垫片，用位移阈值区分「点按」与「拖动」，可拖元素在拖动时不再误滚动页面）。猎手的十字弩箭头本就用指针事件，触屏可用。']},
   {v:'v2.41.29', d:'2026-08-11', items:['①猎手开枪请求不再占用魔典白天面板（改由屏幕下方的蓝色弹窗确认/驳回）。②删除猎手开枪后的「撤销」按钮。③占卜师不在场（被替换/移除）时，红鲱鱼标记也随之消失。④猎手拖拽的发光箭头改为白色箭头 + 蓝色荧光。']},
   {v:'v2.41.28', d:'2026-08-11', items:['①恶魔描述句尾加句号。②处决信息改为「第X天：【处决信息】xxx（xx号）被处决。」（白天事件抬头为「第X天」而非「第X夜」）。③猎人开枪信息：猎人只得知中/没中，不再泄露红唇女郎是谁；未命中只记在猎人局内信息，命中则为公共信息（全员收到「xxx向xxx开枪→xxx死亡」），抬头为「第X天」。④红唇女郎接任弹窗不再压住处决视频（视频在最上层，弹窗在视频播放期间收起、结束后再出现）、文案精简、抬头按昼夜显示。⑤红唇女郎点确认接任后，说书人会收到底部弹窗告知（类似猎人请求弹窗）。⑥猎人击杀触发红唇继任时也发送接任通知（与处决一致）。⑦有红唇继任时（_swSeat 非空）强制不播完整变身动画、只播前半段，避免误触发「恶魔死亡」的完整动画。']},
   {v:'v2.41.27', d:'2026-08-11', items:['①精简间谍通知文案为「【间谍】说书人发来一份当夜魔典，可随时点击右下角魔典图标查看。」。②所有通知弹窗（说书人→玩家、玩家→说书人）宽度统一固定为 350px、高度随内容，其中的下拉菜单固定为 120px。③更新三段更柔和的背景音乐。']},
@@ -2678,7 +2682,7 @@ function chipEl(t){
   const d=document.createElement("div");
   d.className="chip"+(selected===t.id?" sel":"")+(t.seat!==null?" seated":"");
   const _online=!!(window._acctOnline && window._acctOnline(t.name));   // 已登录且在线 → 绿点
-  d.innerHTML=(_online?'<span class="odot" title="已登录（在线）">●</span> ':'')+esc(t.name)+' <span class="x" title="移出">✕</span>'; d.draggable=true;
+  d.innerHTML=(_online?'<span class="odot" title="已登录（在线）">●</span> ':'')+esc(t.name)+' <span class="x" title="移出">✕</span>'; d.draggable=true; d.setAttribute('data-drag', t.id);
   d.addEventListener("dragstart",e=>e.dataTransfer.setData("text",t.id));
   d.addEventListener("click",e=>{ if(e.target.classList.contains("x")){e.stopPropagation();removeToken(t.id);return;}
     e.stopPropagation(); selected=(selected===t.id?null:t.id); render(); });
@@ -2712,7 +2716,7 @@ function renderGrim(){
       h+='<div class="rlist">';
       ROLES.filter(r=>r.team===team).forEach(r=>{
         const used=_usedSet.has(r.id), locked=lockedRoles.has(r.id);
-        h+='<div class="rchip'+(used?' used':'')+(locked?' locked':'')+'" draggable="true" data-role="'+r.id+'" title="单击锁定/解锁 · '+esc(r.ab)+
+        h+='<div class="rchip'+(used?' used':'')+(locked?' locked':'')+'" draggable="true" data-role="'+r.id+'" data-drag="role:'+r.id+'" title="单击锁定/解锁 · '+esc(r.ab)+
            '" style="border-color:'+TEAMC[r.team]+';color:'+TEAMC[r.team]+'">'+r.name+'</div>';
       });
       h+='</div>';
@@ -3072,6 +3076,44 @@ poolEl.addEventListener("dragover",e=>{e.preventDefault();poolEl.classList.add("
 poolEl.addEventListener("dragleave",()=>poolEl.classList.remove("over"));
 poolEl.addEventListener("drop",e=>{e.preventDefault();poolEl.classList.remove("over");
   const id=+e.dataTransfer.getData("text"); moveToken(id,null); selected=null; render();});
+
+/* ===== 触摸屏拖拽垫片：把 [data-drag] 元素（角色标签/客人/笔记标记/座位身份）用手指拖到座位/名册，
+   等效桌面端 HTML5 拖放（后者在触屏不触发）。只处理 touch，不改动鼠标行为；用位移阈值区分「点按」与「拖动」。 ===== */
+(function(){
+  let _dg=null; const TH=8;
+  function _mkGhost(el){ const g=el.cloneNode(true); g.className=(g.className||'')+' drag-ghost';
+    g.style.position='fixed'; g.style.zIndex='99999'; g.style.pointerEvents='none'; g.style.opacity='.88'; g.style.margin='0'; g.style.left='-9999px'; g.style.top='-9999px';
+    g.removeAttribute('data-drag'); document.body.appendChild(g); return g; }
+  function _posGhost(g,x,y){ if(!g) return; g.style.left=(x-g.offsetWidth/2)+'px'; g.style.top=(y-g.offsetHeight/2)+'px'; }
+  function _seatUnder(x,y){ const e=document.elementFromPoint(x,y); return e?e.closest('.seat[data-seat]'):null; }
+  function _poolUnder(x,y){ const e=document.elementFromPoint(x,y); return e?e.closest('#pool'):null; }
+  function _clearOver(){ document.querySelectorAll('.seat.over, #pool.over').forEach(el=>el.classList.remove('over')); }
+  function _drop(x,y){ const payload=_dg.payload; const seat=_seatUnder(x,y);
+    if(seat){ const idx=+seat.dataset.seat;
+      if(payload.indexOf('role:')===0){ try{ assignRoleToSeat(idx, payload.slice(5)); render(); }catch(e){} }
+      else if(payload.indexOf('prole:')===0||payload.indexOf('pstat:')===0||payload.indexOf('seatrole:')===0){ try{ if(window._plTouchDrop) window._plTouchDrop(idx, payload); }catch(e){} }
+      else if(/^\d+$/.test(payload)){ try{ moveToken(+payload, idx); selected=null; render(); }catch(e){} }
+      return; }
+    if(_poolUnder(x,y)){ if(/^\d+$/.test(payload)){ try{ moveToken(+payload, null); selected=null; render(); }catch(e){} }
+      else if(payload.indexOf('seatrole:')===0){ try{ if(window._plTouchDrop) window._plTouchDrop(-1, payload); }catch(e){} } return; }
+    if(payload.indexOf('seatrole:')===0){ try{ if(window._plTouchDrop) window._plTouchDrop(-1, payload); }catch(e){} }   // 拖到空白处=删除座位身份
+  }
+  document.addEventListener('touchstart', function(e){ if(_dg) return; if(e.touches.length!==1) return;
+    const el=e.target.closest&&e.target.closest('[data-drag]'); if(!el) return; const t=e.touches[0];
+    _dg={ el:el, payload:el.getAttribute('data-drag')||'', ghost:null, dragging:false, sx:t.clientX, sy:t.clientY };
+  }, {passive:true});
+  document.addEventListener('touchmove', function(e){ if(!_dg) return; const t=e.touches[0];
+    if(!_dg.dragging){ if(Math.hypot(t.clientX-_dg.sx, t.clientY-_dg.sy)<TH) return; _dg.dragging=true; _dg.ghost=_mkGhost(_dg.el); }
+    e.preventDefault(); _posGhost(_dg.ghost, t.clientX, t.clientY);
+    _clearOver(); const seat=_seatUnder(t.clientX,t.clientY); const pool=seat?null:_poolUnder(t.clientX,t.clientY);
+    if(seat) seat.classList.add('over'); else if(pool) pool.classList.add('over');
+  }, {passive:false});
+  document.addEventListener('touchend', function(e){ if(!_dg) return; const dg=_dg; _dg=null;
+    if(dg.ghost){ try{ dg.ghost.remove(); }catch(_){} } _clearOver();
+    if(dg.dragging){ if(e.cancelable) e.preventDefault(); const t=e.changedTouches[0]; try{ _drop(t.clientX, t.clientY); }catch(_){} }
+  }, {passive:false});
+  document.addEventListener('touchcancel', function(){ if(!_dg) return; if(_dg.ghost){ try{ _dg.ghost.remove(); }catch(_){} } _clearOver(); _dg=null; }, {passive:true});
+})();
 
 let rt; window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(render,80);});
 load(); render();
@@ -4151,6 +4193,8 @@ load(); render();
         s.addEventListener('mouseleave',hideSeatNote);
         /* 拖标记/角色到座位 → 添加；把座位身份拖出座位范围 → 删除 */
         s.setAttribute('draggable','true');
+        if(mine&&mine.role&&RMAP[mine.role]) s.setAttribute('data-drag','seatrole:'+i);   // 触屏：座位身份可拖出删除
+        else s.removeAttribute('data-drag');
         s.addEventListener('dragstart',e=>{ if(mine&&mine.role&&RMAP[mine.role]){ try{ e.dataTransfer.setData('text','seatrole:'+i); e.dataTransfer.effectAllowed='move';
             const rr=RMAP[mine.role]; const g=document.createElement('div'); g.textContent=rr.name;   // 仅身份标记作为拖拽虚影
             g.style.cssText='position:fixed;left:-1000px;top:-1000px;padding:3px 9px;border-radius:12px;font-size:13px;font-weight:800;white-space:nowrap;background:#fff;border:1.5px solid '+TEAMC[rr.team]+';color:'+TEAMC[rr.team]+';box-shadow:0 2px 6px rgba(0,0,0,.35);z-index:99999';
@@ -4213,11 +4257,11 @@ load(); render();
   function markTabHTML(){ ensureS(); const crossed=new Set(S.crossed||[]);
     let h='<div class="nb-sec">状态标记 · 拖到座位上添加；单击划掉</div><div>';
     h+=STAT_ORDER.map(k=>{ const b=BADGE[k]; const gc=(MARK[k]&&MARK[k][3])||'rgba(122,83,32,.4)'; const ic=MARK[k]?'<img src="'+MARK[k][1]+'" draggable="false" style="width:17px;height:17px;object-fit:contain;vertical-align:middle;margin-right:2px">':'';
-      return '<span class="nbtok'+(crossed.has('stat:'+k)?' crossed':'')+'" draggable="true" ondragstart="_nbDragStart(event,\'pstat:'+k+'\')" onclick="_nbCross(\'stat:'+k+'\')" style="border-color:'+gc+'">'+ic+b.t+'</span>'; }).join('')+'</div>';
+      return '<span class="nbtok'+(crossed.has('stat:'+k)?' crossed':'')+'" draggable="true" data-drag="pstat:'+k+'" ondragstart="_nbDragStart(event,\'pstat:'+k+'\')" onclick="_nbCross(\'stat:'+k+'\')" style="border-color:'+gc+'">'+ic+b.t+'</span>'; }).join('')+'</div>';
     h+='<div class="nb-sec">在场角色 · 拖到座位上记录猜测；单击划掉</div><div>';
     const locked=new Set(pub.locked||[]); const rs=ROLES.filter(r=>!locked.has(r.id)).map(r=>r.id);
     h+=rs.map(id=>{ const r=RMAP[id]; if(!r) return '';
-      return '<span class="nbtok'+(crossed.has('role:'+id)?' crossed':'')+'" draggable="true" ondragstart="_nbDragStart(event,\'prole:'+id+'\')" onclick="_nbCross(\'role:'+id+'\')" style="border-color:'+TEAMC[r.team]+';color:'+TEAMC[r.team]+'">'+r.name+'</span>'; }).join('')+'</div>';
+      return '<span class="nbtok'+(crossed.has('role:'+id)?' crossed':'')+'" draggable="true" data-drag="prole:'+id+'" ondragstart="_nbDragStart(event,\'prole:'+id+'\')" onclick="_nbCross(\'role:'+id+'\')" style="border-color:'+TEAMC[r.team]+';color:'+TEAMC[r.team]+'">'+r.name+'</span>'; }).join('')+'</div>';
     h+='<button class="nb-clearall" onclick="_nbClearAll(this)">清除所有标记</button>';
     return h;
   }
@@ -4240,6 +4284,13 @@ load(); render();
     return h;
   }
   window._nbDragStart=function(ev, payload){ try{ ev.dataTransfer.setData('text', payload); ev.dataTransfer.effectAllowed='copy'; }catch(e){} };   // 拖动标记/角色到座位
+  /* 触屏拖拽落点路由（玩家笔记）：由全局触摸垫片在 touchend 时调用，等效桌面端座位 drop/dragend */
+  window._plTouchDrop=function(idx, payload){ if(role!=='player'&&mode!=='notes'){} ensureS();
+    if(payload.indexOf('seatrole:')===0){ const from=+payload.slice(9);   // 座位身份拖出（落在别的座位/名册/空白）=删除
+      if(idx!==from && S.seats[from] && S.seats[from].role){ S.seats[from].role=''; saveNotes(); drawSeats(); } return; }
+    if(idx<0) return; const st=S.seats[idx]; if(!st) return;
+    if(payload.indexOf('prole:')===0){ st.role=payload.slice(6); saveNotes(); drawSeats(); }
+    else if(payload.indexOf('pstat:')===0){ const k=payload.slice(6); if(!st.status) st.status=[]; if(st.status.indexOf(k)<0){ st.status.push(k); saveNotes(); drawSeats(); } } };
   window._nbCross=function(tok){ ensureS(); if(!Array.isArray(S.crossed)) S.crossed=[]; const ix=S.crossed.indexOf(tok); if(ix>=0) S.crossed.splice(ix,1); else S.crossed.push(tok); saveNotes(); renderNotes(); };   // 单击划掉/恢复
   window._nbClearAll=function(btn){ ensureS();
     if(btn && !btn.classList.contains('confirm')){ btn.classList.add('confirm'); btn.textContent='确认清除？再点一次'; setTimeout(function(){ try{ btn.classList.remove('confirm'); btn.textContent='清除所有标记'; }catch(_){}} ,2500); return; }
