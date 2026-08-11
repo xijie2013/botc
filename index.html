@@ -1148,6 +1148,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.19', d:'2026-08-11', items:['①确定处决/今日无人处决后，处决按钮也一并隐藏（连同已锁定的提名），本日不能再改判。②修复处决动画播放时背景音乐没有压低：同一次公开数据更新里，动画刚把 BGM 压低就被结算判定（无胜负时）立刻恢复了——现在动画播放期间不撤销压制，视频结束再恢复。③修复玩家角色卡「收回角落」时会跳一下：收回改用与「掀开」相同的 FLIP 手法（先冻结当前形态再动画）、时长/缓动与翻面一致，精准落回角落卡背。④魔典/白天投票改为「同一时刻只允许一个投票进行」：只有「停止计票」后玩家才上处决台、也才允许开启新的提名；有投票进行时其它提名暂不能重新计票；重新计票会载入该提名现存的票数，新提名从空票开始。']},
   {v:'v2.41.18', d:'2026-08-11', items:['①左上角设置弹窗的滚动条去掉白色默认背景：改为暗色透明轨道 + 金色细滑块（同其它面板风格）。②玩家笔记/标记：状态标记与角色标记的样式统一为与「魔典/角色设置」的角色牌一模一样——同字号/字重、圆角彩色边框、投影阴影；状态标记的边框颜色对应其在座位图上的光晕色（中毒绿/醉酒黄/守护灰/已开枪蓝/红鲱鱼红/主人金），角色标记边框用对应阵营色。③夜晚选人下拉菜单宽度改为 80px（参考尺寸）。']},
   {v:'v2.41.17', d:'2026-08-11', items:['①魔典/白天：删除多余的「管家 xxx 的主人：…」提示行。②处决面板：点「处决」或「今日无人处决」都会先弹确认弹窗，确认后才执行；本日处决一旦确定，就不能再新增提名（提名表单收起，addNomination 也加了兜底拦截）。③夜晚选人下拉菜单改为固定宽度：不再随玩家名字长短或「已出局/自己」等状态标识变化，layout 保持稳定（收起态过长省略号，展开列表仍显示完整名字）']},
   {v:'v2.41.16', d:'2026-08-10', items:['①当前客人名册：玩家已登录且在线时，名字前显示绿点（登录写 accounts/{key}/online=true，断线/登出自动清；说书人实时显示）。过往名册的「已注册账号=紫点」保持不变。②左上角设置等所有居中弹窗：最多占视口 80% 高/宽（四周至少 10% 边距），超出则内部滚动——上限按缩放系数换算，仍与整体等比缩放一致。③夜晚面板里选人那行（如图书管理员「外来者[下拉] 另一人：[下拉]」）取消左缩进、与角色名对齐，留出横向空间避免换行']},
@@ -2120,7 +2121,7 @@ function showResult(w,reason){ const L=document.getElementById('resultLayer'); i
 function hideResult(){ const L=document.getElementById('resultLayer'); if(L) L.className=''; RES._dismissed=RES._seenTs; try{ if(window._sfxStopWin) _sfxStopWin(); if(window._bgDuck) _bgDuck(false); }catch(e){} }
 window.hideResult=hideResult; window.showResult=showResult;
 window.applyResult=function(res){
-  if(!res || !res.w){ const L=document.getElementById('resultLayer'); if(L) L.className=''; RES._seenTs=0; RES._dismissed=0; try{ if(window._sfxStopWin) _sfxStopWin(); if(window._bgDuck) _bgDuck(false); }catch(e){} return; }
+  if(!res || !res.w){ const L=document.getElementById('resultLayer'); if(L) L.className=''; RES._seenTs=0; RES._dismissed=0; try{ if(window._sfxStopWin) _sfxStopWin(); if(!window.__execPlaying && window._bgDuck) _bgDuck(false); }catch(e){} return; }   // 处决视频播放中不要撤销压低（否则同一次 public 更新里刚 duck 又被这里立刻恢复）；视频结束由 _finalizeExec 负责恢复
   if(res.ts===RES._dismissed) return;
   if(res.ts!==RES._seenTs){ RES._seenTs=res.ts;
     if(window.__execPlaying){ window.__pendingResult={w:res.w, r:res.r}; return; }   // 处决视频播放中：等视频结束再放胜利动画
@@ -2323,10 +2324,14 @@ function ghostUsedAnywhere(seat){   // 鬼票只由「死后投出的票」消�
   return false;
 }
 function onBlock(day){ const noms=nominations[day]||[]; const thr=dayThreshold(); let best=-1,bestV=0,tie=false;
-  noms.forEach(nom=>{ const v=nom.voters.length; if(v>=thr){ if(v>bestV){bestV=v;best=nom.nominee;tie=false;} else if(v===bestV){tie=true;} } });
+  noms.forEach(nom=>{ if(!nom.tallied) return;   // 只有「停止计票」的提名才计入上处决台判定
+    const v=nom.voters.length; if(v>=thr){ if(v>bestV){bestV=v;best=nom.nominee;tie=false;} else if(v===bestV){tie=true;} } });
   return tie?-1:best; }
+/* 本日是否有正在进行（未停止计票）的投票——任意时刻只允许一个 */
+function voteInProgress(day){ return (nominations[day]||[]).some(n=>n&&!n.tallied); }
 function addNomination(nr,ne){ if(nr===""||ne==="") return; const day=night;
   if(executions[day]!==undefined) return;   // 本日处决结果已出 → 锁定，不再新增提名
+  if(voteInProgress(day)) return;            // 已有投票在进行 → 必须先「停止计票」才能开新提名
   nr=+nr; ne=+ne;
   if(!nominations[day]) nominations[day]=[];
   if(nominations[day].some(x=>x.nominator===nr) || nominations[day].some(x=>x.nominee===ne)) return;
@@ -2701,30 +2706,34 @@ function renderGrim(){
   if(gtab==="day"){
     const day=night, alive=countAlive(), thr=dayThreshold();
     h+='<div class="rrow" style="border:none;font-weight:800;color:#43286b">第 '+day+' 天 · 存活 '+alive+' 人 · 处决需 ≥ '+thr+' 票</div>';
-    const noms=nominations[day]||[]; const block=onBlock(day);
+    const noms=nominations[day]||[]; const block=onBlock(day); const voting=voteInProgress(day);   // voting=本日有未停止计票的投票
     const hands=window.__playerHands||{}; const isActiveVote=(nom0)=>{ const vv=window.__pubVote; return vv&&vv.by===nom0.nominator&&vv.to===nom0.nominee&&vv.day===day; };
     noms.forEach((nom,idx)=>{ const v=nom.voters.length; const isB=(nom.nominee===block && block>=0);
       const active=isActiveVote(nom), handCnt=Object.keys(hands).length;
       h+='<div class="nomcard"><div class="nomhead"><span>'+nameAt(nom.nominator)+' → '+nameAt(nom.nominee)+'</span>'
-        +'<span>'+v+' 票'+(v>=thr?(isB?' <span class="onblock">上台</span>':' 达阈'):'')+' <span class="regbtn" onclick="removeNomination('+day+','+idx+')">删</span></span></div>';
+        +'<span>'+v+' 票'+(nom.tallied&&v>=thr?(isB?' <span class="onblock">上台</span>':' 达阈'):'')+' <span class="regbtn" onclick="removeNomination('+day+','+idx+')">删</span></span></div>';
       h+='<div class="voterow">';
       for(let s=0;s<N;s++){ const voted=nom.voters.includes(s), dead=isDeadSeat(s), raising=active&&hands[s]&&!voted;
         h+='<span class="voter'+(voted?' on':'')+(dead?' ghost':'')+(raising?' raising':'')+'" title="'+nameAt(s)+(dead?'（已出局）':'')+(raising?'（正在举手）':'')+'" onclick="toggleVote('+day+','+idx+','+s+')">'+(s+1)+'</span>'; }
       h+='</div>';
       if(!nom.tallied){ h+='<div class="votectl">'+(active?'<span class="hcnt">'+handCnt+' 人举手中</span>':'')
           +'<span class="regbtn pub" onclick="_voteTally('+day+','+idx+')">停止计票</span></div>'; }
+      else if(voting){ h+='<div class="votectl"><span class="revok">✓ 已计票 · '+v+' 票</span><span class="regbtn" style="opacity:.4;cursor:default" title="有投票正在进行，先停止计票">重新计票</span></div>'; }   // 别的提名正在计票 → 暂不可重新计票
       else { h+='<div class="votectl"><span class="revok">✓ 已计票 · '+v+' 票</span><span class="regbtn" onclick="_voteReopen('+day+','+idx+')">重新计票</span></div>'; }
       h+='</div>'; });
-    if(executions[day]===undefined){   // 未处决前才显示「＋提名」表单；处决后锁定
+    if(executions[day]!==undefined){ h+='<div class="impkill" style="opacity:.6;font-weight:400">本日处决已确定，不能再新增提名</div>'; }
+    else if(voting){ h+='<div class="impkill" style="opacity:.6;font-weight:400">请先「停止计票」，再开启新的提名（同一时刻只能有一个投票进行）</div>'; }   // 停止计票后才能开新提名
+    else {   // 未处决且无投票进行 → 显示「＋提名」表单
       const neSet=new Set(noms.map(x=>x.nominee)), nrSet=new Set(noms.map(x=>x.nominator));
       let nrOpt='<option value="">提名人</option>', neOpt='<option value="">被提名</option>';
       allSeats().forEach(i=>{ if(!nrSet.has(i)) nrOpt+='<option value="'+i+'">'+(i+1)+' '+nameAt(i)+(isDeadSeat(i)?'（已出局）':'')+'</option>'; });
       allSeats().forEach(i=>{ if(!neSet.has(i)) neOpt+='<option value="'+i+'">'+(i+1)+' '+nameAt(i)+(isDeadSeat(i)?'（已出局）':'')+'</option>'; });
       h+='<div class="impkill"><select id="nomNr">'+nrOpt+'</select><select id="nomNe">'+neOpt+'</select>'
         +'<span class="regbtn" onclick="addNomination(document.getElementById(\'nomNr\').value,document.getElementById(\'nomNe\').value)">＋提名</span></div>';
-    } else h+='<div class="impkill" style="opacity:.6;font-weight:400">本日处决已确定，不能再新增提名</div>';
+    }
     h+='<div class="gsec">处决</div>';
-    if(block>=0) h+='<div class="rrow" style="border:none">上台：<b class="onblock">'+nameAt(block)+'</b> <span class="regbtn" onclick="confirmExecute('+block+')">处决</span></div>';
+    if(executions[day]!==undefined){ /* 已处决/无人处决 → 不再显示处决按钮（下方有结果 ✓） */ }
+    else if(block>=0) h+='<div class="rrow" style="border:none">上台：<b class="onblock">'+nameAt(block)+'</b> <span class="regbtn" onclick="confirmExecute('+block+')">处决</span></div>';
     else h+='<div class="rrow" style="border:none;display:flex;align-items:center;gap:10px"><span style="opacity:.7">暂无人达处决票数（或平票）</span><span class="regbtn" onclick="confirmExecute(-1)">今日无人处决</span></div>';   /* 「今日无人处决」与提示同行；有人上台(block>=0)后两者一起消失 */
     const ex=executions[day];
     if(ex!==undefined){
@@ -3382,16 +3391,18 @@ load(); render();
     _rcState='anim'; if(hint) hint.style.display='none';
     try{ if(window._sfx) _sfx('card-close'); }catch(e){}   // 收起卡牌
     cc.style.visibility='hidden'; cc.style.display='block';
+    card.style.transition='none';   // 先冻结当前形态，避免读到入场/掀开动画的中间态，导致起点错位、看起来跳一下
     const cr=card.getBoundingClientRect(), sr=cc.getBoundingClientRect();
     const dx=(sr.left+sr.width/2)-(cr.left+cr.width/2), dy=(sr.top+sr.height/2)-(cr.top+cr.height/2), sc=sr.width/cr.width;
-    card.style.opacity='1'; card.style.transition='transform .65s cubic-bezier(.5,.05,.2,1)'; card.classList.add('flip');
+    void card.offsetWidth;   // 提交起始态（与「掀开」同一 FLIP 手法）
+    card.style.opacity='1'; card.style.transition='transform .7s cubic-bezier(.4,.05,.2,1)'; card.classList.add('flip');   // 时长/缓动与「掀开」及翻面(.7s)一致 → 收回顺滑、精准落到角落卡背，不再跳
     card.style.transform='translate('+dx+'px,'+dy+'px) scale('+sc+')';
     const done=(e)=>{ if(e&&e.target!==card) return; card.removeEventListener('transitionend',done);
       cc.style.visibility=''; cc.style.display='block';   // 卡背归位角落
       layer.classList.remove('on');                        // 遮罩淡出（大卡随之淡出）
       setTimeout(()=>{ card.style.transition='none'; card.style.transform=''; card.classList.remove('flip'); card.style.opacity=''; _rcState=''; }, 600);   // 淡出结束后再复位大卡，避免可见跳回
     };
-    card.addEventListener('transitionend',done); setTimeout(()=>{ if(_rcState==='anim') done(); }, 850);
+    card.addEventListener('transitionend',done); setTimeout(()=>{ if(_rcState==='anim') done(); }, 900);
   }
   window._clearRoleCard=function(){ const {layer,card,cc}=_rcEls(); if(layer) layer.classList.remove('on'); if(cc) cc.style.display='none';
     if(card){ card.style.transition='none'; card.style.transform=''; card.classList.remove('flip'); card.style.opacity=''; } _rcState=''; window.__myRole='';
@@ -3975,7 +3986,9 @@ load(); render();
     if(typeof enforceButler==='function') enforceButler();
     if(typeof render==='function') render(); };
   window._voteReopen=function(day,idx){ if(role!=='st'||!curGid) return;
-    const nom=(nominations[day]||[])[idx]; if(nom) nom.tallied=false;
+    const list=nominations[day]||[];
+    if(list.some((n,i)=>i!==idx && n && !n.tallied)){ try{ toast('已有投票在进行，请先「停止计票」再重新计票另一个提名'); }catch(e){} return; }   // 任意时刻只允许一个投票在进行
+    const nom=list[idx]; if(nom) nom.tallied=false;   // 重新计票：保留该提名现存的计票状态（voters 不清空）
     try{ if(window._stPushButlerMaster) _stPushButlerMaster(); }catch(e){}
     db.ref('games/'+curGid+'/public/vote').set({day:+day,by:(nom?nom.nominator:0),to:(nom?nom.nominee:0),open:true,hands:null,ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{});
     if(window._clockBroadcastNom&&nom) window._clockBroadcastNom(nom.nominator,nom.nominee);
