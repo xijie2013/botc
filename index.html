@@ -1145,6 +1145,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.15', d:'2026-08-10', items:['精简夜晚/白天面板文案：①删除洗衣妇「镇民候选…」、图书管理员「外来者/无外来者→告知没有外来者」、调查员「爪牙候选…」、占卜师「读为恶魔…」这些冗长的候选提示（中毒/醉酒警告保留）。②删除「（等前一步完成后再发送）」「完成本夜所有流程后可点亮」「处决结果出来后可点亮」三处引导提示。③白天：「今日无人处决」按钮移到「暂无人达处决票数（或平票）」右侧同一行，有人上处决台后两者一起消失']},
   {v:'v2.41.14', d:'2026-08-10', items:['①「过往客人名册」的名字字号（此前是独立的 .ptag=1.2·sw，上一版漏改）也改为与「当前客人名册」标题一致（1.05·sw）——顺带解决了它字大导致名字放不下、右侧留空却换行的问题。②魔典/角色设置里，镇民/外来者/爪牙/恶魔 标题右侧的 −/＋ 按钮统一上移 0.5px']},
   {v:'v2.41.13', d:'2026-08-10', items:['①「第 X 夜」「共 X 人」文字与数字改为上移 2.5px（较上版下移 0.5px）。②说书人大厅里「当前客人名册」「过往客人名册」下列出的客人名字（chip）字号，从 1.25 改为与「当前客人名册」标题一致（1.05·sw）']},
   {v:'v2.41.12', d:'2026-08-10', items:['再微调：「第 X 夜」「共 X 人」文字与数字改为上移 3px（较上版下移 2px）；标题改为上移 1.5px（较上版下移 1.5px）']},
@@ -1418,18 +1419,10 @@ function computeNightInfo(id){
   const label=(team)=>teamSeats(team).map(j=>nameAt(j)+'＝'+RMAP[meta[j].role].name);
   if(id==="chef"){ return warn+'相邻邪恶对数：<b>'+chefPairs()+'</b>'; }
   if(id==="empath"){ return warn+'两侧存活邻座邪恶数：<b>'+empathNum(i)+'</b>'; }
-  if(id==="washerwoman"){ const t=label("tf"); return warn+'镇民候选：'+(t.join('、')||'无')+'（选其一+任意一名玩家）'; }
-  if(id==="librarian"){ const o=label("out"); return warn+(o.length?'外来者：'+o.join('、')+'（选其一+任意一名玩家）':'无外来者 → 告知“没有外来者”'); }
-  if(id==="investigator"){
-    const cand=[]; meta.forEach((mm,j)=>{ if(!mm.role) return; const tm=RMAP[mm.role].team;
-      if(tm==="min" && effReg(j)!=="good") cand.push(nameAt(j)+'＝'+RMAP[mm.role].name);
-      else if(mm.role==="recluse" && effReg(j)==="evil") cand.push(nameAt(j)+'＝陌客(判为爪牙)'); });
-    return warn+(cand.length?'爪牙候选：'+cand.join('、')+'（选其一+任意一名玩家）':'无可判定爪牙'); }
-  if(id==="fortuneteller"){
-    const d=[]; meta.forEach((mm,j)=>{ if(!mm.role) return;
-      if(RMAP[mm.role].team==="dem") d.push(nameAt(j));
-      else if(mm.role==="recluse" && effReg(j)==="evil") d.push(nameAt(j)+'(陌客可读为恶魔)'); });
-    return warn+'读为恶魔：'+(d.join('、')||'无')+'　红鲱鱼另设一名好人；所选2人含其一则答“是”'; }
+  if(id==="washerwoman"){ return warn; }   /* 候选信息按需删除，仅保留中毒/醉酒警告 */
+  if(id==="librarian"){ return warn; }
+  if(id==="investigator"){ return warn; }
+  if(id==="fortuneteller"){ return warn; }
   if(id==="undertaker"){ const ex=executions[night-1];
     if(ex===undefined) return warn+'昨日尚未记录处决';
     if(ex<0) return warn+'昨日无人被处决 → 无信息';
@@ -1685,7 +1678,6 @@ function nightPanel(id, active){
       +'<button class="nf-ok"'+(dead?' disabled':'')+' onclick="nightProxyConfirm(\''+id+'\')">代确认</button>'
       +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button></div>';
     if(dead) h+='<div class="nf-hint">该角色已出局，本夜无行动，请点「跳过」。</div>';
-    else if(!active) h+='<div class="nf-hint">（等前一步完成后再发送）</div>';
     return h+'</div>';
   }
   if(kind!=='info' && stage==='picked'){
@@ -2717,8 +2709,7 @@ function renderGrim(){
       +'<span class="regbtn" onclick="addNomination(document.getElementById(\'nomNr\').value,document.getElementById(\'nomNe\').value)">＋提名</span></div>';
     h+='<div class="gsec">处决</div>';
     if(block>=0) h+='<div class="rrow" style="border:none">上台：<b class="onblock">'+nameAt(block)+'</b> <span class="regbtn" onclick="doExecute('+block+')">处决</span></div>';
-    else h+='<div class="rrow" style="border:none;opacity:.7">暂无人达处决票数（或平票）</div>';
-    h+='<div class="rrow" style="border:none"><span class="regbtn" onclick="doExecute(-1)">今日无人处决</span></div>';
+    else h+='<div class="rrow" style="border:none;display:flex;align-items:center;gap:10px"><span style="opacity:.7">暂无人达处决票数（或平票）</span><span class="regbtn" onclick="doExecute(-1)">今日无人处决</span></div>';   /* 「今日无人处决」与提示同行；有人上台(block>=0)后两者一起消失 */
     const ex=executions[day];
     if(ex!==undefined){
       if(ex===-1) h+='<div class="rrow" style="color:#2e7d43">今日无人处决 ✓</div>';
@@ -2740,7 +2731,7 @@ function renderGrim(){
     h+='<div style="margin-top:14px">';
     if(_dusked) h+='<button class="btn purple" style="width:100%;font-weight:800;opacity:.4;cursor:not-allowed;filter:grayscale(.85)" disabled>已结束本日 · 已进入第 '+(day+1)+' 夜</button>';
     else if(_executed) h+='<button class="btn purple" style="width:100%;font-weight:800" onclick="stEndDay()">结束本日 · 进入第 '+(day+1)+' 夜</button>';
-    else h+='<button class="btn purple" style="width:100%;font-weight:800;opacity:.4;cursor:not-allowed;filter:grayscale(.85)" disabled>结束本日</button><div style="text-align:center;font-size:11px;color:#8a7250;margin-top:5px">处决结果出来后可点亮</div>';
+    else h+='<button class="btn purple" style="width:100%;font-weight:800;opacity:.4;cursor:not-allowed;filter:grayscale(.85)" disabled>结束本日</button>';
     h+='</div>';
     c.innerHTML=h; return;
   }
@@ -2779,7 +2770,7 @@ function renderGrim(){
     h+='<div style="margin-top:14px">';
     if(_dawned) h+='<button class="btn purple" style="width:100%;font-weight:800;opacity:.4;cursor:not-allowed;filter:grayscale(.85)" disabled>已结束本夜 · 已进入白天</button>';
     else if(_dawnReady) h+='<button class="btn purple" style="width:100%;font-weight:800" onclick="stEndNight()">结束本夜</button>';
-    else h+='<button class="btn purple" style="width:100%;font-weight:800;opacity:.4;cursor:not-allowed;filter:grayscale(.85)" disabled>结束本夜</button><div style="text-align:center;font-size:11px;color:#8a7250;margin-top:5px">完成本夜所有流程后可点亮</div>';
+    else h+='<button class="btn purple" style="width:100%;font-weight:800;opacity:.4;cursor:not-allowed;filter:grayscale(.85)" disabled>结束本夜</button>';
     h+='</div>';
   }
   c.innerHTML=h;
