@@ -209,7 +209,7 @@
     position:absolute; left:6.5%; top:13%; width:27%; height:7.5%;
     display:flex; align-items:center; justify-content:center; z-index:4;
     font-weight:800; color:#5a3d16; letter-spacing:3px;
-    font-size:calc(18 * var(--sw) / 1280); text-shadow:0 1px 0 rgba(255,255,255,.5);   /* 标题统一 18px（所有视图：暗流涌动/说书人魔典/玩家笔记等，随舞台缩放） */
+    font-size:calc(20 * var(--sw) / 1280); text-shadow:0 1px 0 rgba(255,255,255,.5);   /* 标题统一 20px（所有视图，随舞台缩放） */
   }
 
   /* ======= LEFT (seat view): ledger ======= */
@@ -264,7 +264,7 @@
   .grimoire{position:absolute; left:8.3%; top:23.5%; width:23.4%; height:54.7%;
     display:flex; flex-direction:column; gap:6px; color:var(--ink);}
   .gtabs{display:flex; gap:4px; flex:0 0 auto;}
-  .gtabs button{flex:1; padding:5px 2px; font-size:calc(14 * var(--sw) / 1280); font-weight:800;   /* 标签 14px（基准，随舞台缩放） */
+  .gtabs button{flex:1; padding:5px 2px; font-size:calc(18 * var(--sw) / 1280); font-weight:800;   /* 标签 18px（基准，随舞台缩放） */
     border:1px solid rgba(74,43,107,.4); background:rgba(240,235,250,.6); color:#43286b; border-radius:6px; cursor:pointer;}
   .gtabs button.on{background:#b9a0d6; color:#2e1a47;}
   .grimoire.logview .gtabs, .grimoire.logview .bottom-bar{display:none;}   /* 墨水瓶进入日志：隐藏三标签与底栏 */
@@ -410,15 +410,15 @@
   .night-ctl button:hover{background:#b9a0d6;}
   .night-ctl b{color:#7a1f8f; font-size:1.2em;}
   /* 魔典底栏：夜数(第一页)放大，发牌/重置按钮变窄 */
-  .grimoire .bottom-bar .night-ctl{flex:1; margin:0; gap:5px; flex-wrap:nowrap; white-space:nowrap; font-size:calc(14 * var(--sw) / 1280);}   /* 「第…夜」文字 14px */
+  .grimoire .bottom-bar .night-ctl{flex:1; margin:0; gap:5px; flex-wrap:nowrap; white-space:nowrap; font-size:calc(18 * var(--sw) / 1280);}   /* 「第…夜」文字 18px */
   .grimoire .bottom-bar .night-ctl button{flex:0 0 auto; width:min(25px, calc(1.85 * var(--sw) / 100)); height:min(25px, calc(1.85 * var(--sw) / 100)); font-size:min(14px, calc(1.0 * var(--sw) / 100));}
-  .grimoire .bottom-bar .night-ctl b{font-size:calc(18 * var(--sw) / 1280);}   /* 夜数数字 X 18px */
+  .grimoire .bottom-bar .night-ctl b{font-size:calc(20 * var(--sw) / 1280);}   /* 夜数数字 X 20px */
   .grimoire .bottom-bar .btn{flex:0 0 auto; padding:7px 9px;}   /* 与「保存本局/查看存档」同款：沿用 .btn 基础字号，不再缩小 */
   .ledger .bottom-bar, .grimoire .bottom-bar{margin-bottom:2.5px;}
   /* 酒馆底栏：人数放大，随机排座/清空座位变窄 */
-  .ledger .bottom-bar .count{flex:1; justify-content:center; gap:5px; flex-wrap:nowrap; white-space:nowrap; font-size:calc(14 * var(--sw) / 1280); color:#6b4a1e; font-weight:800;}   /* 「共…人」文字 14px */
+  .ledger .bottom-bar .count{flex:1; justify-content:center; gap:5px; flex-wrap:nowrap; white-space:nowrap; font-size:calc(18 * var(--sw) / 1280); color:#6b4a1e; font-weight:800;}   /* 「共…人」文字 18px */
   .ledger .bottom-bar .count button{flex:0 0 auto; width:min(25px, calc(1.85 * var(--sw) / 100)); height:min(25px, calc(1.85 * var(--sw) / 100)); font-size:min(14px, calc(1.0 * var(--sw) / 100));}
-  .ledger .bottom-bar .count b{color:#8a5f28; font-size:calc(18 * var(--sw) / 1280);}   /* 人数数字 X 18px（与夜数一致） */
+  .ledger .bottom-bar .count b{color:#8a5f28; font-size:calc(20 * var(--sw) / 1280);}   /* 人数数字 X 20px（与夜数一致） */
   .ledger .bottom-bar .btn{flex:0 0 auto; padding:7px 9px;}   /* 与「保存本局/查看存档」同款：沿用 .btn 基础字号，不再缩小 */
   /* 背景墨水瓶热区：点击导出玩家笔记；悬停时墨口飘出光点（酒馆=金，魔典=紫） */
   .inkhotspot{position:absolute; left:39.4%; top:70.5%; width:8.6%; height:18%; cursor:pointer; z-index:6;}
@@ -549,7 +549,7 @@
   .stage.grim .nameitem{background:rgba(240,235,250,.5); border-color:rgba(74,43,107,.3); color:#3a2456;}
   /* 玩家书本 3 个 tab */
   .nbtabs{display:flex; gap:4px; flex:0 0 auto;}
-  .nbtabs button{flex:1; padding:5px 2px; font-size:calc(14 * var(--sw) / 1280); font-weight:800; border-radius:6px; cursor:pointer;   /* 标签统一 14px */
+  .nbtabs button{flex:1; padding:5px 2px; font-size:calc(18 * var(--sw) / 1280); font-weight:800; border-radius:6px; cursor:pointer;   /* 标签统一 18px */
     border:1px solid rgba(122,83,32,.4); background:rgba(255,250,235,.6); color:#6b4a1e;}
   .nbtabs button.on{background:rgba(184,134,11,.32); color:#6b4a1e; border-color:rgba(122,83,32,.6);}
   #notesPanel .nbcontent{flex:1; min-height:0; overflow:auto; padding-right:3px; font-size:calc(1 * var(--sw) / 100); color:#3a2a12;}
@@ -1142,6 +1142,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.8', d:'2026-08-10', items:['字号再上调（全局统一，随舞台等比缩放）：所有标题→20px、所有标签→18px、「共 X 人」「第 X 夜」文字→18px、数字 X→20px']},
   {v:'v2.41.7', d:'2026-08-10', items:['把上一版字号调整改为全局统一（影响魔典/大厅/玩家笔记等所有视图，均为 1280 基准像素、随舞台等比缩放）：所有标题→18px；所有标签（魔典 角色设置/夜晚/白天、旧局记录、玩家笔记 标记/提名/概览）→14px；计数控件「共 X 人」「第 X 夜」文字→14px、数字 X→18px']},
   {v:'v2.41.6', d:'2026-08-10', items:['按要求调整魔典字号（均为 1280 基准像素，随舞台等比缩放）：魔典标题→18px、标签(角色设置/夜晚/白天)→14px、「第…夜」文字→14px、夜数数字 X→18px']},
   {v:'v2.41.5', d:'2026-08-10', items:['「随机排座/清空座位/随机发牌/重置角色」底栏按钮此前有一条把字号缩小的旧样式（min(12px,.9·sw)），导致它们比「保存本局/查看存档」略小、不对齐——去掉该缩小样式，改回沿用 .btn 基础字号，现与「保存本局/查看存档」完全同款、同大、对齐']},
