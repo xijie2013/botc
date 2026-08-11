@@ -168,7 +168,7 @@
   /* 设置面板 */
   #setModal{position:fixed; inset:0; z-index:210; display:none; align-items:center; justify-content:center; background:rgba(10,6,16,.64); padding:16px; overflow-y:auto;}
   #setModal.on{display:flex;}
-  #setModal .setbox{width:min(92vw,430px); max-height:calc(100dvh - 28px); overflow-y:auto; background:linear-gradient(180deg,#2b2038,#20172a);
+  #setModal .setbox{width:min(92vw,430px); max-width:calc(80vw / var(--uiscale)); max-height:calc(80dvh / var(--uiscale)); overflow-y:auto; background:linear-gradient(180deg,#2b2038,#20172a);
     border:2px solid #e9c46a; border-radius:14px; padding:18px 20px 18px; color:#e9dcc4; box-shadow:0 14px 44px rgba(0,0,0,.6), inset 0 0 34px rgba(233,196,106,.06); zoom:var(--uiscale);}
   #setModal h3{margin:0 0 12px; color:#e9c46a; font-size:17px; letter-spacing:2px; display:flex; justify-content:space-between; align-items:center;}
   #setModal .cX{cursor:pointer; color:#9a8fb3; font-weight:700;}
@@ -239,6 +239,7 @@
   .chip .x{cursor:pointer; font-size:1.05em; line-height:1; color:#a5744a; border-radius:50%; width:14px; height:14px; display:inline-flex; align-items:center; justify-content:center;}
   .chip .x:hover{background:#b0402e; color:#fff;}
   .chip.sel .x{color:#fff3d8;}
+  .chip .odot{color:#2e9d4f; font-size:.78em; vertical-align:middle; text-shadow:0 0 3px rgba(46,157,79,.5);}   /* 当前名册：该玩家已登录且在线=绿点 */
   .ptag{font-size:calc(1.05 * var(--sw) / 100); padding:2px 8px; border-radius:14px; height:fit-content;   /* 过往客人名册名字 = 「当前客人名册」标题字号（与当前名册一致） */
     border:1px dashed rgba(122,83,32,.45); background:rgba(255,250,235,.4); color:#6b4a1e; cursor:pointer; user-select:none; white-space:nowrap;}
   .ptag:hover{background:#6b4a1e; color:#f3e6c4;}
@@ -282,7 +283,7 @@
     border-radius:5px; background:rgba(255,252,244,.85); color:var(--ink); font-family:inherit;}
   .nstep{display:flex; gap:6px; align-items:flex-start; padding:4px 2px; border-bottom:1px solid rgba(122,83,32,.16); line-height:1.3; cursor:pointer;}
   .nstep input{margin-top:3px;} .nstep .nn{color:#6a4e8f; font-size:.92em;}
-  .impkill{margin:2px 0 5px 24px; font-size:calc(.95 * var(--sw) / 100); color:#43286b; display:flex; align-items:center; gap:5px; flex-wrap:wrap;}
+  .impkill{margin:2px 0 5px 2px; font-size:calc(.95 * var(--sw) / 100); color:#43286b; display:flex; align-items:center; gap:5px; flex-wrap:wrap;}   /* 取消左缩进，与角色名对齐，留出横向空间避免换行 */
   .impkill select{font-size:calc(.9 * var(--sw) / 100); padding:2px 5px; border:1px solid rgba(74,43,107,.5); border-radius:5px; background:rgba(255,252,244,.9); color:#3a2a12; font-family:inherit;}
   .impkill.warn{color:#b0402e; font-weight:700;}
   .impkill.done{color:#2e7d43; font-weight:700;}
@@ -503,7 +504,7 @@
   /* editor modal */
   .mask{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:50;}
   .mask.on{display:flex;}
-  .modal{background:#221a30; border:1px solid #3a2d4e; border-radius:12px; padding:16px; width:340px; max-width:92vw; color:#efe6d2; zoom:var(--uiscale);}
+  .modal{background:#221a30; border:1px solid #3a2d4e; border-radius:12px; padding:16px; width:340px; max-width:calc(80vw / var(--uiscale)); max-height:calc(80dvh / var(--uiscale)); overflow-y:auto; color:#efe6d2; zoom:var(--uiscale);}
   .modal h3{margin:0 0 10px; color:#e9c46a; font-size:16px;}
   .modal label{display:block; font-size:12px; color:#bdb0d0; margin:8px 0 3px;}
   .modal input[type=text],.modal select,.modal textarea{width:100%; padding:7px; border:1px solid #3a2d4e; border-radius:6px;
@@ -518,7 +519,7 @@
   /* 游戏内确认框 */
   .cfmask{position:fixed; inset:0; background:rgba(10,6,16,.62); display:none; align-items:center; justify-content:center; z-index:320;}
   .cfmask.on{display:flex;}
-  .cfbox{width:min(86vw,360px); max-height:calc(100dvh - 24px); overflow-y:auto; background:linear-gradient(180deg,#2b2038,#20172a); border:2px solid #e9c46a; border-radius:14px;
+  .cfbox{width:min(86vw,360px); max-width:calc(80vw / var(--uiscale)); max-height:calc(80dvh / var(--uiscale)); overflow-y:auto; background:linear-gradient(180deg,#2b2038,#20172a); border:2px solid #e9c46a; border-radius:14px;
     padding:20px 22px 18px; color:#efe6d2; text-align:center; box-shadow:0 14px 44px rgba(0,0,0,.6), inset 0 0 34px rgba(233,196,106,.07);
     zoom:var(--uiscale); animation:cfin .18s ease;}
   @keyframes cfin{from{transform:translateY(14px) scale(.96); opacity:.2} to{transform:none; opacity:1}}
@@ -640,7 +641,7 @@
   .gate{position:fixed; inset:0; z-index:120; display:none; align-items:center; justify-content:center; padding:16px; overflow-y:auto;
     background:rgba(10,6,16,.72); backdrop-filter:blur(3px);}
   .gate.on{display:flex;}
-  .gatebox{width:min(92vw,360px); max-height:calc(100dvh - 24px); overflow-y:auto; background:linear-gradient(180deg,#2b2038,#20172a); border:2px solid #e9c46a; border-radius:16px;
+  .gatebox{width:min(92vw,360px); max-width:calc(80vw / var(--uiscale)); max-height:calc(80dvh / var(--uiscale)); overflow-y:auto; background:linear-gradient(180deg,#2b2038,#20172a); border:2px solid #e9c46a; border-radius:16px;
     padding:24px 22px 20px; text-align:center; box-shadow:0 14px 44px rgba(0,0,0,.6), inset 0 0 34px rgba(233,196,106,.07); zoom:var(--uiscale);}
   .gatebox .ink{width:96px; height:96px; margin-bottom:6px; filter:drop-shadow(0 6px 14px rgba(0,0,0,.55));}
   .gatebox h2{margin:6px 0 4px; font-size:20px; color:#e9c46a; letter-spacing:2px;}
@@ -733,7 +734,7 @@
   /* 本局存档弹窗 */
   #cfgModal{position:fixed; inset:0; z-index:150; display:none; align-items:center; justify-content:center; background:rgba(10,6,16,.62);}
   #cfgModal.on{display:flex;}
-  #cfgModal .cbox{width:min(92vw,420px); max-height:80vh; overflow:auto; background:linear-gradient(180deg,#2b2038,#20172a);
+  #cfgModal .cbox{width:min(92vw,420px); max-width:calc(80vw / var(--uiscale)); max-height:calc(80dvh / var(--uiscale)); overflow:auto; background:linear-gradient(180deg,#2b2038,#20172a);
     border:2px solid #b9a0d6; border-radius:14px; padding:18px; color:#efe6d2; box-shadow:0 14px 44px rgba(0,0,0,.6); zoom:var(--uiscale);}
   #cfgModal h3{margin:0 0 12px; color:#c3aede; font-size:16px; display:flex; justify-content:space-between; align-items:center;}
   #cfgModal .cX{cursor:pointer; color:#9a8fb3; font-weight:700;}
@@ -1145,6 +1146,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.16', d:'2026-08-10', items:['①当前客人名册：玩家已登录且在线时，名字前显示绿点（登录写 accounts/{key}/online=true，断线/登出自动清；说书人实时显示）。过往名册的「已注册账号=紫点」保持不变。②左上角设置等所有居中弹窗：最多占视口 80% 高/宽（四周至少 10% 边距），超出则内部滚动——上限按缩放系数换算，仍与整体等比缩放一致。③夜晚面板里选人那行（如图书管理员「外来者[下拉] 另一人：[下拉]」）取消左缩进、与角色名对齐，留出横向空间避免换行']},
   {v:'v2.41.15', d:'2026-08-10', items:['精简夜晚/白天面板文案：①删除洗衣妇「镇民候选…」、图书管理员「外来者/无外来者→告知没有外来者」、调查员「爪牙候选…」、占卜师「读为恶魔…」这些冗长的候选提示（中毒/醉酒警告保留）。②删除「（等前一步完成后再发送）」「完成本夜所有流程后可点亮」「处决结果出来后可点亮」三处引导提示。③白天：「今日无人处决」按钮移到「暂无人达处决票数（或平票）」右侧同一行，有人上处决台后两者一起消失']},
   {v:'v2.41.14', d:'2026-08-10', items:['①「过往客人名册」的名字字号（此前是独立的 .ptag=1.2·sw，上一版漏改）也改为与「当前客人名册」标题一致（1.05·sw）——顺带解决了它字大导致名字放不下、右侧留空却换行的问题。②魔典/角色设置里，镇民/外来者/爪牙/恶魔 标题右侧的 −/＋ 按钮统一上移 0.5px']},
   {v:'v2.41.13', d:'2026-08-10', items:['①「第 X 夜」「共 X 人」文字与数字改为上移 2.5px（较上版下移 0.5px）。②说书人大厅里「当前客人名册」「过往客人名册」下列出的客人名字（chip）字号，从 1.25 改为与「当前客人名册」标题一致（1.05·sw）']},
@@ -2564,7 +2566,8 @@ function renderLedger(){
 function chipEl(t){
   const d=document.createElement("div");
   d.className="chip"+(selected===t.id?" sel":"")+(t.seat!==null?" seated":"");
-  d.innerHTML=esc(t.name)+' <span class="x" title="移出">✕</span>'; d.draggable=true;
+  const _online=!!(window._acctOnline && window._acctOnline(t.name));   // 已登录且在线 → 绿点
+  d.innerHTML=(_online?'<span class="odot" title="已登录（在线）">●</span> ':'')+esc(t.name)+' <span class="x" title="移出">✕</span>'; d.draggable=true;
   d.addEventListener("dragstart",e=>e.dataTransfer.setData("text",t.id));
   d.addEventListener("click",e=>{ if(e.target.classList.contains("x")){e.stopPropagation();removeToken(t.id);return;}
     e.stopPropagation(); selected=(selected===t.id?null:t.id); render(); });
@@ -3179,7 +3182,8 @@ load(); render();
         catch(e2){ err.textContent=(e2.code||'').includes('email-already-in-use')?'密码不对':authErr(e2); }
       } else err.textContent=authErr(e); } };
 
-  window._logout=function(){ try{ if(typeof _stSessStop==='function') _stSessStop(); }catch(e){}   // 退出：先停会话监听，避免自己顶自己
+  window._logout=function(){ try{ if(typeof _playerOnlineStop==='function') _playerOnlineStop(); }catch(e){}   // 退出：清除在线标记
+    try{ if(typeof _stSessStop==='function') _stSessStop(); }catch(e){}   // 退出：先停会话监听，避免自己顶自己
     const finish=()=>{ try{ localStorage.removeItem('botc_ppw'); localStorage.removeItem('botc_stpw'); localStorage.removeItem('botc_lastrole'); localStorage.setItem('botc_remember',''); }catch(e){} try{ auth.signOut(); }catch(e){} };
     try{ const u=auth.currentUser; if(u && (u.email||'').endsWith(ST_DOM)){ db.ref('storytellerUid').transaction(cur=>{ const cu=(cur&&typeof cur==='object')?cur.uid:cur; return cu===u.uid?null:undefined; }).then(finish).catch(finish); return; } }catch(e){}   // 说书人退出：释放占用
     finish(); };
@@ -3304,7 +3308,13 @@ load(); render();
       ov.innerHTML='<div class="kick-box"><div class="kick-t">此账号已在其他页面 / 设备登录</div><div class="kick-s">为避免多处同时操作产生冲突，本页已停用。<br>你在新页面看到的内容已从云端继承本页的最新进度。</div><button onclick="location.reload()">切回本页继续</button></div>';
       document.body.appendChild(ov); }
     ov.style.display='flex'; }
-  function enterPlayer(){ document.getElementById('stBadge').classList.remove('on'); document.body.classList.add('pl'); document.getElementById('pbName').textContent=((me&&me.displayName)||_storedId('botc_pid')||'玩家'); _nbSeatPage=false; const _np=document.getElementById('notesPanel'); if(_np) _np.classList.remove('seatpage'); bindNotes(); setMode('notes'); try{ _presenceStart(); }catch(e){} }
+  /* ===== 玩家「在线」标记：登录即写 accounts/{key}/online=true（断线自动清除），说书人当前名册据此显示绿点 ===== */
+  let _onlineRef=null;
+  function _playerOnlineStart(){ if(!me||!me.uid) return; const nm=(me&&me.displayName)||_storedId('botc_pid'); if(!nm) return;
+    try{ const ref=db.ref('accounts/'+rkey(nm)+'/online'); _onlineRef=ref; ref.onDisconnect().remove(); ref.set(true).catch(function(){}); }catch(e){} }
+  function _playerOnlineStop(){ try{ if(_onlineRef){ try{ _onlineRef.onDisconnect().cancel(); }catch(e){} _onlineRef.remove().catch(function(){}); _onlineRef=null; } }catch(e){} }
+  window._acctOnline=function(name){ try{ const a=window.__accounts||{}; const acc=a[rkey(name)]; return !!(acc&&acc.online); }catch(e){ return false; } };
+  function enterPlayer(){ document.getElementById('stBadge').classList.remove('on'); document.body.classList.add('pl'); document.getElementById('pbName').textContent=((me&&me.displayName)||_storedId('botc_pid')||'玩家'); _nbSeatPage=false; const _np=document.getElementById('notesPanel'); if(_np) _np.classList.remove('seatpage'); bindNotes(); setMode('notes'); try{ _presenceStart(); }catch(e){} try{ _playerOnlineStart(); }catch(e){} }
   function bindNotes(){ if(notesRef){ notesRef.off(); notesRef=null; } if(role==='player'&&me&&curGid){ notesRef=db.ref('games/'+curGid+'/players/'+me.uid); notesRef.on('value',s=>{ S=s.val(); ensureS(); window.__myRole=(S&&S.role)||''; try{ updateRoleCard(curGid, window.__myRole); }catch(e){} try{ updateSpyGrim(); }catch(e){} try{ updateSlayerGun(); }catch(e){} if(mode==='notes') renderView(); }); } }
 
   /* ===== 玩家本局角色卡（右上角卡背 + 入场/翻开动画） ===== */
