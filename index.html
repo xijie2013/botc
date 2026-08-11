@@ -1175,6 +1175,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.34', d:'2026-08-11', items:['修复拖放失效（自 v2.41.31 统一指针事件后一直存在的 bug）：松手结算函数 `_end` 先把拖拽状态 `_dg` 置成了 null，随后 `_drop` 又去读 `_dg.payload` → 抛异常被 try/catch 静默吞掉，导致所有拖放（魔典角色标签拖到座位、令牌移动、玩家笔记里状态/身份标记拖到座位）放手后都没生效。现在 `_drop` 改为显式接收 payload 参数、不再依赖已被清空的 `_dg`。（用无头 Chromium 真机指针/触摸事件回归验证：鼠标与触屏拖放均正确落点。）']},
   {v:'v2.41.33', d:'2026-08-11', items:['卡背也做成等比：右上角/翻面用的通用卡背 cardback.png 此前被 720×1188 卡框（object-fit:fill）竖向压扁约 11%，金色圆角边框与中央钟楼/眼睛徽记都变扁。现在把卡背原生重做为 720×1188——不整体拉伸，只从徽记下方的空白紫色区（避开下圆角，取纯紫直边处）抽掉底部约 265px（≈10%）高度，顶部与上下圆角边框完全不动、接缝无痕，圆角边框与徽记都保持原比例。（仅替换 assets/cardback.png 素材，未改 layout。）']},
   {v:'v2.41.32', d:'2026-08-11', items:['重制 22 张角色卡：此前卡片是 720×1320 原生尺寸，被塞进 720×1188 的卡框（object-fit:fill）竖向压缩约 10%，人物与文字都显得扁。现在用原始高清半身像（_stale）按 720×1188 原生比例重新合成每张卡——标题/英文名/阵营徽章、底部技能描述都保留原样不缩放，只把人物窗口按新比例重新裁切（人脸对齐到画面上部三分之一）。比例与卡框一致，object-fit:fill 不再产生形变。（仅替换 assets/roles/*.png 素材，未改 layout。）']},
   {v:'v2.41.31', d:'2026-08-11', items:['把拖放统一为一套「指针事件」系统：删除原来的桌面端 HTML5 原生拖放与另加的触屏垫片，改为鼠标/触屏/手写笔共用同一条指针事件路径（`pointerdown/move/up`）。可拖元素统一用 `data-drag` 标记、座位用 `data-seat` 作落点，用位移阈值区分「点按」与「拖动」，拖动后抑制随之而来的 click。行为在各端一致，逻辑只有一份。（猎手十字弩箭头本就是指针事件，保持不变。）']},
@@ -3076,7 +3077,7 @@ const poolEl=document.getElementById("pool");   // 拖回名册(移出座位)由
   function _seatUnder(x,y){ const e=document.elementFromPoint(x,y); return e?e.closest('.seat[data-seat]'):null; }
   function _poolUnder(x,y){ const e=document.elementFromPoint(x,y); return e?e.closest('#pool'):null; }
   function _clearOver(){ document.querySelectorAll('.seat.over, #pool.over').forEach(el=>el.classList.remove('over')); }
-  function _drop(x,y){ const payload=_dg.payload; const seat=_seatUnder(x,y);
+  function _drop(x,y,payload){ const seat=_seatUnder(x,y);
     if(seat){ const idx=+seat.dataset.seat;
       if(payload.indexOf('role:')===0){ try{ assignRoleToSeat(idx, payload.slice(5)); render(); }catch(e){} }
       else if(payload.indexOf('prole:')===0||payload.indexOf('pstat:')===0||payload.indexOf('seatrole:')===0){ try{ if(window._plTouchDrop) window._plTouchDrop(idx, payload); }catch(e){} }
@@ -3098,7 +3099,7 @@ const poolEl=document.getElementById("pool");   // 拖回名册(移出座位)由
   });
   function _end(e){ if(!_dg || (e&&e.pointerId!==_dg.pid)) return; const dg=_dg; _dg=null;
     if(dg.ghost){ try{ dg.ghost.remove(); }catch(_){} } _clearOver();
-    if(dg.dragging){ _suppressClick=true; try{ _drop(e.clientX, e.clientY); }catch(_){} } }   // 有过拖动 → 抑制随后的 click（避免误触点按逻辑）
+    if(dg.dragging){ _suppressClick=true; try{ _drop(e.clientX, e.clientY, dg.payload); }catch(_){} } }   // 有过拖动 → 抑制随后的 click（避免误触点按逻辑）；payload 由 dg 显式传入（此时 _dg 已置 null）
   document.addEventListener('pointerup', _end);
   document.addEventListener('pointercancel', function(e){ if(!_dg || (e&&e.pointerId!==_dg.pid)) return; if(_dg.ghost){ try{ _dg.ghost.remove(); }catch(_){} } _clearOver(); _dg=null; });
   document.addEventListener('click', function(e){ if(_suppressClick){ _suppressClick=false; e.stopPropagation(); e.preventDefault(); } }, true);
