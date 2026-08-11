@@ -29,18 +29,19 @@
 </script>
 <style>
   :root{ --purple:#4a2b6b; --gold:#b8860b; --ink:#3a2a12; --parch:#f3e6c4;
-    /* 舞台自身的宽/高（16:9 等比适配）——舞台内所有字号/尺寸都按它等比缩放，
-       所以手机上的"标准"与电脑完全同比例，只是整体变小 */
-    --sw: min(100vw, 177.78vh); --sh: min(56.25vw, 100vh); }
+    /* 舞台采用「固定 1280×720 设计基准 + 整体 transform 缩放」：舞台里所有元素（不论 px / % / var(--sw)）
+       都随舞台一起等比缩放，任何屏幕上截图放大后完全重叠、layout 不变。--sw/--sh 即设计基准像素。
+       缩放由 JS _fitStage() 计算 scale=min(vw/1280, vh/720)，舞台可视尺寸 = min(100vw,177.78vh)，与旧版一致。 */
+    --sw: 1280px; --sh: 720px; }
   *{box-sizing:border-box;}
   html,body{margin:0;height:100%;}
   body{
     font-family:-apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif;
     background:#1a1220;color:var(--ink);
-    display:flex;align-items:center;justify-content:center;min-height:calc(100 * var(--sh) / 100);overflow:hidden;
+    display:flex;align-items:center;justify-content:center;min-height:100vh;overflow:hidden;
   }
   .stage{
-    position:relative; width:var(--sw); height:var(--sh);
+    position:relative; width:var(--sw); height:var(--sh); transform-origin:center center; flex:0 0 auto;
     background:#000 center/100% 100% no-repeat; background-image:url("assets/tavern-bg.jpg");
     box-shadow:0 0 60px rgba(0,0,0,.6); overflow:hidden;
   }
@@ -74,7 +75,7 @@
 
   /* 玩家本局角色卡（右上角卡背 + 入场/翻开动画） */
   #cornerCard{position:absolute; top:3.5%; right:2.5%; z-index:31; cursor:pointer; display:none;
-    width:clamp(42px,5vw,62px); aspect-ratio:720/1320; filter:drop-shadow(0 3px 8px rgba(0,0,0,.6)); transition:transform .14s;}
+    width:calc(4.85 * var(--sw) / 100); aspect-ratio:720/1320; filter:drop-shadow(0 3px 8px rgba(0,0,0,.6)); transition:transform .14s;}
   #cornerCard{overflow:hidden; border-radius:7px;}
   #cornerCard img{object-fit:cover;}
   #cornerCard:hover{transform:scale(1.06);}
@@ -83,7 +84,7 @@
     background:rgba(8,6,14,.74); -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); cursor:pointer;
     opacity:0; visibility:hidden; transition:opacity .55s ease, visibility .55s;}   /* 遮罩淡入淡出，不再突兀 */
   #roleCardLayer.on{opacity:1; visibility:visible;}
-  #roleCard{position:relative; height:min(74vh, calc(88vw * 1320 / 720)); aspect-ratio:720/1320; will-change:transform, opacity;}
+  #roleCard{position:relative; height:min(calc(74 * var(--sh) / 100), calc(88 * var(--sw) / 100 * 1320 / 720)); aspect-ratio:720/1320; will-change:transform, opacity;}
   #roleCard .rc-inner{position:absolute; inset:0; transform-style:preserve-3d; transition:transform .7s cubic-bezier(.4,.05,.2,1); will-change:transform;}
   #roleCard.flip .rc-inner{transform:rotateY(180deg);}
   #roleCard .rc-face{position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; border-radius:16px; overflow:hidden;}
@@ -96,7 +97,7 @@
   .rc-fallback::after{content:""; width:40%; aspect-ratio:1; border:2px solid rgba(200,165,90,.6); border-radius:8px; transform:rotate(45deg); box-shadow:inset 0 0 16px rgba(184,134,11,.3);}
   .rc-fallback::before{content:""; position:absolute; width:20%; aspect-ratio:1; border-radius:50%; background:radial-gradient(circle, rgba(220,190,120,.55), rgba(184,134,11,0) 70%);}
   #rcHint{position:absolute; left:0; right:0; bottom:6%; text-align:center; color:#ece0c6; font-weight:600;
-    font-size:clamp(13px,2.1vh,18px); text-shadow:0 1px 5px rgba(0,0,0,.85); pointer-events:none;}
+    font-size:calc(2.1 * var(--sh) / 100); text-shadow:0 1px 5px rgba(0,0,0,.85); pointer-events:none;}
   /* ===== 间谍魔典（右下角图标 + 只读魔典遮罩，1:1 复刻说书人魔典 layout） ===== */
   #spyGrimIcon{position:absolute; bottom:3.5%; right:2.5%; z-index:130; cursor:pointer;
     width:calc(6.624 * var(--sw) / 100); aspect-ratio:1/1; filter:drop-shadow(0 3px 8px rgba(0,0,0,.6)); transition:transform .14s;}
@@ -133,7 +134,7 @@
   #spyGrimClock{position:absolute; inset:0; pointer-events:none; z-index:3;}
   /* ===== 猎手十字弩（右下角，可拖到座位开枪） ===== */
   #slayerGun{position:absolute; bottom:3.5%; right:2.5%; z-index:34; cursor:grab; touch-action:none;
-    width:clamp(46px,5.6vw,70px); aspect-ratio:1/1; filter:drop-shadow(0 0 5px rgba(74,168,255,.85)) drop-shadow(0 3px 8px rgba(0,0,0,.6)); transition:transform .14s, filter .2s;}
+    width:calc(5.6 * var(--sw) / 100); aspect-ratio:1/1; filter:drop-shadow(0 0 5px rgba(74,168,255,.85)) drop-shadow(0 3px 8px rgba(0,0,0,.6)); transition:transform .14s, filter .2s;}
   #slayerGun img{width:100%; height:100%; object-fit:contain; display:block; pointer-events:none;}
   #slayerGun:hover{transform:scale(1.07);}
   #slayerGun.dragging{cursor:grabbing; transform:scale(1.12);}
@@ -146,7 +147,7 @@
   @keyframes slayerDash{to{stroke-dashoffset:-13;}}
   .seat.slayer-target{outline:3px solid #ff5a3a; outline-offset:2px; box-shadow:0 0 0 4px rgba(255,90,58,.5),0 0 16px rgba(255,90,58,.8)!important; z-index:6;}
   #slayerResult{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:122; display:none;
-    max-width:min(92vw,460px); padding:14px 18px; border-radius:16px; text-align:center;
+    max-width:calc(36 * var(--sw) / 100); padding:14px 18px; border-radius:16px; text-align:center;
     background:linear-gradient(160deg,rgba(40,24,20,.97),rgba(24,14,12,.97)); border:1.5px solid rgba(233,196,106,.55); box-shadow:0 8px 30px rgba(0,0,0,.6);}
   #slayerResult.on{display:block;}
   #slayerResult .sr-t{font-size:15px; font-weight:800; color:#ffe9b8; line-height:1.5; margin-bottom:10px; white-space:pre-wrap;}
@@ -155,7 +156,7 @@
   @media (max-width:720px){ #slayerResult{bottom:6px; padding:11px 14px;} #slayerResult .sr-t{font-size:13px;} }
   /* 左上角工具栏：全屏 / 刷新 / 设置 */
   #toolBar{position:fixed; top:12px; left:12px; z-index:60; display:flex; gap:8px; align-items:center;}
-  .fsbtn{width:clamp(30px,2.6vw,40px); height:clamp(30px,2.6vw,40px);
+  .fsbtn{width:calc(2.85 * var(--sw) / 100); height:calc(2.85 * var(--sw) / 100);
     border-radius:9px; border:1px solid rgba(233,196,106,.55); background:rgba(24,16,36,.62); color:#e9c46a;
     font-size:clamp(15px,1.5vw,20px); line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center;
     padding:0; transition:transform .12s, box-shadow .12s, background .12s;}
@@ -915,11 +916,12 @@
     <div id="winBanner"></div>
     <!-- 猎手十字弩（拖到座位开枪） -->
     <div id="slayerGun" title="把十字弩拖到目标座位开枪" style="display:none"><img src="assets/mk-crossbow.png" alt="" draggable="false"></div>
-    <svg id="slayerArrow"><path id="slayerArrowPath"></path><polygon id="slayerArrowHead"></polygon></svg>
     <div id="slayerResult"></div>
     <div id="winIcon"></div>
     <video id="execVideo" playsinline preload="auto"></video>
   </div>
+  <!-- 猎手拖拽箭头：置于舞台外、视口固定，按指针真实坐标绘制（不随舞台 transform 缩放） -->
+  <svg id="slayerArrow"><path id="slayerArrowPath"></path><polygon id="slayerArrowHead"></polygon></svg>
 
   <!-- seat editor (grimoire) -->
   <div class="mask" id="mask">
@@ -1120,11 +1122,24 @@ function toggleFull(){
   if(!document.fullscreenElement){ (el.requestFullscreen||el.webkitRequestFullscreen||(()=>{})).call(el); }
   else { (document.exitFullscreen||document.webkitExitFullscreen||(()=>{})).call(document); }
 }
+/* 整台等比缩放：固定 1280×720 设计基准，按视口 min(vw/1280,vh/720) 缩放，可视尺寸与旧版一致，舞台内一切元素同比缩放 */
+function _fitStage(){ const st=document.getElementById('stage'); if(!st) return;
+  const W=window.innerWidth||document.documentElement.clientWidth, H=window.innerHeight||document.documentElement.clientHeight;
+  const s=Math.min(W/1280, H/720); st.style.transform='scale('+s+')'; }
+window._fitStage=_fitStage;
+window.addEventListener('resize', _fitStage);
+window.addEventListener('orientationchange', function(){ setTimeout(_fitStage, 60); });
+document.addEventListener('fullscreenchange', function(){ setTimeout(_fitStage, 60); });
+document.addEventListener('webkitfullscreenchange', function(){ setTimeout(_fitStage, 60); });
+try{ _fitStage(); }catch(e){}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', _fitStage); else _fitStage();
+window.addEventListener('load', _fitStage);
 document.addEventListener('fullscreenchange',()=>{ const b=document.getElementById('fsBtn');
   if(b){ b.textContent = document.fullscreenElement ? '🗗' : '⛶'; b.title = document.fullscreenElement ? '退出全屏' : '网页全屏'; } });
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.0', d:'2026-08-10', items:['全局等比缩放：舞台改为固定 1280×720 设计基准 + 整体 transform 缩放（scale=min(视口宽/1280,高/720)），舞台内所有元素（文字/图标/按钮/座位/面板，不论此前用 px 还是比例单位）现在都随舞台一起等比放大缩小，layout 恒定——任意尺寸屏幕截图后按比例放大将完全重叠，不再出现「有的缩放有的不缩放」导致的错位。舞台可视尺寸与旧版一致（仍是 16:9 适配），全屏/非全屏、横竖屏都实时重算。（居中弹窗/确认框/登录页等视口级浮层仍按视口自适应，属正常模态）']},
   {v:'v2.40.1', d:'2026-08-10', items:['间谍魔典右下角图标放大到与说书人魔典书本图标同样大小。修复说书人右上角魔典书本按钮：打开态此前用 vw 单位、合上态用比例单位，导致非全屏下打开/合上大小与位置对不上——现统一改用同一比例单位(var(--sw))，两态一致']},
   {v:'v2.40.0', d:'2026-08-10', items:['新功能·猎手十字弩：猎手玩家开局获得一把「弩」，固定在屏幕右下角（复用十字弩图标）。白天可拖动它——拖拽时会拉出一条抛物线的发光箭头，拖到某个座位上松手，弹出「是否向该玩家开枪」确认；猎手确认后请求发给说书人，说书人在「白天」面板「确认开枪」（也可「代猎手开枪」或「驳回」），随后自动回执给猎手：命中则播放射杀动画并提示「恶魔死亡」，否则提示「无事发生」。十字弩在夜晚、当日处决出结果后、以及开过枪之后都会变灰不可用（灰亮状态由说书人端实时下发）']},
   {v:'v2.39.2', d:'2026-08-10', items:['间谍魔典左侧不再空着：加入「座位一览」表——玩家（座位号＋名字）／身份／状态三列，与右侧座位图信息一致，只是列表更好扫读；随夜晚切换、与座位图同步定格']},
@@ -3456,10 +3471,11 @@ load(); render();
   /* 视口坐标 → 座位序号（复刻 drawSeats 几何） */
   function _slayerSeatAt(clientX, clientY){ const stage=document.getElementById('stage'); if(!stage||!pub||!pub.count) return -1;
     const sr=stage.getBoundingClientRect(); const SW=stage.clientWidth, SH=stage.clientHeight; if(!SW||!SH) return -1;
+    const sc=(sr.width/SW)||1;   // 舞台 transform 缩放比（把舞台布局坐标换到真实视口像素）
     const zoneLeft=0.40*SW, zoneTop=0.08*SH, cx0=SW*0.71-zoneLeft, cy0=SH*0.525-zoneTop, R=SH*0.34;
-    const NN=pub.count, seatD=Math.max(R*0.26, Math.min(R*0.78, R*3.8/NN)); const hitR=seatD*0.62;
+    const NN=pub.count, seatD=Math.max(R*0.26, Math.min(R*0.78, R*3.8/NN)); const hitR=seatD*0.62*sc;
     for(let i=0;i<NN;i++){ const ang=-Math.PI/2+i*2*Math.PI/NN; const x=cx0+R*Math.cos(ang), y=cy0+R*Math.sin(ang);
-      const vx=sr.left+zoneLeft+x, vy=sr.top+zoneTop+y;
+      const vx=sr.left+(zoneLeft+x)*sc, vy=sr.top+(zoneTop+y)*sc;
       if(Math.hypot(clientX-vx, clientY-vy)<=hitR) return i; }
     return -1; }
   function _slayerHighlight(idx){ const zone=document.getElementById('tableZone'); if(!zone) return;
