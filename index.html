@@ -137,16 +137,16 @@
   #spyGrimClock{position:absolute; inset:0; pointer-events:none; z-index:3;}
   /* ===== 猎手十字弩（右下角，可拖到座位开枪） ===== */
   #slayerGun{position:absolute; bottom:3.5%; right:2.5%; z-index:34; cursor:grab; touch-action:none;
-    width:calc(5.6 * var(--sw) / 100); aspect-ratio:1/1; filter:drop-shadow(0 0 5px rgba(74,168,255,.85)) drop-shadow(0 3px 8px rgba(0,0,0,.6)); transition:transform .14s, filter .2s;}
+    width:calc(8.4 * var(--sw) / 100); aspect-ratio:1/1; filter:drop-shadow(0 0 5px rgba(74,168,255,.85)) drop-shadow(0 3px 8px rgba(0,0,0,.6)); transition:transform .14s, filter .2s;}   /* 十字弩图标放大 50%（5.6→8.4）*/
   #slayerGun img{width:100%; height:100%; object-fit:contain; display:block; pointer-events:none;}
   #slayerGun:hover{transform:scale(1.07);}
   #slayerGun.dragging{cursor:grabbing; transform:scale(1.12);}
   #slayerGun.disabled{filter:grayscale(1) brightness(.6) drop-shadow(0 2px 5px rgba(0,0,0,.5)); cursor:not-allowed; opacity:.75;}
   #slayerGun.disabled:hover{transform:none;}
   #slayerArrow{position:fixed; inset:0; width:100%; height:100%; z-index:205; pointer-events:none; display:none; overflow:visible;}
-  #slayerArrowPath{fill:none; stroke:#ffd24a; stroke-width:4.5; stroke-linecap:round;
-    filter:drop-shadow(0 0 4px #ffb020) drop-shadow(0 0 9px #ff7a1a); stroke-dasharray:2 11; animation:slayerDash .5s linear infinite;}
-  #slayerArrowHead{fill:#ffe36a; filter:drop-shadow(0 0 5px #ff9020) drop-shadow(0 0 10px #ff6a1a);}
+  #slayerArrowPath{fill:none; stroke:#4aa8ff; stroke-width:4.5; stroke-linecap:round;
+    filter:drop-shadow(0 0 4px rgba(74,168,255,.95)) drop-shadow(0 0 9px rgba(74,168,255,.75)); stroke-dasharray:2 11; animation:slayerDash .5s linear infinite;}   /* 箭头改蓝色荧光，与十字弩蓝色发光一致 */
+  #slayerArrowHead{fill:#9cccff; filter:drop-shadow(0 0 5px rgba(74,168,255,.95)) drop-shadow(0 0 10px rgba(74,168,255,.75));}
   @keyframes slayerDash{to{stroke-dashoffset:-13;}}
   .seat.slayer-target{outline:3px solid #ff5a3a; outline-offset:2px; box-shadow:0 0 0 4px rgba(255,90,58,.5),0 0 16px rgba(255,90,58,.8)!important; z-index:6;}
   #slayerResult{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:122; display:none;
@@ -688,6 +688,17 @@
   #nightBar .nb-btn{min-width:150px; padding:11px 30px; border-radius:14px; font-size:15px; font-weight:800; cursor:pointer;
     border:1.5px solid rgba(233,196,106,.7); background:linear-gradient(180deg,rgba(60,38,78,.98),rgba(34,20,44,.98)); color:#e9c46a; box-shadow:0 6px 20px rgba(0,0,0,.5);}
   #nightBar .nb-done{font-size:13px; color:#c9b6e6; letter-spacing:1px;}
+  /* ===== 猎手开枪请求：说书人底部弹窗（比魔典里的请求更醒目，蓝色荧光呼应十字弩） ===== */
+  #stSlayerBar{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); transform-origin:center bottom; z-index:122; display:none;
+    max-width:min(94vw,480px); text-align:center; color:#cfe6ff; animation:vbIn .35s ease both;
+    background:linear-gradient(180deg,rgba(30,44,72,.98),rgba(16,26,46,.98)); border:1.5px solid rgba(74,168,255,.7);
+    border-radius:16px; padding:14px 18px; box-shadow:0 10px 30px rgba(0,0,0,.55), 0 0 16px rgba(74,168,255,.4);}
+  #stSlayerBar.on{display:block;}
+  #stSlayerBar .sb-text{font-size:14.5px; font-weight:800; color:#cfe6ff; line-height:1.5; margin-bottom:10px;}
+  #stSlayerBar .sb-btns{display:flex; gap:10px; justify-content:center;}
+  #stSlayerBar button{min-width:130px; padding:11px 26px; border-radius:14px; font-size:15px; font-weight:800; cursor:pointer; border:1.5px solid; box-shadow:0 6px 20px rgba(0,0,0,.5);}
+  #stSlayerBar .sb-yes{border-color:rgba(74,168,255,.85); background:linear-gradient(180deg,rgba(34,74,124,.98),rgba(20,42,74,.98)); color:#9cccff;}
+  #stSlayerBar .sb-no{border-color:rgba(233,196,106,.5); background:linear-gradient(180deg,rgba(60,38,78,.98),rgba(34,20,44,.98)); color:#e9c46a;}
   /* 手机竖屏引导：竖着拿时提示转横 */
   #rotateGate{position:fixed; inset:0; z-index:99999; display:none; flex-direction:column; align-items:center; justify-content:center;
     background:radial-gradient(circle at 50% 40%,#3a2a1e,#160e1c 82%); color:#f3e6c4; text-align:center; padding:24px;}
@@ -1038,7 +1049,7 @@ const DIST={5:[3,0,1,1],6:[3,1,1,1],7:[5,0,1,1],8:[5,1,1,1],9:[5,2,1,1],
 const NIGHT={
  first:[
   {id:"_minion",name:"爪牙相认",note:"唤醒爪牙，互认身份并认识恶魔。",special:"min"},
-  {id:"_demon",name:"恶魔信息",note:"唤醒恶魔，告知爪牙，给3个不在场好人伪装。",special:"dem"},
+  {id:"_demon",name:"恶魔信息",note:"唤醒恶魔，认识爪牙，告知3个不在场的好人伪装（包含外来者）",special:"dem"},
   {id:"poisoner",note:"选1人，当晚+次日中毒。"},
   {id:"washerwoman",note:"告知2人中有1个特定镇民。"},
   {id:"librarian",note:"告知2人中有1个特定外来者（或无）。"},
@@ -1152,6 +1163,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.26', d:'2026-08-11', items:['①恶魔夜晚描述改为「唤醒恶魔，认识爪牙，告知3个不在场的好人伪装（包含外来者）」。②删除间谍步的「查看魔典（知晓全部身份与状态）…」描述。③玩家被处决时，向所有玩家的局内信息写入当天处决信息【xxx被处决】（改判会覆盖、无人处决/撤销会清除；贞洁者触发的处决同样广播）；若处决的是小恶魔且红唇女郎接任，红唇女郎会额外收到「接任成为新恶魔」的确认弹窗，该通知也记入其日志。④说书人「代猎手开枪」时也会先弹确认。⑤右下角十字弩图标放大50%。⑥猎手拖拽的发光箭头改为蓝色荧光（与十字弩蓝色发光一致）。⑦猎手开枪请求现在会在说书人屏幕下方弹出醒目的蓝色确认弹窗（确认开枪/驳回），不再只藏在魔典白天面板里。']},
   {v:'v2.41.25', d:'2026-08-11', items:['角色卡整体统一为 720/1188 拉伸比例：把展开的大卡也改成与右上角卡背相同的 720/1188、图片 object-fit:fill（竖向压缩10%）。这样右上角卡背与展开大卡比例一致，开/收动画两端形状相同、无缝衔接，无需改动画逻辑，出错更少。']},
   {v:'v2.41.24', d:'2026-08-11', items:['右上角角色卡背改为「拉伸素材」而非裁切：卡背图 object-fit 由 cover 改为 fill，随卡框 720/1188 竖向压缩 10%，不再切掉上下。']},
   {v:'v2.41.23', d:'2026-08-11', items:['玩家视角右上角角色卡背比例调整：宽度不变，高度缩小 10%（aspect-ratio 720/1320 → 720/1188），不再显得过长。']},
@@ -1445,7 +1457,7 @@ function computeNightInfo(id){
     if(ex<0) return warn+'昨日无人被处决 → 无信息';
     const tr=meta[ex]?(meta[ex].isDrunk?'drunk':meta[ex].role):null;   // 酒鬼真身=酒鬼
     return warn+'昨日处决：'+nameAt(ex)+' → '+(tr&&RMAP[tr]?RMAP[tr].name:'（未分配）'); }
-  if(id==="spy"){ return warn+'查看魔典（知晓全部身份与状态）　注意：间谍可被判定为好人 / 镇民 / 外来者'; }
+  if(id==="spy"){ return warn; }   /* 删除「查看魔典…」描述，仅保留中毒/醉酒警告 */
   return warn;
 }
 /* 夜间信息录入：勾选夜间顺序的某一步 → 记录该角色本夜信息；取消勾选 → 删除该条 */
@@ -2353,6 +2365,7 @@ function addNomination(nr,ne){ if(nr===""||ne==="") return; const day=night;
     const nrm=meta[nr];
     if(healthy(ne) && nrm && RMAP[nrm.role] && RMAP[nrm.role].team==="tf"){
       executions[day]=nr; killSeat(nr,true); nom.virginExec=nr;
+      try{ _broadcastExecToAll(day, nr); }catch(e){}   // 贞洁者触发处决也向所有玩家广播【xxx被处决】
       histSet(ne,'info','贞洁者首次被提名（'+nameAt(nr)+'）→ 触发');
       histSet(nr,'death','被贞洁者处决出局');
     } else histSet(ne,'info','贞洁者首次被提名 → 提名者非镇民（或贞洁者失效），无事发生');
@@ -2363,7 +2376,7 @@ function addNomination(nr,ne){ if(nr===""||ne==="") return; const day=night;
   render(); }
 function removeNomination(day,idx){ if(nominations[day]){ const nom=nominations[day][idx];
   if(nom && nom.virginConsumed){ virginUsed=false; histSet(nom.nominee,'info',null);   // 撤销贞洁者能力消耗
-    if(nom.virginExec!=null){ killSeat(nom.virginExec,false); histSet(nom.virginExec,'death',null); if(executions[day]===nom.virginExec) delete executions[day]; } }
+    if(nom.virginExec!=null){ killSeat(nom.virginExec,false); histSet(nom.virginExec,'death',null); if(executions[day]===nom.virginExec) delete executions[day]; try{ _clearExecFromAll(day); }catch(e){} } }
   nominations[day].splice(idx,1); if(!nominations[day].length) delete nominations[day]; }
   if(window._syncNoms) window._syncNoms(); render(); }
 function toggleVote(day,nomIdx,seat){ const nom=nominations[day][nomIdx]; const at=nom.voters.indexOf(seat);
@@ -2397,6 +2410,11 @@ function _stFireSlayer(target){ if(target==null||target==='') return;
   try{ if(window.stRecordGameInfo && slSeat>=0) window.stRecordGameInfo(slSeat,'slayer:day'+sh.day,'【猎手】第 '+sh.day+' 天你开枪射向 '+(t+1)+'号 '+nameAt(t)+' → '+text, sh.day, 2); }catch(e){}
   window.__slayerReq=null; render();
 }
+window._stProxyFireSlayer=async function(target){ if(target==null||target==='') return; const t=+target;   // 说书人「代猎手开枪」下拉选人后先弹确认
+  const ok=await uiConfirm('确认代猎手向 '+(t+1)+'号 '+nameAt(t)+' 开枪？',{title:'代猎手开枪',ok:'确认开枪',cancel:'取消'});
+  if(!ok){ render(); return; }   // 取消：重渲染让下拉复位
+  _stFireSlayer(String(t));
+};
 window._stConfirmSlayerReq=function(){ const req=window.__slayerReq; if(!req||req.target==null) return; _stFireSlayer(req.target); };
 window._stRejectSlayerReq=function(){ window.__slayerReq=null; try{ if(window._stClearSlayerReq) _stClearSlayerReq(); }catch(e){} render(); };
 function slayerUI(){
@@ -2415,7 +2433,7 @@ function slayerUI(){
       +'<div class="rrow" style="border:none"><span class="regbtn pub" onclick="_stConfirmSlayerReq()">确认开枪</span> <span class="regbtn" onclick="_stRejectSlayerReq()">驳回</span></div>';
   }
   let opts='<option value="">目标</option>'; livingSeats().forEach(i=>{ opts+='<option value="'+i+'">'+(i+1)+' '+nameAt(i)+'</option>'; });
-  return h+'<div class="rrow" style="border:none">代猎手开枪：<select onchange="_stFireSlayer(this.value)">'+opts+'</select></div>';
+  return h+'<div class="rrow" style="border:none">代猎手开枪：<select onchange="_stProxyFireSlayer(this.value)">'+opts+'</select></div>';
 }
 async function confirmExecute(seat){   /* 处决 / 今日无人处决 都先弹确认弹窗，确认后才执行 */
   if(voteInProgress(night)) return;   // 计票进行中不允许处决/无人处决（需先停止计票）
@@ -2425,13 +2443,30 @@ async function confirmExecute(seat){   /* 处决 / 今日无人处决 都先弹�
   if(!ok) return;
   doExecute(seat);
 }
+/* 处决广播：向所有玩家局内信息写入/清除【xxx被处决】（每天同 key，改判时覆盖，无人处决/撤销时清除） */
+function _broadcastExecToAll(day, seat){ const txt='【第 '+day+' 天】'+nameAt(seat)+'（'+(seat+1)+'号）被处决出局。';
+  allSeats().forEach(function(i){ try{ if(window.stRecordGameInfo) window.stRecordGameInfo(i,'exec:day:'+day,txt,day,2); }catch(e){} }); }
+function _clearExecFromAll(day){ allSeats().forEach(function(i){ try{ if(window.stRemoveGameInfo) window.stRemoveGameInfo(i,'exec:day:'+day); }catch(e){} }); }
+const SW_TAKEOVER_TEXT='【红唇女郎】原恶魔被处决，你触发接任——从此刻起你成为新的小恶魔（恶魔阵营），之后每晚由你选择击杀目标。';
+function _notifySwTakeover(swSeat, day){ if(swSeat==null||swSeat<0) return;
+  try{ if(window.stRecordGameInfo) window.stRecordGameInfo(swSeat,'swtakeover:day:'+day,SW_TAKEOVER_TEXT,day,3); }catch(e){}   // 记入日志
+  try{ if(window.stNightSend) window.stNightSend('_swday','ack',SW_TAKEOVER_TEXT,null,[swSeat],day); }catch(e){} }   // 底部弹窗，需玩家确认（phase='ack' 避免玩家端重复记日志）
+function _clearSwTakeover(swSeat, day){ if(swSeat==null||swSeat<0) return;
+  try{ if(window.stRemoveGameInfo) window.stRemoveGameInfo(swSeat,'swtakeover:day:'+day); }catch(e){}
+  try{ if(window._stClearSeatNight) window._stClearSeatNight(swSeat); }catch(e){} }
 function doExecute(seat){ const day=night; const prev=executions[day];
-  if(prev!=null && prev>=0){ demonRevived(prev); killSeat(prev,false); histSet(prev,'death',null); }   // 撤销上次处决
+  if(prev!=null && prev>=0){ const prevSw=(meta[prev]&&meta[prev]._swSeat!=null)?meta[prev]._swSeat:null;
+    demonRevived(prev); killSeat(prev,false); histSet(prev,'death',null);   // 撤销上次处决
+    if(prevSw!=null) try{ _clearSwTakeover(prevSw, day); }catch(e){} }   // 撤销上次处决触发的红唇接任通知
+  try{ _clearExecFromAll(day); }catch(e){}   // 清掉本日旧的处决广播（改判/无人处决/撤销）
   if(seat<0){ executions[day]=-1; if(window._syncNoms) window._syncNoms(); if(window._syncSeats) window._syncSeats(); render(); return; }
   executions[day]=seat; killSeat(seat,true); histSet(seat,'death','第'+day+'天被处决出局');
+  try{ _broadcastExecToAll(day, seat); }catch(e){}   // 向所有玩家局内信息写入【xxx被处决】
   const _isDem=!!(meta[seat]&&meta[seat].role&&RMAP[meta[seat].role]&&RMAP[meta[seat].role].team==='dem');
   const _ei=Math.floor(Math.random()*EXEC_VIDEOS.length);
   demonDied(seat);   // 可能触发红唇女郎接任（产生新恶魔）
+  const _swSeat=(meta[seat]&&meta[seat]._swSeat!=null)?meta[seat]._swSeat:null;
+  if(_swSeat!=null) try{ _notifySwTakeover(_swSeat, day); }catch(e){}   // 红唇女郎接任 → 通知(需确认)+记日志
   const _demonAlive=meta.some((m,i)=>m&&m.role&&RMAP[m.role]&&RMAP[m.role].team==='dem' && !isDeadSeat(i));
   const _full=_isDem && !_demonAlive;   // 仅当处决的是场上最后一个恶魔、且无新恶魔接任（同好人胜利条件）时才播完整变身视频；红唇女郎接任则只播前半段
   if(window._syncNoms) window._syncNoms(); if(window._syncSeats) window._syncSeats();
@@ -2574,7 +2609,19 @@ function render(){
   renderClock();
   save();
   try{ if(window._stPushSlayerArmed) _stPushSlayerArmed(); }catch(e){}   // 把猎手「可开枪」状态推给猎手玩家（灰/亮）
+  try{ updateStSlayerBar(); }catch(e){}   // 猎手开枪请求：底部弹窗（醒目）
 }
+/* 猎手开枪请求：说书人底部弹窗（比魔典白天面板里的请求更醒目；蓝色荧光呼应十字弩） */
+function updateStSlayerBar(){ const bar=document.getElementById('stSlayerBar'); if(!bar) return;
+  const req=window.__slayerReq;
+  if(req && req.target!=null && !slayerShot){
+    const sl=meta.findIndex(m=>m&&m.role==='slayer');
+    bar.innerHTML='<div class="sb-text">🎯 猎手 '+esc(sl>=0?nameAt(sl):'')+' 请求开枪 → '+(req.target+1)+'号 '+esc(nameAt(req.target))+'</div>'
+      +'<div class="sb-btns"><button class="sb-yes" onclick="_stConfirmSlayerReq()">确认开枪</button><button class="sb-no" onclick="_stRejectSlayerReq()">驳回</button></div>';
+    bar.classList.add('on');
+  } else bar.classList.remove('on');
+}
+window.updateStSlayerBar=updateStSlayerBar;
 function renderLedger(){
   const pool=document.getElementById("pool"); pool.innerHTML="";
   if(tokens.length===0){ pool.innerHTML='<span class="empty-hint">（无 · 添加新客人或从往期名单邀请）</span>'; }
@@ -2999,6 +3046,7 @@ load(); render();
 <div id="fbToast"></div>
 <div id="voteBar"></div>
 <div id="nightBar"></div>
+<div id="stSlayerBar"></div>
 <div id="rotateGate"><div class="phone"></div><div class="rg-t">请把手机横过来</div><div class="rg-s">血染钟楼在横屏下体验更好 🔄</div></div>
 <div id="cfgModal"><div class="cbox"><h3><span>本局存档 · 角色配置</span><span class="cX" onclick="_cfgClose()">✕</span></h3><div id="cfgList"></div></div></div>
 <div id="setModal" onclick="if(event.target.id==='setModal')closeSettings()"><div class="setbox">
@@ -3931,6 +3979,9 @@ load(); render();
     if(seat==null || seat<0) return; const uid=_seatUid(seat); if(!uid) return;
     const k=String(key).replace(/[.#$\[\]\/]/g,'_');
     db.ref('games/'+curGid+'/players/'+uid+'/gameInfo/'+k).set({key:k, n:(n==null?null:n), ord:(ord==null?1:ord), text:text, ts:firebase.database.ServerValue.TIMESTAMP}).catch(function(){}); };
+  window.stRemoveGameInfo=function(seat, key){ if(role!=='st'||!curGid) return; if(seat==null||seat<0) return; const uid=_seatUid(seat); if(!uid) return;
+    const k=String(key).replace(/[.#$\[\]\/]/g,'_');
+    db.ref('games/'+curGid+'/players/'+uid+'/gameInfo/'+k).remove().catch(function(){}); };
   function recomputeNightReplies(all){ if(role!=='st') return; all=all||{}; let changed=false;
     Object.keys(all).forEach(function(uid){ const nd=all[uid]; const rep=nd&&nd.nightReply; if(!rep||typeof rep!=='object') return;
       if(rep.n!==night) return;
@@ -3939,6 +3990,9 @@ load(); render();
         if(rep.ack && fi && fi.stage==='newimp' && (rep.sid||0)===(fi.newImpSid||0)){
           try{ db.ref('games/'+curGid+'/players/'+uid+'/night').remove().catch(function(){}); }catch(e){}
           nfDone('imp'); changed=true; }
+        return; }
+      if(rep.stepId==='_swday'){   // 白天处决触发红唇女郎接任的通知：玩家确认后清掉底部弹窗（日志已由说书人侧写入）
+        if(rep.ack){ try{ db.ref('games/'+curGid+'/players/'+uid+'/night').remove().catch(function(){}); db.ref('games/'+curGid+'/players/'+uid+'/nightReply').remove().catch(function(){}); }catch(e){} }
         return; }
       const f=nightFlow[night+':'+rep.stepId]; if(!f) return; if((f.sid||0)!==(rep.sid||0)) return;   // 只认本次下发(sid)对应的回复
       if(f.stage==='sent' && rep.phase==='info' && rep.ack){   // 信息步：多爪牙群发需全部确认才完成
