@@ -150,7 +150,7 @@
   @keyframes slayerDash{to{stroke-dashoffset:-13;}}
   .seat.slayer-target{outline:3px solid #ff5a3a; outline-offset:2px; box-shadow:0 0 0 4px rgba(255,90,58,.5),0 0 16px rgba(255,90,58,.8)!important; z-index:6;}
   #slayerResult{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:122; display:none;
-    max-width:calc(36 * var(--sw) / 100); padding:14px 18px; border-radius:16px; text-align:center;
+    width:350px; box-sizing:border-box; padding:14px 18px; border-radius:16px; text-align:center;   /* 底部弹窗宽度统一固定 350px */
     background:linear-gradient(160deg,rgba(40,24,20,.97),rgba(24,14,12,.97)); border:1.5px solid rgba(233,196,106,.55); box-shadow:0 8px 30px rgba(0,0,0,.6);}
   #slayerResult.on{display:block;}
   #slayerResult .sr-t{font-size:15px; font-weight:800; color:#ffe9b8; line-height:1.5; margin-bottom:10px; white-space:pre-wrap;}
@@ -354,12 +354,6 @@
     background:radial-gradient(circle at 50% 30%, rgba(60,40,70,.9), rgba(28,18,42,.94));
     box-shadow:0 4px 15px rgba(0,0,0,.6); font-size:calc(1 * var(--sw) / 100); line-height:1.4;}
   #hoverBox.on{display:block;}
-  #winBanner{position:absolute; top:0; left:50%; transform:translateX(-50%); z-index:60; display:none;
-    padding:8px 24px; border-radius:0 0 14px 14px; font-weight:800; font-size:calc(1.7 * var(--sw) / 100);
-    box-shadow:0 5px 18px rgba(0,0,0,.55); letter-spacing:1px; text-align:center; white-space:nowrap;}
-  #winBanner.good{background:linear-gradient(#3a7d4a,#2c6640); color:#eafff0; border:2px solid #61c281; border-top:none;}
-  #winBanner.evil{background:linear-gradient(#8a2f26,#661d18); color:#ffe8e4; border:2px solid #cf4436; border-top:none;}
-  #winBanner.on{display:block;}
   #execVideo{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#000; z-index:200; display:none; opacity:0; transition:opacity .55s ease;}
   #execVideo.show{opacity:1;}
   #winIcon{position:absolute; transform:translate(-50%,-50%); z-index:55; display:none; pointer-events:none;
@@ -666,7 +660,7 @@
     padding:9px 16px; border-radius:20px; font-size:13px; font-weight:700; box-shadow:0 4px 14px rgba(0,0,0,.4); display:none;}
   #fbToast.on{display:block;}
   #voteBar{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); transform-origin:center bottom; z-index:120; display:none;
-    max-width:min(92vw,460px); text-align:center; color:#f3e6c4; animation:vbIn .35s ease both;}
+    width:350px; box-sizing:border-box; text-align:center; color:#f3e6c4; animation:vbIn .35s ease both;}   /* 底部弹窗宽度统一固定 350px */
   #voteBar.on{display:block;}
   /* 弹条同比缩放：把 scale 烘进入场关键帧（both 会保留末态），配合 transform-origin:center bottom 锚在底部 */
   @keyframes vbIn{from{opacity:0; transform:translate(-50%,14px) scale(var(--uiscale));}to{opacity:1; transform:translate(-50%,0) scale(var(--uiscale));}}
@@ -947,7 +941,6 @@
     <div class="table-zone" id="tableZone"></div>
     <div id="bubbleLayer"></div>
     <div id="hoverBox"></div>
-    <div id="winBanner"></div>
     <!-- 猎手十字弩（拖到座位开枪） -->
     <div id="slayerGun" title="把十字弩拖到目标座位开枪" style="display:none"><img src="assets/mk-crossbow.png" alt="" draggable="false"></div>
     <div id="slayerResult"></div>
@@ -1175,6 +1168,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.35', d:'2026-08-11', items:['①删除猎手请求 toast 里的 🎯 图标（「猎手请求开枪，请到白天面板确认」）。②所有底部弹窗宽度统一固定 350px：此前只有夜晚信息条/猎手请求条/红唇接任条是 350px，现在把投票条(#voteBar)与猎手开枪结果条(#slayerResult)也改为固定 350px（内部下拉仍固定 120px）。③删除未使用的顶部胜负横幅 #winBanner（一直是空 div、无任何 JS 写入，从不显示；胜负已由结算动画与笔记/魔典里的横幅呈现）。']},
   {v:'v2.41.34', d:'2026-08-11', items:['修复拖放失效（自 v2.41.31 统一指针事件后一直存在的 bug）：松手结算函数 `_end` 先把拖拽状态 `_dg` 置成了 null，随后 `_drop` 又去读 `_dg.payload` → 抛异常被 try/catch 静默吞掉，导致所有拖放（魔典角色标签拖到座位、令牌移动、玩家笔记里状态/身份标记拖到座位）放手后都没生效。现在 `_drop` 改为显式接收 payload 参数、不再依赖已被清空的 `_dg`。（用无头 Chromium 真机指针/触摸事件回归验证：鼠标与触屏拖放均正确落点。）']},
   {v:'v2.41.33', d:'2026-08-11', items:['卡背也做成等比：右上角/翻面用的通用卡背 cardback.png 此前被 720×1188 卡框（object-fit:fill）竖向压扁约 11%，金色圆角边框与中央钟楼/眼睛徽记都变扁。现在把卡背原生重做为 720×1188——不整体拉伸，只从徽记下方的空白紫色区（避开下圆角，取纯紫直边处）抽掉底部约 265px（≈10%）高度，顶部与上下圆角边框完全不动、接缝无痕，圆角边框与徽记都保持原比例。（仅替换 assets/cardback.png 素材，未改 layout。）']},
   {v:'v2.41.32', d:'2026-08-11', items:['重制 22 张角色卡：此前卡片是 720×1320 原生尺寸，被塞进 720×1188 的卡框（object-fit:fill）竖向压缩约 10%，人物与文字都显得扁。现在用原始高清半身像（_stale）按 720×1188 原生比例重新合成每张卡——标题/英文名/阵营徽章、底部技能描述都保留原样不缩放，只把人物窗口按新比例重新裁切（人脸对齐到画面上部三分之一）。比例与卡框一致，object-fit:fill 不再产生形变。（仅替换 assets/roles/*.png 素材，未改 layout。）']},
@@ -4031,7 +4025,7 @@ load(); render();
     const after=req?(req.target+'|'+req.ts):'';
     window.__slayerReq=req;
     if(before!==after){
-      if(req && mode==='st'){ try{ toast('🎯 猎手请求开枪，请到「白天」面板确认'); }catch(e){} }
+      if(req && mode==='st'){ try{ toast('猎手请求开枪，请到「白天」面板确认'); }catch(e){} }
       if(mode==='st' && typeof render==='function'){ try{ render(); }catch(e){} }
     } }
   window.__recomputeSlayerReq=recomputeSlayerReq;
