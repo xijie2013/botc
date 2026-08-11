@@ -131,6 +131,28 @@
   #spyGrimSeats{z-index:4;}
   #spyGrimSeats .seat{cursor:default;}
   #spyGrimClock{position:absolute; inset:0; pointer-events:none; z-index:3;}
+  /* ===== 猎手十字弩（右下角，可拖到座位开枪） ===== */
+  #slayerGun{position:absolute; bottom:3.5%; right:2.5%; z-index:34; cursor:grab; touch-action:none;
+    width:clamp(46px,5.6vw,70px); aspect-ratio:1/1; filter:drop-shadow(0 0 5px rgba(74,168,255,.85)) drop-shadow(0 3px 8px rgba(0,0,0,.6)); transition:transform .14s, filter .2s;}
+  #slayerGun img{width:100%; height:100%; object-fit:contain; display:block; pointer-events:none;}
+  #slayerGun:hover{transform:scale(1.07);}
+  #slayerGun.dragging{cursor:grabbing; transform:scale(1.12);}
+  #slayerGun.disabled{filter:grayscale(1) brightness(.6) drop-shadow(0 2px 5px rgba(0,0,0,.5)); cursor:not-allowed; opacity:.75;}
+  #slayerGun.disabled:hover{transform:none;}
+  #slayerArrow{position:fixed; inset:0; width:100%; height:100%; z-index:205; pointer-events:none; display:none; overflow:visible;}
+  #slayerArrowPath{fill:none; stroke:#ffd24a; stroke-width:4.5; stroke-linecap:round;
+    filter:drop-shadow(0 0 4px #ffb020) drop-shadow(0 0 9px #ff7a1a); stroke-dasharray:2 11; animation:slayerDash .5s linear infinite;}
+  #slayerArrowHead{fill:#ffe36a; filter:drop-shadow(0 0 5px #ff9020) drop-shadow(0 0 10px #ff6a1a);}
+  @keyframes slayerDash{to{stroke-dashoffset:-13;}}
+  .seat.slayer-target{outline:3px solid #ff5a3a; outline-offset:2px; box-shadow:0 0 0 4px rgba(255,90,58,.5),0 0 16px rgba(255,90,58,.8)!important; z-index:6;}
+  #slayerResult{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:122; display:none;
+    max-width:min(92vw,460px); padding:14px 18px; border-radius:16px; text-align:center;
+    background:linear-gradient(160deg,rgba(40,24,20,.97),rgba(24,14,12,.97)); border:1.5px solid rgba(233,196,106,.55); box-shadow:0 8px 30px rgba(0,0,0,.6);}
+  #slayerResult.on{display:block;}
+  #slayerResult .sr-t{font-size:15px; font-weight:800; color:#ffe9b8; line-height:1.5; margin-bottom:10px; white-space:pre-wrap;}
+  #slayerResult .sr-b{min-width:120px; padding:9px 26px; border-radius:13px; font-size:14px; font-weight:800; cursor:pointer;
+    border:none; background:linear-gradient(160deg,#b8863b,#8a5f28); color:#fff2d6;}
+  @media (max-width:720px){ #slayerResult{bottom:6px; padding:11px 14px;} #slayerResult .sr-t{font-size:13px;} }
   /* 左上角工具栏：全屏 / 刷新 / 设置 */
   #toolBar{position:fixed; top:12px; left:12px; z-index:60; display:flex; gap:8px; align-items:center;}
   .fsbtn{width:clamp(30px,2.6vw,40px); height:clamp(30px,2.6vw,40px);
@@ -891,6 +913,10 @@
     <div id="bubbleLayer"></div>
     <div id="hoverBox"></div>
     <div id="winBanner"></div>
+    <!-- 猎手十字弩（拖到座位开枪） -->
+    <div id="slayerGun" title="把十字弩拖到目标座位开枪" style="display:none"><img src="assets/mk-crossbow.png" alt="" draggable="false"></div>
+    <svg id="slayerArrow"><path id="slayerArrowPath"></path><polygon id="slayerArrowHead"></polygon></svg>
+    <div id="slayerResult"></div>
     <div id="winIcon"></div>
     <video id="execVideo" playsinline preload="auto"></video>
   </div>
@@ -1099,6 +1125,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.40.0', d:'2026-08-10', items:['新功能·猎手十字弩：猎手玩家开局获得一把「弩」，固定在屏幕右下角（复用十字弩图标）。白天可拖动它——拖拽时会拉出一条抛物线的发光箭头，拖到某个座位上松手，弹出「是否向该玩家开枪」确认；猎手确认后请求发给说书人，说书人在「白天」面板「确认开枪」（也可「代猎手开枪」或「驳回」），随后自动回执给猎手：命中则播放射杀动画并提示「恶魔死亡」，否则提示「无事发生」。十字弩在夜晚、当日处决出结果后、以及开过枪之后都会变灰不可用（灰亮状态由说书人端实时下发）']},
   {v:'v2.39.2', d:'2026-08-10', items:['间谍魔典左侧不再空着：加入「座位一览」表——玩家（座位号＋名字）／身份／状态三列，与右侧座位图信息一致，只是列表更好扫读；随夜晚切换、与座位图同步定格']},
   {v:'v2.39.1', d:'2026-08-10', items:['修正间谍魔典：移除左侧「说书人日志」——日志记录了所有玩家的夜间行动与所得信息，间谍不应看到。间谍现在只看座位图上的信息（各座位身份、酒鬼、中毒/醉酒/守护/出局及死因、管家主人、红鲱鱼等标记，皆为魔典上本就可见的提示物）＋中央时钟，各夜为发送时定格。日志内容也不再写入间谍的数据节点（杜绝从后台/开发者工具读取）。左侧改为标题＋夜晚切换']},
   {v:'v2.39.0', d:'2026-08-10', items:['间谍看魔典改造：①现在作为标准「信息步」自动化——说书人在间谍夜晚步点「发送给玩家」，间谍屏幕底部像普通夜间信息一样弹出提示框，点「确认收到」后才解锁查看；说书人须收到确认（或用「代确认/跳过」）方可结束本夜。②间谍魔典界面改为 1:1 复刻说书人魔典：同一张暗背景、右侧座位圈在完全相同的位置（含中央时钟，时钟冻结在发送时刻），左侧是与说书人日志完全一致的排版（只显示当夜），不再是「换背景＋浮一层贴图」。③打开/收起有淡入淡出（比登录更快），点右下角魔典图标打开、再点一次即收起；多夜可在左侧切换，每夜为发送时定格。修复措辞：随机发牌（此前注释误写「大排灯」）']},
@@ -2306,6 +2333,21 @@ function slayerFire(v){ if(v===""||slayerShot||executions[night]!==undefined) re
 function slayerUndo(){ if(!slayerShot) return; const t=slayerShot.target;
   if(slayerShot.hit){ demonRevived(t); killSeat(t,false); histSet(t,'death',null); }
   slayerShot=null; if(window._syncNoms) window._syncNoms(); if(window._syncSeats) window._syncSeats(); render(); }
+/* 说书人开枪结算（猎手请求 或 说书人代开枪都走这里）：射击 + 把结果回给猎手玩家 + 记局内信息 */
+function _stFireSlayer(target){ if(target==null||target==='') return;
+  slayerFire(String(target));
+  const sh=slayerShot;
+  if(!sh){ try{ if(window._stClearSlayerReq) _stClearSlayerReq(); }catch(e){} window.__slayerReq=null; render(); return; }   // 被门控挡下（已处决等）→ 清请求
+  const t=sh.target; let text;
+  if(sh.hit){ const sw=meta[t]&&meta[t]._swSeat; text=(sw!=null)?('命中！你射杀的是恶魔——红唇女郎 '+nameAt(sw)+' 接任成为新的恶魔。'):'命中！你射杀的是恶魔，恶魔死亡！'; }
+  else text='无事发生——目标不是恶魔（或你的能力此刻失效）。';
+  const slSeat=meta.findIndex(m=>m&&m.role==='slayer');
+  try{ if(window._stSendSlayerResult) _stSendSlayerResult(t, sh.hit, text); }catch(e){}
+  try{ if(window.stRecordGameInfo && slSeat>=0) window.stRecordGameInfo(slSeat,'slayer:day'+sh.day,'【猎手】第 '+sh.day+' 天你开枪射向 '+(t+1)+'号 '+nameAt(t)+' → '+text, sh.day, 2); }catch(e){}
+  window.__slayerReq=null; render();
+}
+window._stConfirmSlayerReq=function(){ const req=window.__slayerReq; if(!req||req.target==null) return; _stFireSlayer(req.target); };
+window._stRejectSlayerReq=function(){ window.__slayerReq=null; try{ if(window._stClearSlayerReq) _stClearSlayerReq(); }catch(e){} render(); };
 function slayerUI(){
   const sl=meta.findIndex(m=>m&&m.role==="slayer"); if(sl<0) return "";
   let h='<div class="gsec">猎人（每局一次·白天）</div>';
@@ -2316,8 +2358,13 @@ function slayerUI(){
   }
   if(isDeadSeat(sl)) return h+'<div class="rrow" style="border:none;opacity:.6">猎人已出局，无法开枪</div>';
   if(executions[night]!==undefined) return h+'<div class="rrow" style="border:none;opacity:.6">本日处决结果已出，猎人不可再开枪</div>';   // 处决/无人处决 后锁定
+  const req=window.__slayerReq;
+  if(req && req.target!=null){   // 猎手玩家拖十字弩发来的开枪请求：说书人确认/驳回
+    return h+'<div class="rrow" style="border:none;color:#b0402e;font-weight:800">🎯 猎手 '+nameAt(sl)+' 请求开枪 → '+(req.target+1)+'号 '+nameAt(req.target)+'</div>'
+      +'<div class="rrow" style="border:none"><span class="regbtn pub" onclick="_stConfirmSlayerReq()">确认开枪</span> <span class="regbtn" onclick="_stRejectSlayerReq()">驳回</span></div>';
+  }
   let opts='<option value="">目标</option>'; livingSeats().forEach(i=>{ opts+='<option value="'+i+'">'+(i+1)+' '+nameAt(i)+'</option>'; });
-  return h+'<div class="rrow" style="border:none">开枪：<select onchange="slayerFire(this.value)">'+opts+'</select></div>';
+  return h+'<div class="rrow" style="border:none">代猎手开枪：<select onchange="_stFireSlayer(this.value)">'+opts+'</select></div>';
 }
 function doExecute(seat){ const day=night; const prev=executions[day];
   if(prev!=null && prev>=0){ demonRevived(prev); killSeat(prev,false); histSet(prev,'death',null); }   // 撤销上次处决
@@ -2467,6 +2514,7 @@ function render(){
   renderWin();
   renderClock();
   save();
+  try{ if(window._stPushSlayerArmed) _stPushSlayerArmed(); }catch(e){}   // 把猎手「可开枪」状态推给猎手玩家（灰/亮）
 }
 function renderLedger(){
   const pool=document.getElementById("pool"); pool.innerHTML="";
@@ -3230,7 +3278,7 @@ load(); render();
       document.body.appendChild(ov); }
     ov.style.display='flex'; }
   function enterPlayer(){ document.getElementById('stBadge').classList.remove('on'); document.body.classList.add('pl'); document.getElementById('pbName').textContent=((me&&me.displayName)||_storedId('botc_pid')||'玩家'); _nbSeatPage=false; const _np=document.getElementById('notesPanel'); if(_np) _np.classList.remove('seatpage'); bindNotes(); setMode('notes'); try{ _presenceStart(); }catch(e){} }
-  function bindNotes(){ if(notesRef){ notesRef.off(); notesRef=null; } if(role==='player'&&me&&curGid){ notesRef=db.ref('games/'+curGid+'/players/'+me.uid); notesRef.on('value',s=>{ S=s.val(); ensureS(); window.__myRole=(S&&S.role)||''; try{ updateRoleCard(curGid, window.__myRole); }catch(e){} try{ updateSpyGrim(); }catch(e){} if(mode==='notes') renderView(); }); } }
+  function bindNotes(){ if(notesRef){ notesRef.off(); notesRef=null; } if(role==='player'&&me&&curGid){ notesRef=db.ref('games/'+curGid+'/players/'+me.uid); notesRef.on('value',s=>{ S=s.val(); ensureS(); window.__myRole=(S&&S.role)||''; try{ updateRoleCard(curGid, window.__myRole); }catch(e){} try{ updateSpyGrim(); }catch(e){} try{ updateSlayerGun(); }catch(e){} if(mode==='notes') renderView(); }); } }
 
   /* ===== 玩家本局角色卡（右上角卡背 + 入场/翻开动画） ===== */
   window.__myRole='';
@@ -3297,7 +3345,8 @@ load(); render();
   }
   window._clearRoleCard=function(){ const {layer,card,cc}=_rcEls(); if(layer) layer.classList.remove('on'); if(cc) cc.style.display='none';
     if(card){ card.style.transition='none'; card.style.transform=''; card.classList.remove('flip'); card.style.opacity=''; } _rcState=''; window.__myRole='';
-    try{ const si=document.getElementById('spyGrimIcon'); if(si) si.style.display='none'; const sl=document.getElementById('spyGrimLayer'); if(sl) sl.classList.remove('on'); _spyG=null; _spyNights=[]; _spySel=null; }catch(e){} };
+    try{ const si=document.getElementById('spyGrimIcon'); if(si) si.style.display='none'; const sl=document.getElementById('spyGrimLayer'); if(sl) sl.classList.remove('on'); _spyG=null; _spyNights=[]; _spySel=null; }catch(e){}
+    try{ const g=document.getElementById('slayerGun'); if(g) g.style.display='none'; const rb=document.getElementById('slayerResult'); if(rb) rb.classList.remove('on'); }catch(e){} };
 
   /* ===== 间谍魔典（确认收到后 → 右下角魔典图标 → 只读魔典遮罩，1:1 复刻说书人魔典 layout，多夜可切换） ===== */
   let _spyG=null, _spyNights=[], _spySel=null, _spyClkEls=null;
@@ -3384,6 +3433,63 @@ load(); render();
     }catch(e){ layer.innerHTML=''; _spyClkEls=null; } }
   window.addEventListener('resize',function(){ const lay=document.getElementById('spyGrimLayer'); if(lay&&lay.classList.contains('on')&&_spyG&&_spyG[_spySel]){ _spyDrawSeats(_spyG[_spySel]); _spyDrawClock(_spyG[_spySel]); } });
 
+  /* ===== 猎手十字弩（玩家端：右下角图标，拖到座位 → 抛物发光箭头 → 确认 → 请求说书人 → 结果弹窗） ===== */
+  let _slayerDrag=null, _slayerResSeen=0;
+  function updateSlayerGun(){ const gun=document.getElementById('slayerGun'); if(!gun) return;
+    const isSlayer = role==='player' && S && S.role==='slayer';
+    if(!isSlayer || !window.__pubHasGame){ gun.style.display='none'; if(_slayerDrag) _slayerEndDrag(); return; }
+    gun.style.display='block';
+    const pending = !!(S && S.slayerReq);
+    const armed = !!(S && S.slayerArmed) && !pending;
+    gun.classList.toggle('disabled', !armed);
+    gun.title = armed ? '把十字弩拖到目标座位开枪（本局仅一次）'
+      : (pending ? '已请求开枪，等待说书人确认…' : '现在不能开枪（夜晚 / 已处决 / 已开枪）');
+    _slayerCheckResult();
+  }
+  function _slayerCheckResult(){ if(!S||!S.slayerResult) return; const r=S.slayerResult; if(!r.ts||r.ts===_slayerResSeen) return;
+    _slayerResSeen=r.ts;   // 只弹一次
+    const box=document.getElementById('slayerResult'); if(!box) return;
+    box.innerHTML='<div class="sr-t">'+_nbEsc(r.text||(r.hit?'命中！':'无事发生'))+'</div><button class="sr-b" onclick="window._slayerCloseResult&&_slayerCloseResult()">知道了</button>';
+    box.classList.add('on'); }
+  window._slayerCloseResult=function(){ const box=document.getElementById('slayerResult'); if(box) box.classList.remove('on'); };
+  /* 视口坐标 → 座位序号（复刻 drawSeats 几何） */
+  function _slayerSeatAt(clientX, clientY){ const stage=document.getElementById('stage'); if(!stage||!pub||!pub.count) return -1;
+    const sr=stage.getBoundingClientRect(); const SW=stage.clientWidth, SH=stage.clientHeight; if(!SW||!SH) return -1;
+    const zoneLeft=0.40*SW, zoneTop=0.08*SH, cx0=SW*0.71-zoneLeft, cy0=SH*0.525-zoneTop, R=SH*0.34;
+    const NN=pub.count, seatD=Math.max(R*0.26, Math.min(R*0.78, R*3.8/NN)); const hitR=seatD*0.62;
+    for(let i=0;i<NN;i++){ const ang=-Math.PI/2+i*2*Math.PI/NN; const x=cx0+R*Math.cos(ang), y=cy0+R*Math.sin(ang);
+      const vx=sr.left+zoneLeft+x, vy=sr.top+zoneTop+y;
+      if(Math.hypot(clientX-vx, clientY-vy)<=hitR) return i; }
+    return -1; }
+  function _slayerHighlight(idx){ const zone=document.getElementById('tableZone'); if(!zone) return;
+    zone.querySelectorAll('.seat').forEach(function(s){ s.classList.toggle('slayer-target', (+s.dataset.seat)===idx); }); }
+  function _slayerClearHighlight(){ const zone=document.getElementById('tableZone'); if(zone) zone.querySelectorAll('.seat.slayer-target').forEach(function(s){ s.classList.remove('slayer-target'); }); }
+  function _slayerArrowDraw(x1,y1,x2,y2){ const path=document.getElementById('slayerArrowPath'), head=document.getElementById('slayerArrowHead'); if(!path||!head) return;
+    const dx=x2-x1, dy=y2-y1, dist=Math.hypot(dx,dy); const mx=(x1+x2)/2, my=(y1+y2)/2;
+    const lift=Math.min(240, 55+dist*0.38); const cx=mx, cy=my-lift;   // 控制点在中点上方 → 向上抛物线
+    path.setAttribute('d','M '+x1+' '+y1+' Q '+cx+' '+cy+' '+x2+' '+y2);
+    let tx=x2-cx, ty=y2-cy; const tl=Math.hypot(tx,ty)||1; tx/=tl; ty/=tl;   // 末端切线（箭头朝向）
+    const ah=18, aw=10, bx=x2-tx*ah, by=y2-ty*ah, px=-ty, py=tx;
+    head.setAttribute('points', x2+','+y2+' '+(bx+px*aw)+','+(by+py*aw)+' '+(bx-px*aw)+','+(by-py*aw)); }
+  function _slayerGunDown(ev){ const gun=document.getElementById('slayerGun'); if(!gun||gun.classList.contains('disabled')||gun.style.display==='none') return;
+    ev.preventDefault(); const r=gun.getBoundingClientRect(); _slayerDrag={ ox:r.left+r.width/2, oy:r.top+r.height/2 };
+    gun.classList.add('dragging'); const svg=document.getElementById('slayerArrow'); if(svg) svg.style.display='block';
+    document.addEventListener('pointermove', _slayerGunMove); document.addEventListener('pointerup', _slayerGunUp); }
+  function _slayerGunMove(ev){ if(!_slayerDrag) return; _slayerArrowDraw(_slayerDrag.ox, _slayerDrag.oy, ev.clientX, ev.clientY); _slayerHighlight(_slayerSeatAt(ev.clientX, ev.clientY)); }
+  function _slayerEndDrag(){ const gun=document.getElementById('slayerGun'); if(gun) gun.classList.remove('dragging');
+    const svg=document.getElementById('slayerArrow'); if(svg) svg.style.display='none';
+    _slayerClearHighlight(); _slayerDrag=null;
+    document.removeEventListener('pointermove', _slayerGunMove); document.removeEventListener('pointerup', _slayerGunUp); }
+  function _slayerGunUp(ev){ if(!_slayerDrag){ _slayerEndDrag(); return; } const seat=_slayerSeatAt(ev.clientX, ev.clientY); _slayerEndDrag();
+    if(seat<0) return; _slayerConfirmShoot(seat); }
+  function _slayerConfirmShoot(seat){ const nm=(pub&&pub.seats&&pub.seats[seat])?pub.seats[seat].name:('座位'+(seat+1));
+    Promise.resolve(uiConfirm('确定向 '+(seat+1)+'号 '+(nm||'')+' 开枪吗？（本局仅此一次）',{title:'猎手开枪',ok:'开枪',cancel:'取消'})).then(function(ok){
+      if(!ok) return; if(!notesRef) return;
+      try{ notesRef.child('slayerReq').set({target:seat, day:(pub&&pub.day)||0, ts:firebase.database.ServerValue.TIMESTAMP}).catch(function(){}); }catch(e){}
+      if(S) S.slayerReq={target:seat}; updateSlayerGun(); try{ toast('已请求开枪，等待说书人确认…'); }catch(e){}
+    }); }
+  (function(){ const gun=document.getElementById('slayerGun'); if(gun) gun.addEventListener('pointerdown', _slayerGunDown); })();
+
   /* ===== 背景音乐（未登录=空酒馆 / 玩家=烛影 / 说书人=八音盒；淡入淡出 + 交叉淡化循环，避免生硬接缝） ===== */
   const BGM={ anon:'assets/bgm-tavern-empty.mp3', player:'assets/bgm-tavern-player.mp3', st:'assets/bgm-tavern-storyteller.mp3' };
   const BGM_VOL=0.5, BGM_CF=2.4, BGM_LOOP_CF=10;   // 目标音量 / 切换交叉淡化秒数 / 循环交叉淡化秒数（提前10s开始，接缝更自然）
@@ -3451,7 +3557,7 @@ load(); render();
   window._stClearPlayerNotes=function(){ if(role!=='st'||!curGid) return;
     db.ref('games/'+curGid+'/players').once('value').then(s=>{ const v=s.val()||{}; const up={};
       Object.keys(v).forEach(uid=>{ const b='games/'+curGid+'/players/'+uid+'/';
-        up[b+'gameInfo']=null; up[b+'seats']=null; up[b+'crossed']=null; up[b+'night']=null; up[b+'nightReply']=null; up[b+'spyGrim']=null; });
+        up[b+'gameInfo']=null; up[b+'seats']=null; up[b+'crossed']=null; up[b+'night']=null; up[b+'nightReply']=null; up[b+'spyGrim']=null; up[b+'slayerReq']=null; up[b+'slayerResult']=null; up[b+'slayerArmed']=null; });
       if(Object.keys(up).length) db.ref().update(up).catch(()=>{});
     }).catch(()=>{}); };
   /* 说书人重置角色：把公开状态（座位死亡/死因、胜负横幅、提名、处决/击杀动画、举手、指针）一并清零，让大厅与玩家笔记同步复位 */
@@ -3549,6 +3655,7 @@ load(); render();
       window.__pubVote=pub&&pub.vote;
       if(role==='st'&&stPlayersRef){ stPlayersRef.once('value').then(ss=>recomputeHands(ss.val())).catch(()=>{}); }
       updateVoteBar();
+      try{ updateSlayerGun(); }catch(e){}   // 开局/结束/换天 → 更新猎手十字弩显隐
       if(mode!=='st') renderView(); }); }
   /* 说书人：满足胜负时自动公布（只传结果，不泄露角色；去重避免重复写） */
   let _lastResultSig=null;
@@ -3694,6 +3801,38 @@ load(); render();
       ref.transaction(function(cur){ if(cur) return; return {n:n, seats:snap.seats||[], clock:snap.clock||{hour:0,minute:0}, ts:Date.now()}; }, function(){}, false);
     }catch(e){ return false; }
     return true; };
+  /* ===== 猎手十字弩：说书人端下发/收集 ===== */
+  let _slayerArmedCache=null;
+  function _slayerSeatST(){ try{ return (typeof meta!=='undefined')?meta.findIndex(function(m){return m&&m.role==='slayer';}):-1; }catch(e){ return -1; } }
+  window._stPushSlayerArmed=function(){ if(role!=='st'||!curGid) return;
+    const sl=_slayerSeatST(); if(sl<0){ _slayerArmedCache=null; return; }
+    const uid=_seatUid(sl); if(!uid){ _slayerArmedCache=null; return; }
+    let armed=false;
+    try{ const df=(typeof dayFlow!=='undefined')?dayFlow[night]:null; const isDay=!!(df&&df.dawn&&!df.dusk);
+      armed = isDay && !isDeadSeat(sl) && (executions[night]===undefined) && !slayerShot; }catch(e){ armed=false; }
+    const key=curGid+'|'+uid+'|'+(armed?1:0);
+    if(key===_slayerArmedCache) return;   // 防重复写
+    _slayerArmedCache=key;
+    db.ref('games/'+curGid+'/players/'+uid+'/slayerArmed').set(!!armed).catch(function(){}); };
+  window._stSendSlayerResult=function(target, hit, text){ if(role!=='st'||!curGid) return;
+    const sl=_slayerSeatST(); if(sl<0) return; const uid=_seatUid(sl); if(!uid) return;
+    db.ref('games/'+curGid+'/players/'+uid+'/slayerResult').set({target:target, hit:!!hit, text:text||'', ts:Date.now()}).catch(function(){});
+    db.ref('games/'+curGid+'/players/'+uid+'/slayerReq').remove().catch(function(){}); };
+  window._stClearSlayerReq=function(){ if(role!=='st'||!curGid) return; const sl=_slayerSeatST(); if(sl<0) return; const uid=_seatUid(sl); if(!uid) return;
+    db.ref('games/'+curGid+'/players/'+uid+'/slayerReq').remove().catch(function(){}); };
+  /* 说书人订阅玩家节点时：收集猎手的开枪请求 → window.__slayerReq，供 slayerUI 显示 */
+  function recomputeSlayerReq(all){ if(role!=='st') return; all=all||{};
+    const sl=_slayerSeatST(); let req=null;
+    if(sl>=0 && (typeof slayerShot==='undefined'||!slayerShot)){ const uid=_seatUid(sl); const nd=uid?all[uid]:null; const r=nd&&nd.slayerReq;
+      if(r && r.target!=null) req={target:+r.target, day:r.day||0, ts:r.ts||0}; }
+    const before=window.__slayerReq?(window.__slayerReq.target+'|'+window.__slayerReq.ts):'';
+    const after=req?(req.target+'|'+req.ts):'';
+    window.__slayerReq=req;
+    if(before!==after){
+      if(req && mode==='st'){ try{ toast('🎯 猎手请求开枪，请到「白天」面板确认'); }catch(e){} }
+      if(mode==='st' && typeof render==='function'){ try{ render(); }catch(e){} }
+    } }
+  window.__recomputeSlayerReq=recomputeSlayerReq;
   window.stNightSend=function(id, phase, text, pick, seats, sid){ if(role!=='st'||!curGid) return;
     (seats||[]).forEach(function(i){ const uid=_seatUid(i); if(!uid) return;
       db.ref('games/'+curGid+'/players/'+uid+'/nightReply').remove().catch(function(){});   // 先清旧回复，避免 sid 之外的误判
@@ -3748,7 +3887,7 @@ load(); render();
   window.__playerHands={};
   let stPlayersRef=null;
   function bindStPlayers(){ if(stPlayersRef){stPlayersRef.off();stPlayersRef=null;} window.__playerHands={};
-    if(role==='st'&&curGid){ stPlayersRef=db.ref('games/'+curGid+'/players'); stPlayersRef.on('value',s=>{ const v=s.val(); recomputeHands(v); if(window.__recomputeNightReplies) __recomputeNightReplies(v); }); } }
+    if(role==='st'&&curGid){ stPlayersRef=db.ref('games/'+curGid+'/players'); stPlayersRef.on('value',s=>{ const v=s.val(); recomputeHands(v); if(window.__recomputeNightReplies) __recomputeNightReplies(v); if(window.__recomputeSlayerReq) __recomputeSlayerReq(v); }); } }
   /* 当前进行中的提名（by/to/day 与公开 vote 匹配） */
   function stActiveNom(){ const v=pub&&pub.vote; if(!v||!v.open) return null;
     const list=nominations[v.day]||[];
@@ -3805,7 +3944,7 @@ load(); render();
     const numD=seatD*0.46, numF=numD*0.6, nmF=Math.max(11,seatD*0.24), rF=Math.max(9,seatD*0.17);
     for(let i=0;i<N;i++){ const ps=seats[i]||{}, ang=-Math.PI/2+i*2*Math.PI/N, x=cx+R*Math.cos(ang), y=cy+R*Math.sin(ang);
       const mine=(mode==='notes'&&S&&S.seats)?(S.seats[i]||{}):null, dead=!!ps.dead;
-      const s=document.createElement('div'); s.className='seat filled'+(dead?' dead hascause':''); s.style.cssText='left:'+x+'px;top:'+y+'px;width:'+seatD+'px;height:'+seatD+'px';
+      const s=document.createElement('div'); s.className='seat filled'+(dead?' dead hascause':''); s.dataset.seat=i; s.style.cssText='left:'+x+'px;top:'+y+'px;width:'+seatD+'px;height:'+seatD+'px';
       let h='<div class="num" style="width:'+numD+'px;height:'+numD+'px;font-size:'+numF+'px">'+(i+1)+'</div>';
       h+='<div class="nm" style="font-size:'+nmF+'px">'+(E(ps.name)||'<span style=\"opacity:.5\">空</span>')+'</div>';
       const rid=mine&&mine.role; if(rid&&RMAP[rid]) h+='<div class="vrole" style="font-size:'+rF+'px;color:'+TEAMC[RMAP[rid].team]+'">'+RMAP[rid].name+'</div>';
