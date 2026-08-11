@@ -678,19 +678,19 @@
   #voteBar .vb-hint .vb-ghost.used{color:#f0a89e;}
   /* ===== 夜晚信息自动化：玩家底部弹窗 ===== */
   #nightBar{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); transform-origin:center bottom; z-index:121; display:none;
-    max-width:min(94vw,480px); text-align:center; color:#f3e6c4; animation:vbIn .35s ease both;
+    width:350px; box-sizing:border-box; text-align:center; color:#f3e6c4; animation:vbIn .35s ease both;   /* 通知弹窗宽度固定 350px，高度随内容 */
     background:linear-gradient(180deg,rgba(52,32,66,.98),rgba(28,16,38,.98)); border:1.5px solid rgba(233,196,106,.6);
     border-radius:16px; padding:14px 18px; box-shadow:0 10px 30px rgba(0,0,0,.55);}
   #nightBar.on{display:block;}
   #nightBar .nb-text{font-size:14.5px; font-weight:700; color:#ffe9b8; line-height:1.5; margin-bottom:10px; white-space:pre-wrap;}
   #nightBar .nb-picks{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:10px;}
-  #nightBar .nb-sel{padding:8px 10px; border-radius:10px; font-size:14px; background:rgba(20,12,28,.95); color:#f3e6c4; border:1.2px solid rgba(233,196,106,.5); min-width:120px;}
+  #nightBar .nb-sel{padding:8px 10px; border-radius:10px; font-size:14px; background:rgba(20,12,28,.95); color:#f3e6c4; border:1.2px solid rgba(233,196,106,.5); width:120px; min-width:0; box-sizing:border-box;}   /* 通知弹窗内下拉宽度固定 120px */
   #nightBar .nb-btn{min-width:150px; padding:11px 30px; border-radius:14px; font-size:15px; font-weight:800; cursor:pointer;
     border:1.5px solid rgba(233,196,106,.7); background:linear-gradient(180deg,rgba(60,38,78,.98),rgba(34,20,44,.98)); color:#e9c46a; box-shadow:0 6px 20px rgba(0,0,0,.5);}
   #nightBar .nb-done{font-size:13px; color:#c9b6e6; letter-spacing:1px;}
   /* ===== 猎手开枪请求：说书人底部弹窗（比魔典里的请求更醒目，蓝色荧光呼应十字弩） ===== */
   #stSlayerBar{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); transform-origin:center bottom; z-index:122; display:none;
-    max-width:min(94vw,480px); text-align:center; color:#cfe6ff; animation:vbIn .35s ease both;
+    width:350px; box-sizing:border-box; text-align:center; color:#cfe6ff; animation:vbIn .35s ease both;   /* 通知弹窗宽度固定 350px，高度随内容 */
     background:linear-gradient(180deg,rgba(30,44,72,.98),rgba(16,26,46,.98)); border:1.5px solid rgba(74,168,255,.7);
     border-radius:16px; padding:14px 18px; box-shadow:0 10px 30px rgba(0,0,0,.55), 0 0 16px rgba(74,168,255,.4);}
   #stSlayerBar.on{display:block;}
@@ -1163,6 +1163,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.27', d:'2026-08-11', items:['①精简间谍通知文案为「【间谍】说书人发来一份当夜魔典，可随时点击右下角魔典图标查看。」。②所有通知弹窗（说书人→玩家、玩家→说书人）宽度统一固定为 350px、高度随内容，其中的下拉菜单固定为 120px。③更新三段更柔和的背景音乐。']},
   {v:'v2.41.26', d:'2026-08-11', items:['①恶魔夜晚描述改为「唤醒恶魔，认识爪牙，告知3个不在场的好人伪装（包含外来者）」。②删除间谍步的「查看魔典（知晓全部身份与状态）…」描述。③玩家被处决时，向所有玩家的局内信息写入当天处决信息【xxx被处决】（改判会覆盖、无人处决/撤销会清除；贞洁者触发的处决同样广播）；若处决的是小恶魔且红唇女郎接任，红唇女郎会额外收到「接任成为新恶魔」的确认弹窗，该通知也记入其日志。④说书人「代猎手开枪」时也会先弹确认。⑤右下角十字弩图标放大50%。⑥猎手拖拽的发光箭头改为蓝色荧光（与十字弩蓝色发光一致）。⑦猎手开枪请求现在会在说书人屏幕下方弹出醒目的蓝色确认弹窗（确认开枪/驳回），不再只藏在魔典白天面板里。']},
   {v:'v2.41.25', d:'2026-08-11', items:['角色卡整体统一为 720/1188 拉伸比例：把展开的大卡也改成与右上角卡背相同的 720/1188、图片 object-fit:fill（竖向压缩10%）。这样右上角卡背与展开大卡比例一致，开/收动画两端形状相同、无缝衔接，无需改动画逻辑，出错更少。']},
   {v:'v2.41.24', d:'2026-08-11', items:['右上角角色卡背改为「拉伸素材」而非裁切：卡背图 object-fit 由 cover 改为 fill，随卡框 720/1188 竖向压缩 10%，不再切掉上下。']},
@@ -1543,7 +1544,7 @@ function nightAutoText(id){
     const rn=(shown&&RMAP[shown])?RMAP[shown].name:'（未知）';
     return '【送葬者】昨日被处决的 '+nameAt(ex)+' 的真实角色是：'+rn+'。'; }
   if(id==='washerwoman'||id==='librarian'||id==='investigator') return pingPlayerText(id);
-  if(id==='spy') return '【间谍】说书人发来一份当夜魔典（座位图＋日志）。点「确认收到」后，可随时点击屏幕右下角的魔典图标查看；再次点击可收起。';
+  if(id==='spy') return '【间谍】说书人发来一份当夜魔典，可随时点击右下角魔典图标查看。';
   return '';
 }
 function ftResultText(){ const cur=ftPicks[night]; if(!cur||cur[0]==null||cur[1]==null) return '【占卜结果】（尚未选定两名玩家）';
