@@ -413,13 +413,13 @@
   .grimoire .bottom-bar .night-ctl{flex:1; margin:0; gap:5px; flex-wrap:nowrap; white-space:nowrap; font-size:min(14px, calc(1.02 * var(--sw) / 100));}
   .grimoire .bottom-bar .night-ctl button{flex:0 0 auto; width:min(25px, calc(1.85 * var(--sw) / 100)); height:min(25px, calc(1.85 * var(--sw) / 100)); font-size:min(14px, calc(1.0 * var(--sw) / 100));}
   .grimoire .bottom-bar .night-ctl b{font-size:1.12em;}
-  .grimoire .bottom-bar .btn{flex:0 0 auto; padding:7px 9px; font-size:min(12px, calc(.9 * var(--sw) / 100));}
+  .grimoire .bottom-bar .btn{flex:0 0 auto; padding:7px 9px;}   /* 与「保存本局/查看存档」同款：沿用 .btn 基础字号，不再缩小 */
   .ledger .bottom-bar, .grimoire .bottom-bar{margin-bottom:2.5px;}
   /* 酒馆底栏：人数放大，随机排座/清空座位变窄 */
   .ledger .bottom-bar .count{flex:1; justify-content:center; gap:5px; flex-wrap:nowrap; white-space:nowrap; font-size:min(14px, calc(1.02 * var(--sw) / 100)); color:#6b4a1e; font-weight:800;}
   .ledger .bottom-bar .count button{flex:0 0 auto; width:min(25px, calc(1.85 * var(--sw) / 100)); height:min(25px, calc(1.85 * var(--sw) / 100)); font-size:min(14px, calc(1.0 * var(--sw) / 100));}
   .ledger .bottom-bar .count b{color:#8a5f28; font-size:1.12em;}
-  .ledger .bottom-bar .btn{flex:0 0 auto; padding:7px 9px; font-size:min(12px, calc(.9 * var(--sw) / 100));}
+  .ledger .bottom-bar .btn{flex:0 0 auto; padding:7px 9px;}   /* 与「保存本局/查看存档」同款：沿用 .btn 基础字号，不再缩小 */
   /* 背景墨水瓶热区：点击导出玩家笔记；悬停时墨口飘出光点（酒馆=金，魔典=紫） */
   .inkhotspot{position:absolute; left:39.4%; top:70.5%; width:8.6%; height:18%; cursor:pointer; z-index:6;}
   .stage:not(.grim) .inkhotspot{--glow:233,196,106;}   /* 金色（酒馆） */
@@ -1142,6 +1142,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.5', d:'2026-08-10', items:['「随机排座/清空座位/随机发牌/重置角色」底栏按钮此前有一条把字号缩小的旧样式（min(12px,.9·sw)），导致它们比「保存本局/查看存档」略小、不对齐——去掉该缩小样式，改回沿用 .btn 基础字号，现与「保存本局/查看存档」完全同款、同大、对齐']},
   {v:'v2.41.4', d:'2026-08-10', items:['按用户要求撤回上一版对「随机排座/随机发牌/重置角色/清空座位」等按钮内边距的收窄——这些按钮恢复原大小；「共 X 人」「第 X 夜」仍靠自身控件收紧＋nowrap 保持一行']},
   {v:'v2.41.3', d:'2026-08-10', items:['「共 X 人」「第 X 夜」仍被挤成两行——进一步收紧：两侧 −/＋、◀/▶ 按钮再缩小、间距从 12px 收到 5px、数字与文字字号一并调小，并强制该控件不换行（nowrap），确保始终一行显示，同时给「随机排座/发牌」等按钮留出空间']},
   {v:'v2.41.2', d:'2026-08-10', items:['说书人底栏的「共 X 人」（大厅）与「第 X 夜」（魔典）此前被两侧的 −/＋、◀/▶ 按钮挤成两行——把这两个按钮缩到原来的 75% 大小，腾出横向空间，文字回到一行']},
