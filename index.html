@@ -144,9 +144,9 @@
   #slayerGun.disabled{filter:grayscale(1) brightness(.6) drop-shadow(0 2px 5px rgba(0,0,0,.5)); cursor:not-allowed; opacity:.75;}
   #slayerGun.disabled:hover{transform:none;}
   #slayerArrow{position:fixed; inset:0; width:100%; height:100%; z-index:205; pointer-events:none; display:none; overflow:visible;}
-  #slayerArrowPath{fill:none; stroke:#4aa8ff; stroke-width:4.5; stroke-linecap:round;
-    filter:drop-shadow(0 0 4px rgba(74,168,255,.95)) drop-shadow(0 0 9px rgba(74,168,255,.75)); stroke-dasharray:2 11; animation:slayerDash .5s linear infinite;}   /* 箭头改蓝色荧光，与十字弩蓝色发光一致 */
-  #slayerArrowHead{fill:#9cccff; filter:drop-shadow(0 0 5px rgba(74,168,255,.95)) drop-shadow(0 0 10px rgba(74,168,255,.75));}
+  #slayerArrowPath{fill:none; stroke:#ffffff; stroke-width:4.5; stroke-linecap:round;
+    filter:drop-shadow(0 0 4px rgba(74,168,255,1)) drop-shadow(0 0 10px rgba(74,168,255,.85)); stroke-dasharray:2 11; animation:slayerDash .5s linear infinite;}   /* 白色箭头 + 蓝色荧光 */
+  #slayerArrowHead{fill:#ffffff; filter:drop-shadow(0 0 5px rgba(74,168,255,1)) drop-shadow(0 0 11px rgba(74,168,255,.85));}
   @keyframes slayerDash{to{stroke-dashoffset:-13;}}
   .seat.slayer-target{outline:3px solid #ff5a3a; outline-offset:2px; box-shadow:0 0 0 4px rgba(255,90,58,.5),0 0 16px rgba(255,90,58,.8)!important; z-index:6;}
   #slayerResult{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:122; display:none;
@@ -1172,6 +1172,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.29', d:'2026-08-11', items:['①猎手开枪请求不再占用魔典白天面板（改由屏幕下方的蓝色弹窗确认/驳回）。②删除猎手开枪后的「撤销」按钮。③占卜师不在场（被替换/移除）时，红鲱鱼标记也随之消失。④猎手拖拽的发光箭头改为白色箭头 + 蓝色荧光。']},
   {v:'v2.41.28', d:'2026-08-11', items:['①恶魔描述句尾加句号。②处决信息改为「第X天：【处决信息】xxx（xx号）被处决。」（白天事件抬头为「第X天」而非「第X夜」）。③猎人开枪信息：猎人只得知中/没中，不再泄露红唇女郎是谁；未命中只记在猎人局内信息，命中则为公共信息（全员收到「xxx向xxx开枪→xxx死亡」），抬头为「第X天」。④红唇女郎接任弹窗不再压住处决视频（视频在最上层，弹窗在视频播放期间收起、结束后再出现）、文案精简、抬头按昼夜显示。⑤红唇女郎点确认接任后，说书人会收到底部弹窗告知（类似猎人请求弹窗）。⑥猎人击杀触发红唇继任时也发送接任通知（与处决一致）。⑦有红唇继任时（_swSeat 非空）强制不播完整变身动画、只播前半段，避免误触发「恶魔死亡」的完整动画。']},
   {v:'v2.41.27', d:'2026-08-11', items:['①精简间谍通知文案为「【间谍】说书人发来一份当夜魔典，可随时点击右下角魔典图标查看。」。②所有通知弹窗（说书人→玩家、玩家→说书人）宽度统一固定为 350px、高度随内容，其中的下拉菜单固定为 120px。③更新三段更柔和的背景音乐。']},
   {v:'v2.41.26', d:'2026-08-11', items:['①恶魔夜晚描述改为「唤醒恶魔，认识爪牙，告知3个不在场的好人伪装（包含外来者）」。②删除间谍步的「查看魔典（知晓全部身份与状态）…」描述。③玩家被处决时，向所有玩家的局内信息写入当天处决信息【xxx被处决】（改判会覆盖、无人处决/撤销会清除；贞洁者触发的处决同样广播）；若处决的是小恶魔且红唇女郎接任，红唇女郎会额外收到「接任成为新恶魔」的确认弹窗，该通知也记入其日志。④说书人「代猎手开枪」时也会先弹确认。⑤右下角十字弩图标放大50%。⑥猎手拖拽的发光箭头改为蓝色荧光（与十字弩蓝色发光一致）。⑦猎手开枪请求现在会在说书人屏幕下方弹出醒目的蓝色确认弹窗（确认开枪/驳回），不再只藏在魔典白天面板里。']},
@@ -2446,15 +2447,11 @@ function slayerUI(){
   if(slayerShot){ const t=slayerShot.target; let res;
     if(slayerShot.hit){ const sw=meta[t]&&meta[t]._swSeat; res=(sw!=null)?'命中！红唇女郎 '+nameAt(sw)+' 接任':'<b class="onblock">命中！恶魔死亡 → 好人胜利</b>'; }
     else res='未命中（非恶魔或猎人失效）';
-    return h+'<div class="rrow" style="border:none">第 '+slayerShot.day+' 天 · '+nameAt(sl)+' 射向 '+nameAt(t)+' → '+res+' <span class="regbtn" onclick="slayerUndo()">撤销</span></div>';
+    return h+'<div class="rrow" style="border:none">第 '+slayerShot.day+' 天 · '+nameAt(sl)+' 射向 '+nameAt(t)+' → '+res+'</div>';
   }
   if(isDeadSeat(sl)) return h+'<div class="rrow" style="border:none;opacity:.6">猎人已出局，无法开枪</div>';
   if(executions[night]!==undefined) return h+'<div class="rrow" style="border:none;opacity:.6">本日处决结果已出，猎人不可再开枪</div>';   // 处决/无人处决 后锁定
-  const req=window.__slayerReq;
-  if(req && req.target!=null){   // 猎手玩家拖十字弩发来的开枪请求：说书人确认/驳回
-    return h+'<div class="rrow" style="border:none;color:#b0402e;font-weight:800">🎯 猎手 '+nameAt(sl)+' 请求开枪 → '+(req.target+1)+'号 '+nameAt(req.target)+'</div>'
-      +'<div class="rrow" style="border:none"><span class="regbtn pub" onclick="_stConfirmSlayerReq()">确认开枪</span> <span class="regbtn" onclick="_stRejectSlayerReq()">驳回</span></div>';
-  }
+  // 猎手拖弩的开枪请求不再占用魔典面板：改由屏幕下方的 #stSlayerBar 弹窗确认/驳回
   let opts='<option value="">目标</option>'; livingSeats().forEach(i=>{ opts+='<option value="'+i+'">'+(i+1)+' '+nameAt(i)+'</option>'; });
   return h+'<div class="rrow" style="border:none">代猎手开枪：<select onchange="_stProxyFireSlayer(this.value)">'+opts+'</select></div>';
 }
@@ -2632,6 +2629,7 @@ function applyView(){
 /* ---------- render ---------- */
 function render(){
   if(window.BOTC_VIEWER) return;   // 访客(大厅/玩家)由多人版逻辑渲染，说书人本地渲染跳过
+  if(redHerring>=0 && !meta.some(m=>m&&m.role==='fortuneteller')) redHerring=-1;   // 占卜师不在场（被替换/移除）→ 红鲱鱼一并消失
   applyView();
   document.getElementById("countVal").textContent=N;
   document.getElementById("nightVal").textContent=night;
