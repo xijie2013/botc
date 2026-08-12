@@ -215,7 +215,7 @@
     display:flex; align-items:center; justify-content:center; z-index:4;
     font-weight:800; color:#5a3d16; letter-spacing:3px;
     font-size:calc(20 * var(--sw) / 1280); text-shadow:0 1px 0 rgba(255,255,255,.5);   /* 标题统一 20px（所有视图，随舞台缩放） */
-    transform:translateY(calc(-1.5 * var(--sw) / 1280));   /* 标题上移 1.5px */
+    transform:translate(calc(5 * var(--sw) / 1280), calc(-1.5 * var(--sw) / 1280));   /* 标题右移 5px、上移 1.5px */
   }
 
   /* ======= LEFT (seat view): ledger ======= */
@@ -444,6 +444,7 @@
   /* 触屏拖拽：可拖元素禁用触摸手势（避免拖动时误触发滚动/缩放，使自定义 touch 拖放可靠）；拖动虚影 */
   [data-drag]{ touch-action:none; }
   .drag-ghost{ pointer-events:none; box-shadow:0 8px 22px rgba(0,0,0,.45); }
+  .seatrole-ghost{ background:rgba(20,14,30,.95); border:1.5px solid currentColor; border-radius:8px; padding:3px 9px; font-weight:800; line-height:1.1; white-space:nowrap; text-shadow:0 1px 2px rgba(0,0,0,.6); }
   /* role roster (draggable) */
   .rlist{display:flex; flex-wrap:wrap; gap:5px; margin-bottom:4px;}
   .rchip{padding:3px 9px; border-radius:14px; font-size:calc(1.02 * var(--sw) / 100); font-weight:700;
@@ -530,6 +531,7 @@
   body.mode-notes #notesPanel{display:flex;}
   .vpanel .box-h{color:#6b4a1e;}
   .stage.grim .vpanel .box-h{color:#43286b;}
+  #hallTitle{transform:translateX(calc(5 * var(--sw) / 1280));}   /* 大厅「客人名单」标题右移 5px */
   /* 大厅客人名单 */
   #hallPanel .namelist{flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; gap:4px; scrollbar-width:thin; scrollbar-color:rgba(233,196,106,.45) transparent;}
   #hallPanel .namelist::-webkit-scrollbar{width:6px;} #hallPanel .namelist::-webkit-scrollbar-track{background:transparent;} #hallPanel .namelist::-webkit-scrollbar-thumb{background:rgba(233,196,106,.45); border-radius:3px;}   /* 去掉滚动条白色默认底：透明轨道+金色滑块 */
@@ -571,9 +573,12 @@
     border:1.4px solid rgba(74,168,255,.55); border-radius:14px; padding:13px 16px 11px; box-shadow:0 10px 34px rgba(0,0,0,.5);}
   #chatStack .civ-t{font-size:14px; font-weight:700; color:#dbe8ff; line-height:1.5; margin-bottom:10px; text-align:center;}
   #chatStack .civ-btns{display:flex; gap:10px; justify-content:center; margin-bottom:9px;}
-  #chatStack .civ-yes,#chatStack .civ-no{min-width:96px; padding:8px 0; border-radius:11px; font-size:14px; font-weight:800; cursor:pointer; border:none;}
+  #chatStack .civ-yes,#chatStack .civ-no,#chatStack .civ-ok{min-width:96px; padding:8px 0; border-radius:11px; font-size:14px; font-weight:800; cursor:pointer; border:none;}
   #chatStack .civ-yes{background:linear-gradient(180deg,#4aa86a,#367a4f); color:#eafff0;}
   #chatStack .civ-no{background:linear-gradient(180deg,#b0483c,#7a3029); color:#ffeae7;}
+  #chatStack .civ-ok{min-width:120px; background:linear-gradient(180deg,#4aa8ff,#2f74c0); color:#fff;}
+  #chatStack .civ-status{font-size:12.5px; color:#bcd0f0; text-align:center; line-height:1.55; margin-bottom:9px;}
+  #chatStack .civ-wait{font-size:13px; color:#9fd0b0; font-weight:700;}
   #chatStack .civ-bar{height:4px; border-radius:3px; background:rgba(255,255,255,.14); overflow:hidden;}
   #chatStack .civ-bar>i{display:block; height:100%; width:100%; background:linear-gradient(90deg,#4aa8ff,#8ec9ff); transform-origin:left center; animation:civShrink linear forwards;}
   @keyframes civShrink{from{transform:scaleX(1);}to{transform:scaleX(0);}}
@@ -593,6 +598,7 @@
     font-weight:800; color:#fff; cursor:pointer; z-index:5; box-shadow:0 2px 8px rgba(0,0,0,.55); user-select:none; white-space:nowrap; -webkit-tap-highlight-color:transparent;}
   #tableZone .chatbtn.cb-exit{background:linear-gradient(180deg,#b0483c,#7a3029); border:2px solid rgba(255,190,180,.75);}
   #tableZone .chatbtn.cb-join{background:linear-gradient(180deg,#2f6fb0,#1f4f7a); border:2px solid rgba(180,215,255,.75);}
+  #tableZone .chatbtn.cb-confirm{background:linear-gradient(180deg,#e0a83a,#b8860b); border-color:#ffe9b8; color:#1a1226;}   /* 待确认态：金色 */
   .nb-note{padding:4px 2px; border-bottom:1px solid rgba(122,83,32,.14); line-height:1.35;}
   .nb-nom{border:1px solid rgba(74,43,107,.22); border-radius:8px; padding:6px 8px; margin:6px 0; background:rgba(255,252,244,.6);}
   .nb-nomhead{font-weight:700; color:#6b4a1e;}
@@ -1173,6 +1179,8 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.44.0', d:'2026-08-12', items:['私聊邀请协商全面改版为「下方常驻弹窗」（不再用上方软提示 banner）：①一个邀请从发出到出结果期间，发起人和所有被邀请人都在屏幕下方看到同一个常驻弹窗，含 20s 倒计时与实时状态。发起人看到自己邀请的每个人是「已接受/已拒绝/待回应」，并有「取消邀请」按钮；被邀请人看到同样的状态，加「同意/拒绝」按钮。②被邀请人点拒绝→其弹窗立即消失（不再持有）；点同意→弹窗保留、显示「你已同意，等待结果…」。只有发起人与已同意者会持有弹窗直到最终结果。③点「取消邀请」：未回应者的弹窗消失，即使已有人同意也不会形成私聊，最终结果对所有持有者显示「X 取消了私聊邀请」。④最终结果（私聊已开始/发起私聊失败/被取消/已加入/加入未通过）出现后，所有仍持有弹窗的人必须点「确定」才关闭。⑤同一时间一个玩家只处理一个私聊请求：有未了结的邀请时，左下角图标灰掉不能发起新的、也不会被别人邀请（避免同时同意多个而打架）。⑥加入申请同理走这套弹窗（需组内全员同意）。⑦通用上方轻提示 banner 停留时间由 2.6s 延长到 7.6s。（本项改动较大、状态机做了 20 项单元测试。）']},
+  {v:'v2.43.1', d:'2026-08-12', items:['私聊/座位一组细节：①玩家笔记里把身份标记从座位上拖下来时，虚影只显示该身份标记本身（不再是整张座位+玩家）。②说书人魔典/玩家日志/大厅的标题统一右移 5px。③修复邀请/加入申请倒计时条不断闪回满、不到 20s 就消失：改用固定总时长+负动画延迟，每秒重渲染时进度条从当前进度接续、能走满 20s。④座位圈上的退出/加入按钮从座位圈中心移到外侧弧线上（圆心落在色带外弧），不再遮挡座位标记。⑤点退出/加入按钮改为两段确认（先变金色「确认」，再点一次才生效），避免误触。']},
   {v:'v2.43.0', d:'2026-08-12', items:['私聊分组改版：①删除玩家笔记页里的「邀请玩家进入私聊/退出私聊」按钮，改为屏幕左下角一个「三小人+加号」图标发起——夜晚灰色不可点、白天可点；点图标进入选人态（图标高亮+人数角标），点座位选人，再点图标发送邀请。②邀请/加入申请倒计时由 10 秒延长到 20 秒。③私聊形成后，在座位圈中「该组第一、二个成员座位之间」的空档放一个按钮（不再在整圈中心）：组内成员看到「退出」（点=退出该私聊），组外玩家看到「加入」（点=发出加入申请，需组内所有现有成员都同意才进组，任一拒绝/超时则失败）。组内玩家想再拉人仍用左下角图标选人邀请。④整套私聊仅白天可用，夜晚整体冻结（图标灰、座位圈按钮不显示、邀请/申请弹窗不弹出）；说书人「结束本夜→白天」解冻、「结束本日→夜晚」及开局/重置角色为冻结。']},
   {v:'v2.42.6', d:'2026-08-12', items:['①未登录大厅客人名单右侧滚动条去掉白色默认底，改透明轨道+金色滑块。②玩家笔记/局内信息右侧滚动条由紫色改为玩家笔记主题的深金褐色（透明轨道）。③修复座位人数多（约 11 人起）时玩家名字（如 Cooler）被换行：根因是 iOS 会自动放大过小的字号（-webkit-text-size-adjust），使字号不再严格等比、名字撑破换行；现关闭该自动放大（字号严格按 px 等比缩放），并把座位名字框余量从 88% 放宽到 94%。']},
   {v:'v2.42.5', d:'2026-08-12', items:['①未登录大厅：点客人名单里的名字，也会弹出玩家登录框（此前只有点墨水瓶才弹），并把该名字预填到 ID 框、光标落到密码框。②座位随人数变化缩放时，座位上的文字（玩家名、身份）、以及守护/红鲱鱼等状态标记，现在都严格按座位直径等比缩放——此前名字字号有 11px 下限、身份字号有 9px 下限、标记徽标有 18px 下限，人多座位小时这些下限让文字/标记相对偏大、和少人局的单座不一致；去掉下限后，放大一个 15 人局的单座就和 5 人局的单座完全一样（座号数字本就等比、不受影响）。']},
@@ -3048,8 +3056,12 @@ document.getElementById("mask").addEventListener("click",e=>{ if(e.target.id==="
    拖到座位/名册。取代原生 HTML5 拖放（原生在触屏不触发）。用位移阈值区分「点按」与「拖动」，拖动后抑制随之而来的 click。 ===== */
 (function(){
   let _dg=null, _suppressClick=false; const TH=6;
-  function _mkGhost(el){ const g=el.cloneNode(true); g.className=(g.className||'')+' drag-ghost';
-    g.style.position='fixed'; g.style.zIndex='99999'; g.style.pointerEvents='none'; g.style.opacity='.88'; g.style.margin='0'; g.style.left='-9999px'; g.style.top='-9999px';
+  function _mkGhost(el,payload){ let g;
+    if(payload && payload.indexOf('seatrole:')===0){   // 从座位拖出身份：虚影只含该身份标记，不是整个座位+玩家
+      const vr=el.querySelector('.vrole'); g=document.createElement('div'); g.className='drag-ghost seatrole-ghost';
+      if(vr){ g.textContent=vr.textContent; g.style.color=(vr.style.color||'#fff'); g.style.fontSize=(vr.style.fontSize||'13px'); } else g.textContent='身份';
+    } else { g=el.cloneNode(true); g.className=(g.className||'')+' drag-ghost'; }
+    g.style.position='fixed'; g.style.zIndex='99999'; g.style.pointerEvents='none'; g.style.opacity='.9'; g.style.margin='0'; g.style.left='-9999px'; g.style.top='-9999px';
     g.removeAttribute('data-drag'); document.body.appendChild(g); return g; }
   function _posGhost(g,x,y){ if(!g) return; g.style.left=(x-g.offsetWidth/2)+'px'; g.style.top=(y-g.offsetHeight/2)+'px'; }
   function _seatUnder(x,y){ const e=document.elementFromPoint(x,y); return e?e.closest('.seat[data-seat]'):null; }
@@ -3070,7 +3082,7 @@ document.getElementById("mask").addEventListener("click",e=>{ if(e.target.id==="
     _dg={ el:el, payload:el.getAttribute('data-drag')||'', ghost:null, dragging:false, sx:e.clientX, sy:e.clientY, pid:e.pointerId };
   });   // 不 preventDefault：保留点击；用位移阈值判定是否拖动
   document.addEventListener('pointermove', function(e){ if(!_dg || e.pointerId!==_dg.pid) return;
-    if(!_dg.dragging){ if(Math.hypot(e.clientX-_dg.sx, e.clientY-_dg.sy)<TH) return; _dg.dragging=true; _dg.ghost=_mkGhost(_dg.el); }
+    if(!_dg.dragging){ if(Math.hypot(e.clientX-_dg.sx, e.clientY-_dg.sy)<TH) return; _dg.dragging=true; _dg.ghost=_mkGhost(_dg.el, _dg.payload); }
     e.preventDefault(); _posGhost(_dg.ghost, e.clientX, e.clientY);
     _clearOver(); const seat=_seatUnder(e.clientX,e.clientY); const pool=seat?null:_poolUnder(e.clientX,e.clientY);
     if(seat) seat.classList.add('over'); else if(pool) pool.classList.add('over');
@@ -3192,7 +3204,7 @@ load(); render();
     shield:[120,'assets/mk-shield.png',1,'#d8dae2'], crossbow:[150,'assets/mk-crossbow.png',1.2,'#4aa8ff'],
     dead:[30,'assets/mk-dead.png',1,'#000'], master:[0,'assets/mk-master.png',1.1,'#f5c542'], herring:[180,'assets/mk-herring.png',1.2,'#ff4a3a'] };
 
-  function toast(m){ const t=document.getElementById('fbToast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('on'),2600); }
+  function toast(m){ const t=document.getElementById('fbToast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('on'),7600); }   // 停留时间 +5s（原 2600ms→7600ms），消失不再太快
   function E(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
   function show(id,on){ const el=document.getElementById(id); if(el) el.classList.toggle('on',on); }
   window._closeGate=function(id){ show(id,false); };
@@ -3736,7 +3748,7 @@ load(); render();
   window._stClearPlayerNotes=function(){ if(role!=='st'||!curGid) return;
     db.ref('games/'+curGid+'/players').once('value').then(s=>{ const v=s.val()||{}; const up={};
       Object.keys(v).forEach(uid=>{ const b='games/'+curGid+'/players/'+uid+'/';
-        up[b+'gameInfo']=null; up[b+'seats']=null; up[b+'crossed']=null; up[b+'night']=null; up[b+'nightReply']=null; up[b+'spyGrim']=null; up[b+'slayerReq']=null; up[b+'slayerResult']=null; up[b+'slayerArmed']=null; up[b+'chatReq']=null; up[b+'chatResp']=null; up[b+'chatLeave']=null; up[b+'chatJoin']=null; });
+        up[b+'gameInfo']=null; up[b+'seats']=null; up[b+'crossed']=null; up[b+'night']=null; up[b+'nightReply']=null; up[b+'spyGrim']=null; up[b+'slayerReq']=null; up[b+'slayerResult']=null; up[b+'slayerArmed']=null; up[b+'chatReq']=null; up[b+'chatResp']=null; up[b+'chatLeave']=null; up[b+'chatJoin']=null; up[b+'chatCancel']=null; up[b+'chatAck']=null; });
       if(Object.keys(up).length) db.ref().update(up).catch(()=>{});
     }).catch(()=>{}); try{ _chatReset(); }catch(e){} };
   /* 说书人重置角色：把公开状态（座位死亡/死因、胜负横幅、提名、处决/击杀动画、举手、指针）一并清零，让大厅与玩家笔记同步复位 */
@@ -4102,67 +4114,102 @@ load(); render();
   window._chatDrawButtons=function(zone,cx,cy,R,seatR,N,posOf){ if(!isChatDay()) return; if(role!=='player') return;
     const mySeat=myVoteSeat(); if(mySeat<0) return; const chats=pubChats(); if(!chats.length) return;
     const myc=chats.find(c=>c.members.indexOf(mySeat)>=0)||null;
-    const bd=Math.max(18, seatR*1.0);   // 按钮直径≈座位半径
+    const bd=Math.max(18, seatR*1.0), rOut=R+seatR*1.11;   // 按钮直径≈座位半径；圆心落在外侧弧线上(=色带外弧半径)，避免遮挡座位标记
     chats.forEach(c=>{ const ks=c.members.map(m=>posOf[m]).filter(k=>k!=null).sort((a,b)=>a-b); if(ks.length<2) return;
-      const midK=(ks[0]+ks[1])/2, ang=-Math.PI/2+midK*2*Math.PI/N, bx=cx+R*Math.cos(ang), by=cy+R*Math.sin(ang);
-      const inChat=!!(myc && myc.id===c.id);
+      const midK=(ks[0]+ks[1])/2, ang=-Math.PI/2+midK*2*Math.PI/N, bx=cx+rOut*Math.cos(ang), by=cy+rOut*Math.sin(ang);
+      const inChat=!!(myc && myc.id===c.id), base=inChat?'退出':'加入';
       const b=document.createElement('div'); b.className='chatbtn '+(inChat?'cb-exit':'cb-join');
       b.style.cssText='left:'+bx+'px;top:'+by+'px;width:'+bd+'px;height:'+bd+'px;font-size:'+(bd*0.3)+'px;';
-      b.textContent=inChat?'退出':'加入';
-      b.addEventListener('click',function(e){ e.stopPropagation(); if(inChat) window._chatLeave(); else window._chatJoinReq(c.id); });
+      b.textContent=base;
+      b.addEventListener('click',function(e){ e.stopPropagation();   // 两段确认，避免误触
+        if(!b._cf){ b._cf=true; b.classList.add('cb-confirm'); b.textContent='确认'; clearTimeout(b._t); b._t=setTimeout(function(){ b._cf=false; b.classList.remove('cb-confirm'); b.textContent=base; },3000); return; }
+        clearTimeout(b._t); if(inChat) window._chatLeave(); else window._chatJoinReq(c.id); });
       zone.appendChild(b); }); };
 
-  /* ---- 玩家端：白天判定 + 左下角图标(FAB) + 邀请/回应/退出/加入 ---- */
+  /* ---- 玩家端：白天判定 + 左下角图标(FAB) + 邀请/回应/退出/加入/取消/确定 ---- */
   window._chatSelMode=false; window._chatSel=null;
+  window.__chatMyResp=window.__chatMyResp||{}; window.__chatAcked=window.__chatAcked||{};   // 本地乐观态（点了立即反映，不等说书人回传）
   function isChatDay(){ return !!(pub && pub.phase==='day'); }   // 私聊仅白天可用（说书人 stDawn 公开 phase='day'、stEndDay 公开 'night'）
   window.isChatDay=isChatDay;
+  function _invMyResp(v,seat){ return (window.__chatMyResp[v.iid]!=null)?window.__chatMyResp[v.iid]:(v.resp&&v.resp[seat]); }
+  function _invMyAcked(v,seat){ return !!(window.__chatAcked[v.iid] || (v.ack&&v.ack[seat])); }
+  /* 我当前需要处理的私聊邀请：涉及我(发起/被邀)且我尚未了结的最早一个。一次只处理一个。 */
+  function _myChatInv(){ const seat=myVoteSeat(); if(seat<0) return null; const inv=(pub&&pub.chatInv)||{};
+    const mine=Object.keys(inv).map(iid=>Object.assign({iid:iid},inv[iid])).filter(v=>{
+      const involved=(v.from===seat)||(v.targets&&v.targets.indexOf(seat)>=0); if(!involved) return false;
+      const mr=_invMyResp(v,seat);
+      if(v.phase==='resolved'){ const holder=(v.from===seat)||(v.targets.indexOf(seat)>=0 && mr!==0); return holder && !_invMyAcked(v,seat); }
+      if(v.from===seat) return true;   // 发起人 pending 一直持有
+      return mr!==0;   // 被邀请人：只要没拒绝(同意/未答)就一直持有
+    }).sort((a,b)=>(a.ts||0)-(b.ts||0));
+    return mine[0]||null; }
   window._chatFabTap=function(){ if(role!=='player'||myVoteSeat()<0) return;
     if(!isChatDay()){ try{toast('夜晚不能发起私聊');}catch(e){} return; }
-    _chatToggleInvite(); };   // 点图标：进选人态/发邀请（在 _chatToggleInvite 内两段切换）
-  window._chatToggleInvite=function(){ if(role!=='player'||myVoteSeat()<0||!isChatDay()) return;
+    if(_myChatInv()&&!_chatSelMode){ try{toast('请先处理当前的私聊邀请');}catch(e){} return; }   // 有未了结邀请→不能发起新的
+    _chatToggleInvite(); };
+  window._chatToggleInvite=function(){ if(role!=='player'||myVoteSeat()<0||!isChatDay()) return; if(_myChatInv()&&!_chatSelMode) return;
     if(!_chatSelMode){ _chatSelMode=true; _chatSel=new Set(); updateChatFab(); drawSeats(); return; }
     const seats=_chatSel?[..._chatSel]:[]; _chatSelMode=false; const from=myVoteSeat();
-    if(seats.length && from>=0 && notesRef){ try{ notesRef.child('chatReq').set({from:from,targets:seats,ts:Date.now()}).catch(function(){}); }catch(e){} try{toast('已发出邀请，等待对方回应…');}catch(e){} }
+    if(seats.length && from>=0 && notesRef){ try{ notesRef.child('chatReq').set({from:from,targets:seats,ts:Date.now()}).catch(function(){}); }catch(e){} }
     _chatSel=new Set(); updateChatFab(); drawSeats(); };
   window._chatSeatPick=function(i){ if(!_chatSelMode) return false; if(i===myVoteSeat()) return true;
     if(!_chatSel) _chatSel=new Set(); if(_chatSel.has(i)) _chatSel.delete(i); else _chatSel.add(i); updateChatFab(); drawSeats(); return true; };
   function updateChatFab(){ const fab=document.getElementById('chatFab'); if(!fab) return;
     const seated=(role==='player'&&myVoteSeat()>=0);
     if(!seated){ fab.style.display='none'; _chatSelMode=false; return; }
-    fab.style.display='flex'; const day=isChatDay(); if(!day){ _chatSelMode=false; }
-    fab.classList.toggle('cf-off', !day);   // 夜晚灰掉
-    fab.classList.toggle('cf-sel', !!_chatSelMode);   // 选人态高亮
+    fab.style.display='flex'; const day=isChatDay(); const busy=!!_myChatInv();
+    if(!day||busy){ _chatSelMode=false; }
+    fab.classList.toggle('cf-off', !day||busy);   // 夜晚或有未了结邀请→灰掉
+    fab.classList.toggle('cf-sel', !!_chatSelMode);
     const badge=fab.querySelector('.cf-badge'); const n=(_chatSelMode&&_chatSel)?_chatSel.size:0;
     if(badge){ badge.textContent=n||''; badge.style.display=n?'flex':'none'; } }
   window.updateChatFab=updateChatFab;
   window._chatRespond=function(iid,agree){ const from=myVoteSeat(); if(from<0||!notesRef) return;
+    window.__chatMyResp[iid]=agree?1:0;   // 乐观：拒绝→弹窗立即消失、同意→立即显示「等待结果」
     try{ notesRef.child('chatResp').set({iid:iid,from:from,agree:agree?1:0,ts:Date.now()}).catch(function(){}); }catch(e){}
-    window.__chatDone=window.__chatDone||{}; window.__chatDone[iid]=1; updateChatInv(); };
+    updateChatInv(); updateChatFab(); };
+  window._chatCancel=function(iid){ const from=myVoteSeat(); if(from<0||!notesRef) return;
+    try{ notesRef.child('chatCancel').set({iid:iid,from:from,ts:Date.now()}).catch(function(){}); }catch(e){} };
+  window._chatAck=function(iid){ const from=myVoteSeat(); if(from<0||!notesRef) return;
+    window.__chatAcked[iid]=1;   // 乐观：点确定弹窗立即消失、图标解锁
+    try{ notesRef.child('chatAck').set({iid:iid,from:from,ts:Date.now()}).catch(function(){}); }catch(e){}
+    updateChatInv(); updateChatFab(); };
   window._chatLeave=function(){ const from=myVoteSeat(); if(from<0||!notesRef||!isChatDay()) return;
     try{ notesRef.child('chatLeave').set({from:from,ts:Date.now()}).catch(function(){}); }catch(e){} try{toast('已退出私聊');}catch(e){} };
   window._chatJoinReq=function(cid){ const from=myVoteSeat(); if(from<0||!notesRef) return; if(!isChatDay()){ try{toast('夜晚不能加入私聊');}catch(e){} return; }
-    try{ notesRef.child('chatJoin').set({chat:cid,from:from,ts:Date.now()}).catch(function(){}); }catch(e){} try{toast('已发出加入申请，等待组内同意…');}catch(e){} };
+    if(_myChatInv()){ try{toast('请先处理当前的私聊邀请');}catch(e){} return; }
+    try{ notesRef.child('chatJoin').set({chat:cid,from:from,ts:Date.now()}).catch(function(){}); }catch(e){} };
 
-  /* ---- 玩家端：底部堆叠邀请弹窗 + 10 秒倒计时 ---- */
+  /* ---- 玩家端：底部常驻私聊弹窗（一次一个，含实时状态 + 20s 倒计时；发起人取消 / 被邀请人同意·拒绝 / 最终结果需点确定）---- */
+  function _cvStatusLine(v,seat){ return v.targets.map(function(t){ const r=(t===seat)?_invMyResp(v,seat):(v.resp&&v.resp[t]);
+    return _nbEsc(pname(t))+'：'+(r===1?'已接受':r===0?'已拒绝':'待回应'); }).join('　'); }
   function updateChatInv(){ const stack=document.getElementById('chatStack'); if(!stack) return;
-    const seat=myVoteSeat(); const inv=(pub&&pub.chatInv)||{};
-    if(role!=='player'||seat<0||!isChatDay()){ stack.innerHTML=''; return; }   // 夜晚冻结：不弹邀请/申请
-    window.__chatDone=window.__chatDone||{};
-    const list=Object.keys(inv).map(iid=>Object.assign({iid:iid},inv[iid]))
-      .filter(v=> v.targets&&v.targets.indexOf(seat)>=0 && !(v.resp&&v.resp[seat]!=null) && !window.__chatDone[v.iid] && (v.deadline||0)>Date.now())
-      .sort((a,b)=>(a.ts||0)-(b.ts||0));   // 最早在前；容器 column-reverse → 最早贴底、后来叠上
-    stack.innerHTML=list.map(v=>{
-      const co=(v.targets||[]).filter(s=>s!==seat).map(s=>_nbEsc(pname(s)));
-      const txt=(v.kind==='join')
-        ? (_nbEsc(pname(v.from))+' 申请加入你们的私聊')
-        : (_nbEsc(pname(v.from))+' 邀请你'+(co.length?'与 '+co.join('、')+' ':'')+'一起进入私聊');
-      const left=Math.max(0,(v.deadline||0)-Date.now());
-      return '<div class="civ"><div class="civ-t">'+txt+'</div>'
-        +'<div class="civ-btns"><button class="civ-yes" onclick="_chatRespond(\''+v.iid+'\',1)">同意</button>'
-        +'<button class="civ-no" onclick="_chatRespond(\''+v.iid+'\',0)">拒绝</button></div>'
-        +'<div class="civ-bar"><i style="animation-duration:'+left+'ms"></i></div></div>';
-    }).join('');
-    clearTimeout(window.__chatInvT); if(list.length) window.__chatInvT=setTimeout(updateChatInv,1000); }
+    const seat=myVoteSeat();
+    if(role!=='player'||seat<0||!isChatDay()){ stack.innerHTML=''; clearTimeout(window.__chatInvT); return; }   // 夜晚冻结
+    const inv=(pub&&pub.chatInv)||{};   // 清掉已消失邀请的本地乐观态
+    Object.keys(window.__chatMyResp).forEach(function(iid){ if(!inv[iid]) delete window.__chatMyResp[iid]; });
+    Object.keys(window.__chatAcked).forEach(function(iid){ if(!inv[iid]) delete window.__chatAcked[iid]; });
+    const v=_myChatInv();
+    if(!v){ stack.innerHTML=''; clearTimeout(window.__chatInvT); return; }
+    const isInviter=(v.from===seat), mr=_invMyResp(v,seat); let html='<div class="civ">';
+    if(v.phase==='resolved'){
+      html+='<div class="civ-t">'+_nbEsc((v.result&&v.result.text)||'私聊邀请已结束')+'</div>'
+        +'<div class="civ-btns"><button class="civ-ok" onclick="_chatAck(\''+v.iid+'\')">确定</button></div>';
+    } else {
+      let head;
+      if(v.kind==='join'){ head=isInviter?'你申请加入私聊（需组内全员同意）':(_nbEsc(pname(v.from))+' 申请加入你们的私聊'); }
+      else if(isInviter){ head='你向 '+v.targets.map(function(t){return _nbEsc(pname(t));}).join('、')+' 发起私聊邀请'; }
+      else { const others=v.targets.filter(function(t){return t!==seat;}).map(function(t){return _nbEsc(pname(t));}); head=_nbEsc(pname(v.from))+' 向你'+(others.length?'和 '+others.join('、'):'')+' 发出私聊邀请'; }
+      html+='<div class="civ-t">'+head+'</div><div class="civ-status">'+_cvStatusLine(v,seat)+'</div><div class="civ-btns">';
+      if(isInviter){ html+='<button class="civ-no" onclick="_chatCancel(\''+v.iid+'\')">取消邀请</button>'; }
+      else if(mr===1){ html+='<span class="civ-wait">你已同意，等待结果…</span>'; }
+      else { html+='<button class="civ-yes" onclick="_chatRespond(\''+v.iid+'\',1)">同意</button><button class="civ-no" onclick="_chatRespond(\''+v.iid+'\',0)">拒绝</button>'; }
+      html+='</div>';
+      const total=Math.max(1,(v.deadline||0)-(v.ts||0)), elapsed=Math.max(0,Date.now()-(v.ts||0));   // 固定总时长+负延迟：重渲染时进度条接续、走满 20s
+      html+='<div class="civ-bar"><i style="animation-duration:'+total+'ms;animation-delay:-'+elapsed+'ms"></i></div>';
+    }
+    html+='</div>'; stack.innerHTML=html;
+    clearTimeout(window.__chatInvT); window.__chatInvT=setTimeout(updateChatInv,1000); }
   window.updateChatInv=updateChatInv;
   function chatNotices(){ if(role!=='player') return; const seat=myVoteSeat(); if(seat<0) return;
     const notes=(pub&&pub.chatNote)||[]; window.__chatSeen=window.__chatSeen||{};
@@ -4180,35 +4227,56 @@ load(); render();
   function _cDisband(){ for(const cid in __chat.chats) if(__chat.chats[cid].members.length<2) delete __chat.chats[cid]; }
   function _cName(seat){ return (pub&&pub.seats&&pub.seats[seat]&&pub.seats[seat].name)||('玩家'+(seat+1)); }
   function _cNote(to,text){ __chat.notes.push({id:'n'+(++__chat.nseq),to:to,text:text,ts:Date.now()}); }
-  function _cReq(from,targets){ if(from==null||from<0) return; targets=(targets||[]).filter(s=>s!==from&&s>=0);
-    const fc=_cChatOf(from); targets=targets.filter(s=> !(fc&&_cChatOf(s)===fc)); if(!targets.length) return;
-    const now=Date.now(), iid='i'+(++__chat.iseq); __chat.inv[iid]={from:from,targets:targets,chat:fc,kind:'invite',ts:now,deadline:now+20000,resp:{}};
-    if(fc){ __chat.chats[fc].members.forEach(s=>{ if(s!==from) _cNote(s,_cName(from)+' 邀请 '+targets.map(t=>_cName(t)).join('、')+' 进入当前私聊'); }); } }
+  /* 某座位是否正处理某个私聊邀请（涉及且未了结）→ 一次只处理一个：忙则不能被邀请/不能发起 */
+  function _cBusy(seat){ for(const iid in __chat.inv){ const v=__chat.inv[iid];
+      const involved=(v.from===seat)||(v.targets.indexOf(seat)>=0); if(!involved) continue;
+      if(v.phase==='resolved'){ const holder=(v.from===seat)||(v.targets.indexOf(seat)>=0 && v.resp[seat]!==0); if(holder && !(v.ack&&v.ack[seat])) return true; }
+      else { if(v.from===seat) return true; if(v.resp[seat]!==0) return true; } }
+    return false; }
+  function _cHolders(v){ const h=[v.from]; v.targets.forEach(s=>{ if(v.resp[s]!==0 && h.indexOf(s)<0) h.push(s); }); return h; }   // 结算后仍持有弹窗、需点确定的人=发起人+未拒绝者
+  function _cReq(from,targets){ if(from==null||from<0||_cBusy(from)) return; targets=(targets||[]).filter(s=>s!==from&&s>=0);
+    const fc=_cChatOf(from); targets=targets.filter(s=> !(fc&&_cChatOf(s)===fc)); targets=targets.filter(s=> !_cBusy(s));   // 同组的/正忙的不邀请
+    if(!targets.length) return;
+    const now=Date.now(), iid='i'+(++__chat.iseq); __chat.inv[iid]={from:from,targets:targets,chat:fc,kind:'invite',ts:now,deadline:now+20000,resp:{},phase:'pending'};
+    if(fc){ __chat.chats[fc].members.forEach(s=>{ if(s!==from && targets.indexOf(s)<0) _cNote(s,_cName(from)+' 邀请 '+targets.map(t=>_cName(t)).join('、')+' 进入当前私聊'); }); } }
   /* 加入申请：私聊外的 from 申请进 cid，需组内所有现有成员都同意 */
-  function _cJoinReq(from,cid){ if(from==null||from<0) return; const c=__chat.chats[cid]; if(!c) return; if(c.members.indexOf(from)>=0) return;
+  function _cJoinReq(from,cid){ if(from==null||from<0||_cBusy(from)) return; const c=__chat.chats[cid]; if(!c) return; if(c.members.indexOf(from)>=0) return;
     const targets=c.members.slice(); if(!targets.length) return;
-    const now=Date.now(), iid='i'+(++__chat.iseq); __chat.inv[iid]={from:from,targets:targets,chat:cid,kind:'join',ts:now,deadline:now+20000,resp:{}}; }
-  function _cResp(iid,from,agree){ const v=__chat.inv[iid]; if(!v) return; if(v.targets.indexOf(from)<0) return; v.resp[from]=agree?1:0; }
-  function _cFinalize(iid){ const v=__chat.inv[iid]; if(!v) return;
-    if(v.kind==='join'){   // 加入申请：所有目标成员都同意才进组，否则申请失败
-      const c=__chat.chats[v.chat], allYes=c && v.targets.length>0 && v.targets.every(s=>v.resp[s]===1);
-      if(allYes){ _cLeaveSeat(v.from); _cAdd(v.chat,v.from); _cDisband(); } else { _cNote(v.from,'加入申请被拒绝'); }
-      delete __chat.inv[iid]; return; }
-    const agreers=v.targets.filter(s=>v.resp[s]===1), rejecters=v.targets.filter(s=>v.resp[s]!==1);
-    rejecters.forEach(s=>_cNote(v.from,_cName(s)+' 拒绝了你'));
-    if(agreers.length){ let cid=_cChatOf(v.from); if(!cid){ cid=_cCreate(v.from); _cAdd(cid,v.from); }
-      agreers.forEach(s=>{ _cLeaveSeat(s); _cAdd(cid,s); }); _cDisband(); }
-    delete __chat.inv[iid]; }
+    const now=Date.now(), iid='i'+(++__chat.iseq);
+    if(targets.some(s=>_cBusy(s))){ __chat.inv[iid]={from:from,targets:[],chat:cid,kind:'join',ts:now,deadline:now,resp:{},phase:'resolved',result:{ok:false,text:'对方正在处理其他私聊，请稍后再申请'},ack:{},ackDeadline:now+30000}; return; }
+    __chat.inv[iid]={from:from,targets:targets,chat:cid,kind:'join',ts:now,deadline:now+20000,resp:{},phase:'pending'}; }
+  function _cResp(iid,from,agree){ const v=__chat.inv[iid]; if(!v||v.phase==='resolved') return; if(v.targets.indexOf(from)<0) return; v.resp[from]=agree?1:0; }
+  function _cCancel(iid,from){ const v=__chat.inv[iid]; if(!v||v.phase==='resolved') return; if(v.from!==from) return; v.canceled=true; _cResolve(iid); }
+  function _cAck(iid,seat){ const v=__chat.inv[iid]; if(!v) return; if(!v.ack) v.ack={}; v.ack[seat]=1; }
+  function _cResolve(iid){ const v=__chat.inv[iid]; if(!v||v.phase==='resolved') return; let text,ok=false;
+    if(v.kind==='join'){
+      if(v.canceled){ text=_cName(v.from)+' 取消了加入申请'; }
+      else { const c=__chat.chats[v.chat], allYes=c && v.targets.length>0 && v.targets.every(s=>v.resp[s]===1);
+        if(allYes){ _cLeaveSeat(v.from); _cAdd(v.chat,v.from); _cDisband(); text='已加入私聊'; ok=true; } else { text='加入申请未通过'; } }
+    } else {
+      if(v.canceled){ text=_cName(v.from)+' 取消了私聊邀请'; }
+      else { const agreers=v.targets.filter(s=>v.resp[s]===1), rejecters=v.targets.filter(s=>v.resp[s]===0), parts=[];
+        agreers.forEach(s=>parts.push(_cName(s)+' 已同意')); rejecters.forEach(s=>parts.push(_cName(s)+' 已拒绝'));
+        if(agreers.length){ let cid=_cChatOf(v.from); if(!cid){ cid=_cCreate(v.from); _cAdd(cid,v.from); }
+          agreers.forEach(s=>{ _cLeaveSeat(s); _cAdd(cid,s); }); _cDisband(); text=(parts.length?parts.join('，')+' · ':'')+'私聊已开始'; ok=true; }
+        else { text=(parts.length?parts.join('，')+' · ':'')+'发起私聊失败'; } }
+    }
+    v.phase='resolved'; v.result={ok:ok,text:text}; v.ack={}; v.ackDeadline=Date.now()+30000; }
   function _cTick(){ const now=Date.now();
-    Object.keys(__chat.inv).forEach(iid=>{ const v=__chat.inv[iid]; if(!v) return; if(v.targets.every(s=>v.resp[s]!=null)||now>=v.deadline) _cFinalize(iid); });
-    __chat.notes=__chat.notes.filter(n=>now-n.ts<6000); _cDisband(); }
+    Object.keys(__chat.inv).forEach(iid=>{ const v=__chat.inv[iid]; if(!v) return;
+      if(v.phase==='resolved'){ const hs=_cHolders(v); if(hs.every(s=>v.ack&&v.ack[s]) || now>=(v.ackDeadline||0)) delete __chat.inv[iid]; return; }
+      const allResp=v.targets.every(s=>v.resp[s]!=null), joinRej=(v.kind==='join')&&v.targets.some(s=>v.resp[s]===0);
+      if(v.canceled || now>=v.deadline || allResp || joinRej) _cResolve(iid); });
+    __chat.notes=__chat.notes.filter(n=>now-n.ts<8000); _cDisband(); }
   function _cClear(uid,key){ try{ db.ref('games/'+curGid+'/players/'+uid+'/'+key).remove(); }catch(e){} }
   function recomputeChat(all){ if(role!=='st'||!curGid) return; all=all||{};
     Object.keys(all).forEach(uid=>{ const nd=all[uid]||{}; const pr=__chatProc[uid]||(__chatProc[uid]={});
       const rq=nd.chatReq; if(rq&&rq.ts&&rq.ts!==pr.req){ pr.req=rq.ts; _cReq(rq.from, rq.targets); _cClear(uid,'chatReq'); }
       const lv=nd.chatLeave; if(lv&&lv.ts&&lv.ts!==pr.leave){ pr.leave=lv.ts; _cLeaveSeat(lv.from); _cDisband(); _cClear(uid,'chatLeave'); }
       const jn=nd.chatJoin; if(jn&&jn.ts&&jn.ts!==pr.join){ pr.join=jn.ts; _cJoinReq(jn.from, jn.chat); _cClear(uid,'chatJoin'); }
-      const rp=nd.chatResp; if(rp&&rp.ts&&rp.ts!==pr.resp){ pr.resp=rp.ts; _cResp(rp.iid, rp.from, rp.agree); _cClear(uid,'chatResp'); } });
+      const rp=nd.chatResp; if(rp&&rp.ts&&rp.ts!==pr.resp){ pr.resp=rp.ts; _cResp(rp.iid, rp.from, rp.agree); _cClear(uid,'chatResp'); }
+      const cc=nd.chatCancel; if(cc&&cc.ts&&cc.ts!==pr.cancel){ pr.cancel=cc.ts; _cCancel(cc.iid, cc.from); _cClear(uid,'chatCancel'); }
+      const ak=nd.chatAck; if(ak&&ak.ts&&ak.ts!==pr.ack){ pr.ack=ak.ts; _cAck(ak.iid, ak.from); _cClear(uid,'chatAck'); } });
     _cTick(); _chatPublish();
     if(!__chatTimer){ __chatTimer=setInterval(function(){ if(role==='st'&&curGid){ _cTick(); _chatPublish(); } else { clearInterval(__chatTimer); __chatTimer=null; } },1000); } }
   window.recomputeChat=recomputeChat;
