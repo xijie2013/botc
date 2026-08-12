@@ -579,6 +579,8 @@
   #chatStack .civ-ok{min-width:120px; background:linear-gradient(180deg,#4aa8ff,#2f74c0); color:#fff;}
   #chatStack .civ-status{font-size:12.5px; color:#bcd0f0; text-align:center; line-height:1.55; margin-bottom:9px;}
   #chatStack .civ-wait{font-size:13px; color:#9fd0b0; font-weight:700;}
+  #chatStack .civ.civ-locked{opacity:.5; filter:saturate(.55); pointer-events:none;}   /* 排队中的邀请：变暗、不可操作，只有最底那张能点 */
+  #chatStack .civ-lock{font-size:12.5px; color:#c9b6e6; font-weight:700; padding:2px 0 1px;}
   #chatStack .civ-bar{height:4px; border-radius:3px; background:rgba(255,255,255,.14); overflow:hidden;}
   #chatStack .civ-bar>i{display:block; height:100%; width:100%; background:linear-gradient(90deg,#4aa8ff,#8ec9ff); transform-origin:left center; animation:civShrink linear forwards;}
   @keyframes civShrink{from{transform:scaleX(1);}to{transform:scaleX(0);}}
@@ -1179,6 +1181,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.44.1', d:'2026-08-12', items:['私聊邀请「忙碌」改为可排队：别人仍可以邀请正有未了结邀请的你（你会收到弹窗），只是要先处理旧的、再处理新的。多个邀请在下方堆叠——旧的在最下、新的在上，只有最下方那张可操作（同意/拒绝/取消/确定），上面的变暗并显示「⌛ 请先处理下方的邀请」，等最下方那张处理完消失后，上一张才变为可操作。（左下角发起图标仍在你有未了结邀请时保持灰色不可发起。）']},
   {v:'v2.44.0', d:'2026-08-12', items:['私聊邀请协商全面改版为「下方常驻弹窗」（不再用上方软提示 banner）：①一个邀请从发出到出结果期间，发起人和所有被邀请人都在屏幕下方看到同一个常驻弹窗，含 20s 倒计时与实时状态。发起人看到自己邀请的每个人是「已接受/已拒绝/待回应」，并有「取消邀请」按钮；被邀请人看到同样的状态，加「同意/拒绝」按钮。②被邀请人点拒绝→其弹窗立即消失（不再持有）；点同意→弹窗保留、显示「你已同意，等待结果…」。只有发起人与已同意者会持有弹窗直到最终结果。③点「取消邀请」：未回应者的弹窗消失，即使已有人同意也不会形成私聊，最终结果对所有持有者显示「X 取消了私聊邀请」。④最终结果（私聊已开始/发起私聊失败/被取消/已加入/加入未通过）出现后，所有仍持有弹窗的人必须点「确定」才关闭。⑤同一时间一个玩家只处理一个私聊请求：有未了结的邀请时，左下角图标灰掉不能发起新的、也不会被别人邀请（避免同时同意多个而打架）。⑥加入申请同理走这套弹窗（需组内全员同意）。⑦通用上方轻提示 banner 停留时间由 2.6s 延长到 7.6s。（本项改动较大、状态机做了 20 项单元测试。）']},
   {v:'v2.43.1', d:'2026-08-12', items:['私聊/座位一组细节：①玩家笔记里把身份标记从座位上拖下来时，虚影只显示该身份标记本身（不再是整张座位+玩家）。②说书人魔典/玩家日志/大厅的标题统一右移 5px。③修复邀请/加入申请倒计时条不断闪回满、不到 20s 就消失：改用固定总时长+负动画延迟，每秒重渲染时进度条从当前进度接续、能走满 20s。④座位圈上的退出/加入按钮从座位圈中心移到外侧弧线上（圆心落在色带外弧），不再遮挡座位标记。⑤点退出/加入按钮改为两段确认（先变金色「确认」，再点一次才生效），避免误触。']},
   {v:'v2.43.0', d:'2026-08-12', items:['私聊分组改版：①删除玩家笔记页里的「邀请玩家进入私聊/退出私聊」按钮，改为屏幕左下角一个「三小人+加号」图标发起——夜晚灰色不可点、白天可点；点图标进入选人态（图标高亮+人数角标），点座位选人，再点图标发送邀请。②邀请/加入申请倒计时由 10 秒延长到 20 秒。③私聊形成后，在座位圈中「该组第一、二个成员座位之间」的空档放一个按钮（不再在整圈中心）：组内成员看到「退出」（点=退出该私聊），组外玩家看到「加入」（点=发出加入申请，需组内所有现有成员都同意才进组，任一拒绝/超时则失败）。组内玩家想再拉人仍用左下角图标选人邀请。④整套私聊仅白天可用，夜晚整体冻结（图标灰、座位圈按钮不显示、邀请/申请弹窗不弹出）；说书人「结束本夜→白天」解冻、「结束本日→夜晚」及开局/重置角色为冻结。']},
@@ -4133,16 +4136,16 @@ load(); render();
   window.isChatDay=isChatDay;
   function _invMyResp(v,seat){ return (window.__chatMyResp[v.iid]!=null)?window.__chatMyResp[v.iid]:(v.resp&&v.resp[seat]); }
   function _invMyAcked(v,seat){ return !!(window.__chatAcked[v.iid] || (v.ack&&v.ack[seat])); }
-  /* 我当前需要处理的私聊邀请：涉及我(发起/被邀)且我尚未了结的最早一个。一次只处理一个。 */
-  function _myChatInv(){ const seat=myVoteSeat(); if(seat<0) return null; const inv=(pub&&pub.chatInv)||{};
-    const mine=Object.keys(inv).map(iid=>Object.assign({iid:iid},inv[iid])).filter(v=>{
+  /* 所有涉及我(发起/被邀)且我尚未了结的私聊邀请，按时间升序(旧→新)。可同时收到多个(别人仍能邀正忙的我)，堆叠显示、只处理最早的。 */
+  function _myChatInvList(){ const seat=myVoteSeat(); if(seat<0) return []; const inv=(pub&&pub.chatInv)||{};
+    return Object.keys(inv).map(iid=>Object.assign({iid:iid},inv[iid])).filter(v=>{
       const involved=(v.from===seat)||(v.targets&&v.targets.indexOf(seat)>=0); if(!involved) return false;
       const mr=_invMyResp(v,seat);
       if(v.phase==='resolved'){ const holder=(v.from===seat)||(v.targets.indexOf(seat)>=0 && mr!==0); return holder && !_invMyAcked(v,seat); }
       if(v.from===seat) return true;   // 发起人 pending 一直持有
       return mr!==0;   // 被邀请人：只要没拒绝(同意/未答)就一直持有
-    }).sort((a,b)=>(a.ts||0)-(b.ts||0));
-    return mine[0]||null; }
+    }).sort((a,b)=>(a.ts||0)-(b.ts||0)); }
+  function _myChatInv(){ return _myChatInvList()[0]||null; }   // 最早的一个=当前可操作的；有任意未了结即视为「忙」(左下角图标灰)
   window._chatFabTap=function(){ if(role!=='player'||myVoteSeat()<0) return;
     if(!isChatDay()){ try{toast('夜晚不能发起私聊');}catch(e){} return; }
     if(_myChatInv()&&!_chatSelMode){ try{toast('请先处理当前的私聊邀请');}catch(e){} return; }   // 有未了结邀请→不能发起新的
@@ -4183,32 +4186,35 @@ load(); render();
   /* ---- 玩家端：底部常驻私聊弹窗（一次一个，含实时状态 + 20s 倒计时；发起人取消 / 被邀请人同意·拒绝 / 最终结果需点确定）---- */
   function _cvStatusLine(v,seat){ return v.targets.map(function(t){ const r=(t===seat)?_invMyResp(v,seat):(v.resp&&v.resp[t]);
     return _nbEsc(pname(t))+'：'+(r===1?'已接受':r===0?'已拒绝':'待回应'); }).join('　'); }
+  function _renderCiv(v,seat,active){ const isInviter=(v.from===seat), mr=_invMyResp(v,seat); let html='<div class="civ'+(active?'':' civ-locked')+'">';
+    if(v.phase==='resolved'){
+      html+='<div class="civ-t">'+_nbEsc((v.result&&v.result.text)||'私聊邀请已结束')+'</div>';
+      html+=active?('<div class="civ-btns"><button class="civ-ok" onclick="_chatAck(\''+v.iid+'\')">确定</button></div>'):'<div class="civ-lock">⌛ 请先处理下方的邀请</div>';
+    } else {
+      let head;
+      if(v.kind==='join'){ head=isInviter?'你申请加入私聊（需组内全员同意）':(_nbEsc(pname(v.from))+' 申请加入你们的私聊'); }
+      else if(isInviter){ head='你向 '+v.targets.map(function(t){return _nbEsc(pname(t));}).join('、')+' 发起私聊邀请'; }
+      else { const others=v.targets.filter(function(t){return t!==seat;}).map(function(t){return _nbEsc(pname(t));}); head=_nbEsc(pname(v.from))+' 向你'+(others.length?'和 '+others.join('、'):'')+' 发出私聊邀请'; }
+      html+='<div class="civ-t">'+head+'</div><div class="civ-status">'+_cvStatusLine(v,seat)+'</div>';
+      if(active){ html+='<div class="civ-btns">';
+        if(isInviter){ html+='<button class="civ-no" onclick="_chatCancel(\''+v.iid+'\')">取消邀请</button>'; }
+        else if(mr===1){ html+='<span class="civ-wait">你已同意，等待结果…</span>'; }
+        else { html+='<button class="civ-yes" onclick="_chatRespond(\''+v.iid+'\',1)">同意</button><button class="civ-no" onclick="_chatRespond(\''+v.iid+'\',0)">拒绝</button>'; }
+        html+='</div>';
+      } else { html+='<div class="civ-lock">⌛ 请先处理下方的邀请</div>'; }
+      const total=Math.max(1,(v.deadline||0)-(v.ts||0)), elapsed=Math.max(0,Date.now()-(v.ts||0));   // 固定总时长+负延迟：重渲染时进度条接续、走满 20s
+      html+='<div class="civ-bar"><i style="animation-duration:'+total+'ms;animation-delay:-'+elapsed+'ms"></i></div>';
+    }
+    return html+'</div>'; }
   function updateChatInv(){ const stack=document.getElementById('chatStack'); if(!stack) return;
     const seat=myVoteSeat();
     if(role!=='player'||seat<0||!isChatDay()){ stack.innerHTML=''; clearTimeout(window.__chatInvT); return; }   // 夜晚冻结
     const inv=(pub&&pub.chatInv)||{};   // 清掉已消失邀请的本地乐观态
     Object.keys(window.__chatMyResp).forEach(function(iid){ if(!inv[iid]) delete window.__chatMyResp[iid]; });
     Object.keys(window.__chatAcked).forEach(function(iid){ if(!inv[iid]) delete window.__chatAcked[iid]; });
-    const v=_myChatInv();
-    if(!v){ stack.innerHTML=''; clearTimeout(window.__chatInvT); return; }
-    const isInviter=(v.from===seat), mr=_invMyResp(v,seat); let html='<div class="civ">';
-    if(v.phase==='resolved'){
-      html+='<div class="civ-t">'+_nbEsc((v.result&&v.result.text)||'私聊邀请已结束')+'</div>'
-        +'<div class="civ-btns"><button class="civ-ok" onclick="_chatAck(\''+v.iid+'\')">确定</button></div>';
-    } else {
-      let head;
-      if(v.kind==='join'){ head=isInviter?'你申请加入私聊（需组内全员同意）':(_nbEsc(pname(v.from))+' 申请加入你们的私聊'); }
-      else if(isInviter){ head='你向 '+v.targets.map(function(t){return _nbEsc(pname(t));}).join('、')+' 发起私聊邀请'; }
-      else { const others=v.targets.filter(function(t){return t!==seat;}).map(function(t){return _nbEsc(pname(t));}); head=_nbEsc(pname(v.from))+' 向你'+(others.length?'和 '+others.join('、'):'')+' 发出私聊邀请'; }
-      html+='<div class="civ-t">'+head+'</div><div class="civ-status">'+_cvStatusLine(v,seat)+'</div><div class="civ-btns">';
-      if(isInviter){ html+='<button class="civ-no" onclick="_chatCancel(\''+v.iid+'\')">取消邀请</button>'; }
-      else if(mr===1){ html+='<span class="civ-wait">你已同意，等待结果…</span>'; }
-      else { html+='<button class="civ-yes" onclick="_chatRespond(\''+v.iid+'\',1)">同意</button><button class="civ-no" onclick="_chatRespond(\''+v.iid+'\',0)">拒绝</button>'; }
-      html+='</div>';
-      const total=Math.max(1,(v.deadline||0)-(v.ts||0)), elapsed=Math.max(0,Date.now()-(v.ts||0));   // 固定总时长+负延迟：重渲染时进度条接续、走满 20s
-      html+='<div class="civ-bar"><i style="animation-duration:'+total+'ms;animation-delay:-'+elapsed+'ms"></i></div>';
-    }
-    html+='</div>'; stack.innerHTML=html;
+    const list=_myChatInvList();
+    if(!list.length){ stack.innerHTML=''; clearTimeout(window.__chatInvT); return; }
+    stack.innerHTML=list.map(function(v,i){ return _renderCiv(v,seat,i===0); }).join('');   // 只有最早的(i===0，容器 column-reverse→贴最底)可操作，其余锁定「请先处理下方的邀请」
     clearTimeout(window.__chatInvT); window.__chatInvT=setTimeout(updateChatInv,1000); }
   window.updateChatInv=updateChatInv;
   function chatNotices(){ if(role!=='player') return; const seat=myVoteSeat(); if(seat<0) return;
@@ -4235,16 +4241,14 @@ load(); render();
     return false; }
   function _cHolders(v){ const h=[v.from]; v.targets.forEach(s=>{ if(v.resp[s]!==0 && h.indexOf(s)<0) h.push(s); }); return h; }   // 结算后仍持有弹窗、需点确定的人=发起人+未拒绝者
   function _cReq(from,targets){ if(from==null||from<0||_cBusy(from)) return; targets=(targets||[]).filter(s=>s!==from&&s>=0);
-    const fc=_cChatOf(from); targets=targets.filter(s=> !(fc&&_cChatOf(s)===fc)); targets=targets.filter(s=> !_cBusy(s));   // 同组的/正忙的不邀请
+    const fc=_cChatOf(from); targets=targets.filter(s=> !(fc&&_cChatOf(s)===fc));   // 同组的不邀请（不再过滤正忙者：别人仍可邀请正忙的我，我按队列先旧后新地处理）
     if(!targets.length) return;
     const now=Date.now(), iid='i'+(++__chat.iseq); __chat.inv[iid]={from:from,targets:targets,chat:fc,kind:'invite',ts:now,deadline:now+20000,resp:{},phase:'pending'};
     if(fc){ __chat.chats[fc].members.forEach(s=>{ if(s!==from && targets.indexOf(s)<0) _cNote(s,_cName(from)+' 邀请 '+targets.map(t=>_cName(t)).join('、')+' 进入当前私聊'); }); } }
   /* 加入申请：私聊外的 from 申请进 cid，需组内所有现有成员都同意 */
   function _cJoinReq(from,cid){ if(from==null||from<0||_cBusy(from)) return; const c=__chat.chats[cid]; if(!c) return; if(c.members.indexOf(from)>=0) return;
-    const targets=c.members.slice(); if(!targets.length) return;
-    const now=Date.now(), iid='i'+(++__chat.iseq);
-    if(targets.some(s=>_cBusy(s))){ __chat.inv[iid]={from:from,targets:[],chat:cid,kind:'join',ts:now,deadline:now,resp:{},phase:'resolved',result:{ok:false,text:'对方正在处理其他私聊，请稍后再申请'},ack:{},ackDeadline:now+30000}; return; }
-    __chat.inv[iid]={from:from,targets:targets,chat:cid,kind:'join',ts:now,deadline:now+20000,resp:{},phase:'pending'}; }
+    const targets=c.members.slice(); if(!targets.length) return;   // 正忙的成员也照发（他按队列处理），不再直接拒
+    const now=Date.now(), iid='i'+(++__chat.iseq); __chat.inv[iid]={from:from,targets:targets,chat:cid,kind:'join',ts:now,deadline:now+20000,resp:{},phase:'pending'}; }
   function _cResp(iid,from,agree){ const v=__chat.inv[iid]; if(!v||v.phase==='resolved') return; if(v.targets.indexOf(from)<0) return; v.resp[from]=agree?1:0; }
   function _cCancel(iid,from){ const v=__chat.inv[iid]; if(!v||v.phase==='resolved') return; if(v.from!==from) return; v.canceled=true; _cResolve(iid); }
   function _cAck(iid,seat){ const v=__chat.inv[iid]; if(!v) return; if(!v.ack) v.ack={}; v.ack[seat]=1; }
