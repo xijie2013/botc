@@ -1181,6 +1181,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.45.0', d:'2026-08-12', items:['说书人魔典的座位圈现在也同步显示私聊分组：和玩家端一样，把私聊成员的座位聚拢到一起、用该组颜色的弧形色带圈出，分组变化时实时更新。说书人只做「显示」——不出现加入/退出按钮和发起图标（说书人不参与私聊）。']},
   {v:'v2.44.2', d:'2026-08-12', items:['加入现存私聊未通过时，结果弹窗显示是「谁 拒绝了 谁 的加入申请」——申请人以及该私聊里其他仍持有弹窗的成员都能看到（此前只笼统显示「加入申请未通过」）。加入成功也改为显示「X 加入了私聊」，组员看得更清楚。（若无人明确拒绝、只是超时，显示「X 的加入申请未通过（有人未及时回应）」。）']},
   {v:'v2.44.1', d:'2026-08-12', items:['私聊邀请「忙碌」改为可排队：别人仍可以邀请正有未了结邀请的你（你会收到弹窗），只是要先处理旧的、再处理新的。多个邀请在下方堆叠——旧的在最下、新的在上，只有最下方那张可操作（同意/拒绝/取消/确定），上面的变暗并显示「⌛ 请先处理下方的邀请」，等最下方那张处理完消失后，上一张才变为可操作。（左下角发起图标仍在你有未了结邀请时保持灰色不可发起。）']},
   {v:'v2.44.0', d:'2026-08-12', items:['私聊邀请协商全面改版为「下方常驻弹窗」（不再用上方软提示 banner）：①一个邀请从发出到出结果期间，发起人和所有被邀请人都在屏幕下方看到同一个常驻弹窗，含 20s 倒计时与实时状态。发起人看到自己邀请的每个人是「已接受/已拒绝/待回应」，并有「取消邀请」按钮；被邀请人看到同样的状态，加「同意/拒绝」按钮。②被邀请人点拒绝→其弹窗立即消失（不再持有）；点同意→弹窗保留、显示「你已同意，等待结果…」。只有发起人与已同意者会持有弹窗直到最终结果。③点「取消邀请」：未回应者的弹窗消失，即使已有人同意也不会形成私聊，最终结果对所有持有者显示「X 取消了私聊邀请」。④最终结果（私聊已开始/发起私聊失败/被取消/已加入/加入未通过）出现后，所有仍持有弹窗的人必须点「确定」才关闭。⑤同一时间一个玩家只处理一个私聊请求：有未了结的邀请时，左下角图标灰掉不能发起新的、也不会被别人邀请（避免同时同意多个而打架）。⑥加入申请同理走这套弹窗（需组内全员同意）。⑦通用上方轻提示 banner 停留时间由 2.6s 延长到 7.6s。（本项改动较大、状态机做了 20 项单元测试。）']},
@@ -2894,7 +2895,10 @@ function renderSeats(){
   if(window.BOTC_VIEWER) return;
   const zone=document.getElementById("tableZone");
   [...zone.querySelectorAll(".seat")].forEach(e=>e.remove());
+  [...zone.querySelectorAll(".chat-band-svg")].forEach(e=>e.remove());   // 清掉上一次的私聊分组色带（只清 .seat 会导致色带叠加）
   seatPos=[];
+  /* 私聊分组：把座位圈按玩家端同样的规则重排（成员聚拢到发起人）并画分组色带，说书人魔典与玩家端同步 */
+  let _chPosOf={}; try{ if(window.chatOrder&&window.pubChats){ window.chatOrder(N, window.pubChats()).forEach((o,k)=>{ _chPosOf[o.seat]=k; }); } }catch(e){}
   const stage=document.getElementById("stage");
   const SW=stage.clientWidth, SH=stage.clientHeight;
   const zoneLeft=0.40*SW, zoneTop=0.08*SH;
@@ -2903,7 +2907,7 @@ function renderSeats(){
   const seatD=Math.max(R*0.26, Math.min(R*0.78, R*3.8/N));
   const numD=seatD*0.368, numF=numD*0.6, nmF=seatD*0.24, rF=seatD*0.17;   /* v2.42.5 去掉字号下限，座位名字/身份字号纯按 seatD 等比（人数变→座位缩放，文字同比缩放，放大后与少人座一致） */   /* 座号徽标直径较原 0.46 缩小 20%（字号 numF 随 numD 联动同缩），圆心不动、少挡名字 */
   for(let i=0;i<N;i++){
-    const ang=-Math.PI/2+i*2*Math.PI/N;
+    const _k=(_chPosOf[i]!=null?_chPosOf[i]:i), ang=-Math.PI/2+_k*2*Math.PI/N;   // 有私聊分组时按显示位 k 排布
     const x=cx+R*Math.cos(ang), y=cy+R*Math.sin(ang);
     const s=document.createElement("div"); s.className="seat";
     s.style.left=x+"px"; s.style.top=y+"px"; s.style.width=seatD+"px"; s.style.height=seatD+"px"; s.dataset.seat=i;
@@ -2951,6 +2955,7 @@ function renderSeats(){
     }
     zone.appendChild(s);
   }
+  try{ if(window._chatDrawBands) window._chatDrawBands(zone,cx,cy,R,seatD/2,N,_chPosOf); }catch(e){}   // 说书人魔典座位圈：画私聊分组色带（与玩家端同步）
 }
 function showHover(i){
   if(view!=="grim") return;
@@ -3853,6 +3858,7 @@ load(); render();
       updateVoteBar();
       try{ updateSlayerGun(); }catch(e){}   // 开局/结束/换天 → 更新猎手十字弩显隐
       try{ if(role==='player'){ updateChatInv(); chatNotices(); updateChatFab(); } }catch(e){}   // 私聊：邀请弹窗 + 通知
+      try{ if(role==='st'&&mode==='st'){ const csig=JSON.stringify((pub&&pub.chats)||null); if(csig!==window.__stChatSig){ window.__stChatSig=csig; if(typeof renderSeats==='function') renderSeats(); } } }catch(e){}   // 说书人魔典：私聊分组变化时重排座位圈+重画色带（与玩家端同步）
       if(mode!=='st') renderView(); }); }
   /* 说书人：满足胜负时自动公布（只传结果，不泄露角色；去重避免重复写） */
   let _lastResultSig=null;
@@ -4101,6 +4107,7 @@ load(); render();
       if(s===c.anchor) c.members.slice().sort((a,b)=>a-b).forEach(m=>out.push({seat:m,cc:c})); }
     return out; }
   function pubChats(){ const o=(pub&&pub.chats)||{}; return Object.keys(o).map(k=>({id:k,members:(o[k].members||[]).slice(),anchor:o[k].anchor,color:o[k].color||0})); }
+  window.chatOrder=chatOrder; window.pubChats=pubChats;   // 暴露给 script3 的说书人魔典座位圈同步分组
   function myChat(){ const seat=myVoteSeat(); if(seat<0) return null; return pubChats().find(c=>c.members.indexOf(seat)>=0)||null; }
   function chatBand(cx,cy,R,k0,k1,N,rI,rO,pad){ const A0=-Math.PI/2+k0*2*Math.PI/N-pad, A1=-Math.PI/2+k1*2*Math.PI/N+pad;   // 弧形色带：内外圈同心弧 + 两端半圆弧包裹端座（不用直线切口）
     const P=(r,a)=>[cx+r*Math.cos(a),cy+r*Math.sin(a)]; const lg=(A1-A0)>Math.PI?1:0; const rc=(rO-rI)/2;   // rc=端帽半圆半径=径向厚度一半（内外圈关于座圈R对称，故半圆恰好圆心落在座圈上、包住端座）
@@ -4109,7 +4116,7 @@ load(); render();
   // 座位圈里追加分组色带（供 drawSeats 调用）；posOf: seat->显示位k
   window._chatDrawBands=function(zone,cx,cy,R,seatR,N,posOf){ const chats=pubChats(); if(!chats.length) return;
     const pad=Math.PI/N*0.05, rI=Math.max(seatR*1.05,R-seatR*1.11), rO=R+seatR*1.11;   // 紧贴座位：径向只留 ≈座径*0.11(~10px) 的缝、两端角度 pad 极小，将将裹住端座
-    let svg='<svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:visible">';
+    let svg='<svg class="chat-band-svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:visible">';
     chats.forEach(c=>{ const ks=c.members.map(m=>posOf[m]).filter(k=>k!=null).sort((a,b)=>a-b); if(!ks.length) return;
       const d=chatBand(cx,cy,R,ks[0],ks[ks.length-1],N,rI,rO,pad);
       svg+='<path d="'+d+'" fill="'+chatCol(c.color,0.13)+'" stroke="'+chatCol(c.color,0.95)+'" stroke-width="2.5" stroke-linejoin="round"/>'; });
