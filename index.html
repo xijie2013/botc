@@ -558,6 +558,27 @@
   .nb-clearall{display:block; width:100%; margin:16px 0 6px; padding:8px 10px; font-size:calc(1 * var(--sw) / 100); font-weight:800;
     border-radius:8px; cursor:pointer; border:1px solid rgba(122,83,32,.55); background:rgba(255,250,235,.7); color:#6b4a1e; user-select:none;}
   .nb-clearall.confirm{background:rgba(184,134,11,.32); color:#5a3d16; border-color:rgba(122,83,32,.8);}
+  /* 私聊分组按钮 */
+  .nb-chatbtn{display:block; width:100%; margin:6px 0; padding:8px 10px; font-size:calc(1 * var(--sw) / 100); font-weight:800;
+    border-radius:8px; cursor:pointer; border:1px solid rgba(74,43,107,.5); background:rgba(240,236,245,.75); color:#43286b; user-select:none;}
+  .nb-chatbtn.on{background:rgba(74,168,255,.22); color:#1b3f6b; border-color:rgba(74,168,255,.75);}
+  .nb-exitbtn{display:block; width:100%; margin:6px 0; padding:8px 10px; font-size:calc(1 * var(--sw) / 100); font-weight:800;
+    border-radius:8px; cursor:pointer; border:1px solid rgba(176,64,46,.5); background:rgba(255,240,238,.75); color:#8a2f22; user-select:none;}
+  /* 私聊：座位选中高亮 */
+  .seat.chatsel{outline:3px solid rgba(74,168,255,.9); outline-offset:2px; box-shadow:0 0 12px rgba(74,168,255,.7);}
+  /* 私聊：底部堆叠邀请弹窗 */
+  #chatStack{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:123; display:flex; flex-direction:column-reverse; gap:10px; align-items:center; pointer-events:none;}
+  #chatStack .civ{width:350px; max-width:94vw; box-sizing:border-box; pointer-events:auto; background:linear-gradient(180deg,rgba(30,20,44,.98),rgba(20,13,30,.98));
+    border:1.4px solid rgba(74,168,255,.55); border-radius:14px; padding:13px 16px 11px; box-shadow:0 10px 34px rgba(0,0,0,.5);}
+  #chatStack .civ-t{font-size:14px; font-weight:700; color:#dbe8ff; line-height:1.5; margin-bottom:10px; text-align:center;}
+  #chatStack .civ-btns{display:flex; gap:10px; justify-content:center; margin-bottom:9px;}
+  #chatStack .civ-yes,#chatStack .civ-no{min-width:96px; padding:8px 0; border-radius:11px; font-size:14px; font-weight:800; cursor:pointer; border:none;}
+  #chatStack .civ-yes{background:linear-gradient(180deg,#4aa86a,#367a4f); color:#eafff0;}
+  #chatStack .civ-no{background:linear-gradient(180deg,#b0483c,#7a3029); color:#ffeae7;}
+  #chatStack .civ-bar{height:4px; border-radius:3px; background:rgba(255,255,255,.14); overflow:hidden;}
+  #chatStack .civ-bar>i{display:block; height:100%; width:100%; background:linear-gradient(90deg,#4aa8ff,#8ec9ff); transform-origin:left center; animation:civShrink linear forwards;}
+  @keyframes civShrink{from{transform:scaleX(1);}to{transform:scaleX(0);}}
+  @media (max-width:720px){ #chatStack{bottom:6px;} #chatStack .civ{padding:11px 13px 9px;} #chatStack .civ-t{font-size:12.5px; margin-bottom:8px;} }
   .nb-note{padding:4px 2px; border-bottom:1px solid rgba(122,83,32,.14); line-height:1.35;}
   .nb-nom{border:1px solid rgba(74,43,107,.22); border-radius:8px; padding:6px 8px; margin:6px 0; background:rgba(255,252,244,.6);}
   .nb-nomhead{font-weight:700; color:#6b4a1e;}
@@ -926,6 +947,7 @@
     <!-- 猎手十字弩（拖到座位开枪） -->
     <div id="slayerGun" title="把十字弩拖到目标座位开枪" style="display:none"><img src="assets/mk-crossbow.png" alt="" draggable="false"></div>
     <div id="slayerResult"></div>
+    <div id="chatStack"></div>
     <div id="winIcon"></div>
     <video id="execVideo" playsinline preload="auto"></video>
   </div>
@@ -1130,6 +1152,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.42.0', d:'2026-08-12', items:['新增「私聊分组」：玩家可在「玩家笔记 · 标记」页底部点「邀请玩家进入私聊」，进入选人态后点座位选人、再点「确认邀请」发出邀请。被邀请者收到底部弹窗「X 邀请你与 A、B 一起进入私聊」，可同意/拒绝，10 秒倒计时（超时=拒绝）。全部同意即组队；部分拒绝会给发起人「(X 拒绝了你)」提示、其余同意者仍组队。组队后座位圈会把成员拉到发起人身边聚拢、用该组颜色的细描边+淡填充弧形色带圈出（非成员留在原环序=大厅）。组内成员多一个「退出私聊」按钮；组内剩 ≤1 人自动解散。任何人可随时邀请任何人或被邀请，一人同一时刻只在一个私聊里；组内人再邀请=拉进当前私聊（并通知其他成员），大厅人邀请=新建私聊。分组全场公开、说书人魔典也会显示。（说书人跑状态机中转，玩家只写自己节点 chatReq/chatResp/chatLeave，无需改数据库规则。）']},
   {v:'v2.41.37', d:'2026-08-12', items:['修复：进入「说书人日志」页时，上方的「角色设置/夜晚/白天」三个标签和底部的「第X夜/随机发牌/重置角色」栏没有被隐藏（日志只是汇总记录，不该有这些操作标签）。根因：隐藏逻辑用 `document.querySelector(\'.grimoire\')` 取魔典面板，但后来新增的「间谍魔典」也用了 `.grimoire` 类且在 DOM 里更靠前，于是 `logview` 隐藏类被错加到了间谍魔典上、说书人魔典拿不到。改为精确选 `.grimoire.grim-only`（说书人魔典专属类），日志页正确隐藏标签栏与底栏，只显示记录。']},
   {v:'v2.41.36', d:'2026-08-11', items:['清理死代码 + 精简两处提示：①删除 16 个从未被调用的函数/常量（HAND_SVG 未用的举手SVG、exportPlayerNotes、ghostUsedAnywhere、impSuccessorOptions、inPlayRoles、poolEl、scheduleRouletteOut、seatEvil、setDrunk、setListMode、slayerUndo 及其专用的 _clearSlayerPubFromAll、toggleDead/togglePoison/toggleDrunk、旧固定说书人账号 ST_EMAIL）——多为历次重构后遗留、无任何入口触发。②删除对应的死 CSS：座位旧「状态按钮」`.stbtn/.stbtns`、旧状态角标容器 `.seat .st`、以及从不渲染的 `.votehand`。③死因表 CAUSE 精简为只留 img（此前的 t 文本与 emoji 图标 ⚖️/🩸/🎯 字段从未被读取）。④「已开始新的一局」toast 去掉 ✅。⑤「结束本夜 · 天亮了，钟表开始走时」精简为「天亮了」。（纯清理，无功能变化。）']},
   {v:'v2.41.35', d:'2026-08-11', items:['①删除猎手请求 toast 里的 🎯 图标（「猎手请求开枪，请到白天面板确认」）。②所有底部弹窗宽度统一固定 350px：此前只有夜晚信息条/猎手请求条/红唇接任条是 350px，现在把投票条(#voteBar)与猎手开枪结果条(#slayerResult)也改为固定 350px（内部下拉仍固定 120px）。③删除未使用的顶部胜负横幅 #winBanner（一直是空 div、无任何 JS 写入，从不显示；胜负已由结算动画与笔记/魔典里的横幅呈现）。']},
@@ -3685,17 +3708,18 @@ load(); render();
   window._stClearPlayerNotes=function(){ if(role!=='st'||!curGid) return;
     db.ref('games/'+curGid+'/players').once('value').then(s=>{ const v=s.val()||{}; const up={};
       Object.keys(v).forEach(uid=>{ const b='games/'+curGid+'/players/'+uid+'/';
-        up[b+'gameInfo']=null; up[b+'seats']=null; up[b+'crossed']=null; up[b+'night']=null; up[b+'nightReply']=null; up[b+'spyGrim']=null; up[b+'slayerReq']=null; up[b+'slayerResult']=null; up[b+'slayerArmed']=null; });
+        up[b+'gameInfo']=null; up[b+'seats']=null; up[b+'crossed']=null; up[b+'night']=null; up[b+'nightReply']=null; up[b+'spyGrim']=null; up[b+'slayerReq']=null; up[b+'slayerResult']=null; up[b+'slayerArmed']=null; up[b+'chatReq']=null; up[b+'chatResp']=null; up[b+'chatLeave']=null; });
       if(Object.keys(up).length) db.ref().update(up).catch(()=>{});
-    }).catch(()=>{}); };
+    }).catch(()=>{}); try{ _chatReset(); }catch(e){} };
   /* 说书人重置角色：把公开状态（座位死亡/死因、胜负横幅、提名、处决/击杀动画、举手、指针）一并清零，让大厅与玩家笔记同步复位 */
   window._stResetPublic=function(){ if(role!=='st'||!curGid) return;
     try{ _lastResultSig=null; }catch(e){}
     try{ const p=(typeof buildPublic==='function')?buildPublic():null;
       const upd={ result:null, vote:null, exec:null, clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null} };
       if(p){ upd.seats=p.seats; upd.noms=(p.noms&&p.noms.length)?p.noms:null; upd.day=p.day; upd.count=p.count; }
+      upd.chats=null; upd.chatInv=null; upd.chatNote=null;   // 私聊分组一并清零
       db.ref('games/'+curGid+'/public').update(upd).catch(()=>{});
-    }catch(e){} };
+    }catch(e){} try{ _chatReset(); }catch(e){} };
 
   /* ===== 说书人：旧局记录（对局列表 / 统计 / 积分榜） ===== */
   let _histOn=false, _histTabCur='list';
@@ -3784,6 +3808,7 @@ load(); render();
       if(role==='st'&&stPlayersRef){ stPlayersRef.once('value').then(ss=>recomputeHands(ss.val())).catch(()=>{}); }
       updateVoteBar();
       try{ updateSlayerGun(); }catch(e){}   // 开局/结束/换天 → 更新猎手十字弩显隐
+      try{ if(role==='player'){ updateChatInv(); chatNotices(); } }catch(e){}   // 私聊：邀请弹窗 + 通知
       if(mode!=='st') renderView(); }); }
   /* 说书人：满足胜负时自动公布（只传结果，不泄露角色；去重避免重复写） */
   let _lastResultSig=null;
@@ -4022,11 +4047,119 @@ load(); render();
   /* 说书人：发布“猎人射杀恶魔”动画事件（成功命中时，即便红唇女郎继任也播放） */
   window._pubSlayer=function(){ if(role!=='st'||!curGid) return;
     db.ref('games/'+curGid+'/public/exec').set({kind:'slayer', full:true, ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); };
+  /* ===================== 私聊分组系统（v2.42.0）=====================
+     仅分组(无文字)、全场公开。玩家写自己节点 chatReq/chatResp/chatLeave；说书人跑状态机、发布 public/chats,chatInv,chatNote；所有人渲染。*/
+  const CHAT_RGB=['74,168,255','255,90,74','87,194,106','224,182,74','192,122,223'];
+  function chatCol(idx,a){ return 'rgba('+CHAT_RGB[((idx%5)+5)%5]+','+a+')'; }
+  function chatOrder(N, chats){ const map={}; (chats||[]).forEach(c=>c.members.forEach(m=>{map[m]=c;}));   // 成员段落锚定 anchor 原位、段内按座位号升序、非成员保持环序
+    const out=[]; for(let s=0;s<N;s++){ const c=map[s];
+      if(!c){ out.push({seat:s,cc:null}); continue; }
+      if(s===c.anchor) c.members.slice().sort((a,b)=>a-b).forEach(m=>out.push({seat:m,cc:c})); }
+    return out; }
+  function pubChats(){ const o=(pub&&pub.chats)||{}; return Object.keys(o).map(k=>({id:k,members:(o[k].members||[]).slice(),anchor:o[k].anchor,color:o[k].color||0})); }
+  function myChat(){ const seat=myVoteSeat(); if(seat<0) return null; return pubChats().find(c=>c.members.indexOf(seat)>=0)||null; }
+  function chatBand(cx,cy,R,k0,k1,N,rI,rO,pad){ const A0=-Math.PI/2+k0*2*Math.PI/N-pad, A1=-Math.PI/2+k1*2*Math.PI/N+pad;   // 弧形色带 annular sector
+    const P=(r,a)=>[cx+r*Math.cos(a),cy+r*Math.sin(a)]; const lg=(A1-A0)>Math.PI?1:0;
+    const o0=P(rO,A0),o1=P(rO,A1),i1=P(rI,A1),i0=P(rI,A0);
+    return 'M '+o0[0]+','+o0[1]+' A '+rO+','+rO+' 0 '+lg+',1 '+o1[0]+','+o1[1]+' L '+i1[0]+','+i1[1]+' A '+rI+','+rI+' 0 '+lg+',0 '+i0[0]+','+i0[1]+' Z'; }
+  // 座位圈里追加分组色带（供 drawSeats 调用）；posOf: seat->显示位k
+  window._chatDrawBands=function(zone,cx,cy,R,seatR,N,posOf){ const chats=pubChats(); if(!chats.length) return;
+    const pad=Math.PI/N*0.66, rI=Math.max(seatR*1.2,R-(seatR+seatR*0.28)), rO=R+(seatR+seatR*0.28);
+    let svg='<svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:visible">';
+    chats.forEach(c=>{ const ks=c.members.map(m=>posOf[m]).filter(k=>k!=null).sort((a,b)=>a-b); if(!ks.length) return;
+      const d=chatBand(cx,cy,R,ks[0],ks[ks.length-1],N,rI,rO,pad);
+      svg+='<path d="'+d+'" fill="'+chatCol(c.color,0.13)+'" stroke="'+chatCol(c.color,0.95)+'" stroke-width="2.5" stroke-linejoin="round"/>'; });
+    svg+='</svg>'; zone.insertAdjacentHTML('afterbegin',svg); };
+
+  /* ---- 玩家端：邀请/回应/退出 ---- */
+  window._chatSelMode=false; window._chatSel=null;
+  window._chatToggleInvite=function(){ if(role!=='player'||myVoteSeat()<0) return;
+    if(!_chatSelMode){ _chatSelMode=true; _chatSel=new Set(); _chatUpdBtn(); drawSeats(); return; }
+    const seats=_chatSel?[..._chatSel]:[]; _chatSelMode=false; const from=myVoteSeat();
+    if(seats.length && from>=0 && notesRef){ try{ notesRef.child('chatReq').set({from:from,targets:seats,ts:Date.now()}).catch(function(){}); }catch(e){} try{toast('已发出邀请，等待对方回应…');}catch(e){} }
+    _chatSel=new Set(); _chatUpdBtn(); drawSeats(); };
+  window._chatSeatPick=function(i){ if(!_chatSelMode) return false; if(i===myVoteSeat()) return true;
+    if(!_chatSel) _chatSel=new Set(); if(_chatSel.has(i)) _chatSel.delete(i); else _chatSel.add(i); _chatUpdBtn(); drawSeats(); return true; };
+  function _chatUpdBtn(){ const b=document.getElementById('chatInvBtn'); if(!b) return;
+    b.textContent=_chatSelMode?('确认邀请'+(_chatSel&&_chatSel.size?'（'+_chatSel.size+'人）':'（点座位选人）')):'邀请玩家进入私聊';
+    b.classList.toggle('on',!!_chatSelMode); }
+  window._chatRespond=function(iid,agree){ const from=myVoteSeat(); if(from<0||!notesRef) return;
+    try{ notesRef.child('chatResp').set({iid:iid,from:from,agree:agree?1:0,ts:Date.now()}).catch(function(){}); }catch(e){}
+    window.__chatDone=window.__chatDone||{}; window.__chatDone[iid]=1; updateChatInv(); };
+  window._chatLeave=function(){ const from=myVoteSeat(); if(from<0||!notesRef) return;
+    try{ notesRef.child('chatLeave').set({from:from,ts:Date.now()}).catch(function(){}); }catch(e){} try{toast('已退出私聊');}catch(e){} };
+
+  /* ---- 玩家端：底部堆叠邀请弹窗 + 10 秒倒计时 ---- */
+  function updateChatInv(){ const stack=document.getElementById('chatStack'); if(!stack) return;
+    const seat=myVoteSeat(); const inv=(pub&&pub.chatInv)||{};
+    if(role!=='player'||seat<0){ stack.innerHTML=''; return; }
+    window.__chatDone=window.__chatDone||{};
+    const list=Object.keys(inv).map(iid=>Object.assign({iid:iid},inv[iid]))
+      .filter(v=> v.targets&&v.targets.indexOf(seat)>=0 && !(v.resp&&v.resp[seat]!=null) && !window.__chatDone[v.iid] && (v.deadline||0)>Date.now())
+      .sort((a,b)=>(a.ts||0)-(b.ts||0));   // 最早在前；容器 column-reverse → 最早贴底、后来叠上
+    stack.innerHTML=list.map(v=>{
+      const co=(v.targets||[]).filter(s=>s!==seat).map(s=>_nbEsc(pname(s)));
+      const txt=_nbEsc(pname(v.from))+' 邀请你'+(co.length?'与 '+co.join('、')+' ':'')+'一起进入私聊';
+      const left=Math.max(0,(v.deadline||0)-Date.now());
+      return '<div class="civ"><div class="civ-t">'+txt+'</div>'
+        +'<div class="civ-btns"><button class="civ-yes" onclick="_chatRespond(\''+v.iid+'\',1)">同意</button>'
+        +'<button class="civ-no" onclick="_chatRespond(\''+v.iid+'\',0)">拒绝</button></div>'
+        +'<div class="civ-bar"><i style="animation-duration:'+left+'ms"></i></div></div>';
+    }).join('');
+    clearTimeout(window.__chatInvT); if(list.length) window.__chatInvT=setTimeout(updateChatInv,1000); }
+  window.updateChatInv=updateChatInv;
+  function chatNotices(){ if(role!=='player') return; const seat=myVoteSeat(); if(seat<0) return;
+    const notes=(pub&&pub.chatNote)||[]; window.__chatSeen=window.__chatSeen||{};
+    (Array.isArray(notes)?notes:Object.keys(notes).map(k=>notes[k])).forEach(n=>{ if(!n||n.to!==seat||window.__chatSeen[n.id]) return; window.__chatSeen[n.id]=1; try{toast(n.text);}catch(e){} }); }
+  window.chatNotices=chatNotices;
+
+  /* ---- 说书人端：私聊状态机（挂进 bindStPlayers + 1s 超时 tick）---- */
+  let __chat={chats:{},inv:{},notes:[],cseq:0,iseq:0,nseq:0};
+  let __chatProc={}, __chatPubSig='', __chatTimer=null;
+  function _cChatOf(seat){ for(const cid in __chat.chats){ if(__chat.chats[cid].members.indexOf(seat)>=0) return cid; } return null; }
+  function _cPick(){ const used=new Set(Object.keys(__chat.chats).map(k=>__chat.chats[k].color)); for(let i=0;i<5;i++) if(!used.has(i)) return i; return __chat.cseq%5; }
+  function _cCreate(anchor){ const cid='c'+(++__chat.cseq); __chat.chats[cid]={members:[],anchor:anchor,color:_cPick()}; return cid; }
+  function _cAdd(cid,seat){ const c=__chat.chats[cid]; if(c&&c.members.indexOf(seat)<0) c.members.push(seat); }
+  function _cLeaveSeat(seat){ const cid=_cChatOf(seat); if(!cid) return; const c=__chat.chats[cid]; c.members=c.members.filter(s=>s!==seat); if(c.anchor===seat) c.anchor=(c.members[0]!=null?c.members[0]:seat); }
+  function _cDisband(){ for(const cid in __chat.chats) if(__chat.chats[cid].members.length<2) delete __chat.chats[cid]; }
+  function _cName(seat){ return (pub&&pub.seats&&pub.seats[seat]&&pub.seats[seat].name)||('玩家'+(seat+1)); }
+  function _cNote(to,text){ __chat.notes.push({id:'n'+(++__chat.nseq),to:to,text:text,ts:Date.now()}); }
+  function _cReq(from,targets){ if(from==null||from<0) return; targets=(targets||[]).filter(s=>s!==from&&s>=0);
+    const fc=_cChatOf(from); targets=targets.filter(s=> !(fc&&_cChatOf(s)===fc)); if(!targets.length) return;
+    const now=Date.now(), iid='i'+(++__chat.iseq); __chat.inv[iid]={from:from,targets:targets,chat:fc,ts:now,deadline:now+10000,resp:{}};
+    if(fc){ __chat.chats[fc].members.forEach(s=>{ if(s!==from) _cNote(s,_cName(from)+' 邀请 '+targets.map(t=>_cName(t)).join('、')+' 进入当前私聊'); }); } }
+  function _cResp(iid,from,agree){ const v=__chat.inv[iid]; if(!v) return; if(v.targets.indexOf(from)<0) return; v.resp[from]=agree?1:0; }
+  function _cFinalize(iid){ const v=__chat.inv[iid]; if(!v) return;
+    const agreers=v.targets.filter(s=>v.resp[s]===1), rejecters=v.targets.filter(s=>v.resp[s]!==1);
+    rejecters.forEach(s=>_cNote(v.from,_cName(s)+' 拒绝了你'));
+    if(agreers.length){ let cid=_cChatOf(v.from); if(!cid){ cid=_cCreate(v.from); _cAdd(cid,v.from); }
+      agreers.forEach(s=>{ _cLeaveSeat(s); _cAdd(cid,s); }); _cDisband(); }
+    delete __chat.inv[iid]; }
+  function _cTick(){ const now=Date.now();
+    Object.keys(__chat.inv).forEach(iid=>{ const v=__chat.inv[iid]; if(!v) return; if(v.targets.every(s=>v.resp[s]!=null)||now>=v.deadline) _cFinalize(iid); });
+    __chat.notes=__chat.notes.filter(n=>now-n.ts<6000); _cDisband(); }
+  function _cClear(uid,key){ try{ db.ref('games/'+curGid+'/players/'+uid+'/'+key).remove(); }catch(e){} }
+  function recomputeChat(all){ if(role!=='st'||!curGid) return; all=all||{};
+    Object.keys(all).forEach(uid=>{ const nd=all[uid]||{}; const pr=__chatProc[uid]||(__chatProc[uid]={});
+      const rq=nd.chatReq; if(rq&&rq.ts&&rq.ts!==pr.req){ pr.req=rq.ts; _cReq(rq.from, rq.targets); _cClear(uid,'chatReq'); }
+      const lv=nd.chatLeave; if(lv&&lv.ts&&lv.ts!==pr.leave){ pr.leave=lv.ts; _cLeaveSeat(lv.from); _cDisband(); _cClear(uid,'chatLeave'); }
+      const rp=nd.chatResp; if(rp&&rp.ts&&rp.ts!==pr.resp){ pr.resp=rp.ts; _cResp(rp.iid, rp.from, rp.agree); _cClear(uid,'chatResp'); } });
+    _cTick(); _chatPublish();
+    if(!__chatTimer){ __chatTimer=setInterval(function(){ if(role==='st'&&curGid){ _cTick(); _chatPublish(); } else { clearInterval(__chatTimer); __chatTimer=null; } },1000); } }
+  window.recomputeChat=recomputeChat;
+  function _chatPublish(){ if(role!=='st'||!curGid) return; const sig=JSON.stringify(__chat.chats)+'|'+JSON.stringify(__chat.inv)+'|'+JSON.stringify(__chat.notes);
+    if(sig===__chatPubSig) return; __chatPubSig=sig;
+    try{ db.ref('games/'+curGid+'/public/chats').set(Object.keys(__chat.chats).length?__chat.chats:null).catch(()=>{}); }catch(e){}
+    try{ db.ref('games/'+curGid+'/public/chatInv').set(Object.keys(__chat.inv).length?__chat.inv:null).catch(()=>{}); }catch(e){}
+    try{ db.ref('games/'+curGid+'/public/chatNote').set(__chat.notes.length?__chat.notes:null).catch(()=>{}); }catch(e){} }
+  window._chatReset=function(){ __chat={chats:{},inv:{},notes:[],cseq:0,iseq:0,nseq:0}; __chatProc={}; __chatPubSig='';
+    try{ if(role==='st'&&curGid) db.ref('games/'+curGid+'/public').update({chats:null,chatInv:null,chatNote:null}).catch(()=>{}); }catch(e){} };
+
   /* 说书人订阅玩家举手（实时看谁举手） */
   window.__playerHands={};
   let stPlayersRef=null;
   function bindStPlayers(){ if(stPlayersRef){stPlayersRef.off();stPlayersRef=null;} window.__playerHands={};
-    if(role==='st'&&curGid){ stPlayersRef=db.ref('games/'+curGid+'/players'); stPlayersRef.on('value',s=>{ const v=s.val(); recomputeHands(v); if(window.__recomputeNightReplies) __recomputeNightReplies(v); if(window.__recomputeSlayerReq) __recomputeSlayerReq(v); }); } }
+    if(role==='st'&&curGid){ stPlayersRef=db.ref('games/'+curGid+'/players'); stPlayersRef.on('value',s=>{ const v=s.val(); recomputeHands(v); if(window.__recomputeNightReplies) __recomputeNightReplies(v); if(window.__recomputeSlayerReq) __recomputeSlayerReq(v); try{ recomputeChat(v); }catch(e){} }); } }
   /* 当前进行中的提名（by/to/day 与公开 vote 匹配） */
   function stActiveNom(){ const v=pub&&pub.vote; if(!v||!v.open) return null;
     const list=nominations[v.day]||[];
@@ -4072,7 +4205,7 @@ load(); render();
     if(window._syncNoms) window._syncNoms(); if(typeof render==='function') render(); };
 
   /* ---------- 渲染分发 ---------- */
-  function renderView(){ if(mode==='hall') renderHall(); else if(mode==='notes') renderNotes(); drawSeats(); if(window.renderClock) renderClock(); updateVoteBar(); updateNightBar(); }
+  function renderView(){ if(mode==='hall') renderHall(); else if(mode==='notes') renderNotes(); drawSeats(); if(window.renderClock) renderClock(); updateVoteBar(); updateNightBar(); try{ if(role==='player'){ updateChatInv(); chatNotices(); } }catch(e){} }
 
   /* ---------- 座位圈（访客，复刻说书人比例，画进 #tableZone） ---------- */
   function drawSeats(){ if(mode==='st') return; const zone=document.getElementById('tableZone'); if(!zone) return;
@@ -4083,9 +4216,12 @@ load(); render();
     const zoneLeft=0.40*SW, zoneTop=0.08*SH, cx=SW*0.71-zoneLeft, cy=SH*0.525-zoneTop, R=SH*0.34;
     const N=pub.count, seats=pub.seats||[]; const seatD=Math.max(R*0.26, Math.min(R*0.78, R*3.8/N));
     const numD=seatD*0.46, numF=numD*0.6, nmF=Math.max(11,seatD*0.24), rF=Math.max(9,seatD*0.17);
-    for(let i=0;i<N;i++){ const ps=seats[i]||{}, ang=-Math.PI/2+i*2*Math.PI/N, x=cx+R*Math.cos(ang), y=cy+R*Math.sin(ang);
+    /* 私聊分组：把成员拉到发起人身边聚拢，非成员保持环序；posOf: 座位号 -> 显示位 k */
+    const _chOrder=chatOrder(N, pubChats()); const posOf={}; _chOrder.forEach((o,k)=>{ posOf[o.seat]=k; });
+    for(let i=0;i<N;i++){ const ps=seats[i]||{}, _k=(posOf[i]!=null?posOf[i]:i), ang=-Math.PI/2+_k*2*Math.PI/N, x=cx+R*Math.cos(ang), y=cy+R*Math.sin(ang);
       const mine=(mode==='notes'&&S&&S.seats)?(S.seats[i]||{}):null, dead=!!ps.dead;
-      const s=document.createElement('div'); s.className='seat filled'+(dead?' dead hascause':''); s.dataset.seat=i; s.style.cssText='left:'+x+'px;top:'+y+'px;width:'+seatD+'px;height:'+seatD+'px';
+      const _csel=(window._chatSelMode&&window._chatSel&&_chatSel.has(i));
+      const s=document.createElement('div'); s.className='seat filled'+(dead?' dead hascause':'')+(_csel?' chatsel':''); s.dataset.seat=i; s.style.cssText='left:'+x+'px;top:'+y+'px;width:'+seatD+'px;height:'+seatD+'px';
       let h='<div class="num" style="width:'+numD+'px;height:'+numD+'px;font-size:'+numF+'px">'+(i+1)+'</div>';
       h+='<div class="nm" style="font-size:'+nmF+'px">'+(E(ps.name)||'<span style=\"opacity:.5\">空</span>')+'</div>';
       const rid=mine&&mine.role; if(rid&&RMAP[rid]) h+='<div class="vrole" style="font-size:'+rF+'px;color:'+TEAMC[RMAP[rid].team]+'">'+RMAP[rid].name+'</div>';
@@ -4105,7 +4241,7 @@ load(); render();
         if(mode==='notes'&&i===myVoteSeat()&&myHandOn()) raised=true;   // 本人举手即时显示
         if(raised){ s.classList.add('raised'); const _hs=dead?'assets/hand-ghost.png':'assets/hand.png'; s.insertAdjacentHTML('beforeend','<div class="handfill" title="举手"><img src="'+_hs+'" draggable="false"></div>'); } }
       if(mode==='notes'){ s.style.cursor='pointer'; const sx=zoneLeft+x, sy=zoneTop+y, sd=seatD;
-        s.addEventListener('click',e=>{ e.stopPropagation(); seatTap(i,sx,sy,sd); });
+        s.addEventListener('click',e=>{ e.stopPropagation(); if(window._chatSeatPick && _chatSeatPick(i)) return; seatTap(i,sx,sy,sd); });
         s.addEventListener('mouseenter',()=>showSeatNote(i));
         s.addEventListener('mouseleave',hideSeatNote);
         /* 拖标记/角色到座位=添加、把座位身份拖出=删除；均由统一指针系统处理（data-drag=座位身份、data-seat=落点） */
@@ -4117,6 +4253,7 @@ load(); render();
       }
       zone.appendChild(s);
     }
+    try{ window._chatDrawBands(zone,cx,cy,R,seatD/2,N,posOf); }catch(e){}   // 私聊分组色带
     zone.ondragover=null; zone.ondrop=null;   // 身份拖出座位删除已改由座位 dragend 判定（鼠标离开原座位即生效）
   }
 
@@ -4164,6 +4301,11 @@ load(); render();
     h+=rs.map(id=>{ const r=RMAP[id]; if(!r) return '';
       return '<span class="nbtok'+(crossed.has('role:'+id)?' crossed':'')+'" data-drag="prole:'+id+'" onclick="_nbCross(\'role:'+id+'\')" style="border-color:'+TEAMC[r.team]+';color:'+TEAMC[r.team]+'">'+r.name+'</span>'; }).join('')+'</div>';
     h+='<button class="nb-clearall" onclick="_nbClearAll(this)">清除所有标记</button>';
+    /* 私聊分组 */
+    const _inChat=myChat();
+    h+='<div class="nb-sec" style="margin-top:14px">私聊分组</div>';
+    h+='<button id="chatInvBtn" class="nb-chatbtn'+(window._chatSelMode?' on':'')+'" onclick="_chatToggleInvite()">'+(window._chatSelMode?('确认邀请'+(window._chatSel&&_chatSel.size?'（'+_chatSel.size+'人）':'（点座位选人）')):'邀请玩家进入私聊')+'</button>';
+    if(_inChat) h+='<button class="nb-exitbtn" onclick="_chatLeave()">退出私聊</button>';
     return h;
   }
   /* 我的座位备注（独立页，点墨水瓶进入） */
