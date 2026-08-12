@@ -459,7 +459,7 @@
     background:radial-gradient(circle at 50% 35%, rgba(60,40,70,.82), rgba(30,20,40,.9));
     display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; text-align:center; padding:2px;
     transition:transform .12s, box-shadow .12s, border-color .12s, opacity .12s; box-shadow:0 3px 8px rgba(0,0,0,.45);}
-  .seat .num{position:absolute; top:15%; left:15%; transform:translate(-50%,-50%); z-index:2; display:flex; align-items:center; justify-content:center;   /* 圆心锚定在座位 15%/15% 处（=旧 -8% 偏移+0.46 直径时的圆心），缩放直径圆心不动 */
+  .seat .num{position:absolute; top:9.8%; left:9.8%; transform:translate(-50%,-50%); z-index:2; display:flex; align-items:center; justify-content:center;   /* 圆心锚定座位 9.8%/9.8%：由原 15%/15%(恰在座位弧线上)沿对角线向外挪 0.2×徽标直径(=0.0736·seatD，每轴 5.2%)，不再挤在弧线上 */
     border-radius:50%; background:rgba(28,18,42,.92); color:#ffd76b; font-weight:800; line-height:1;
     border:1.5px solid rgba(233,196,106,.9); box-shadow:0 1px 4px rgba(0,0,0,.55);}
   .seat .nm{line-height:1.1; color:#fff6df; font-weight:700; word-break:break-all; max-width:88%; text-shadow:0 1px 2px rgba(0,0,0,.65);}
@@ -1152,6 +1152,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.42.4', d:'2026-08-12', items:['座号徽标（座位左上角数字）圆心沿对角线向外挪 20% 个徽标直径：此前圆心恰好落在座位圆的弧线上，略显挤；现在把定位锚点从座位 15%/15% 改为 9.8%/9.8%（沿左上对角线、即径向朝外移 0.2×徽标直径≈每轴 5.2% 座径），徽标略微探出座位边缘、更透气。直径/字号不变。']},
   {v:'v2.42.3', d:'2026-08-12', items:['玩家座位左上角的座号徽标（数字标号）直径与字号各缩小 20%，圆心位置保持不变——此前徽标偏大会挡住座位里的玩家名字/身份文字。改法：徽标定位从「左上角负偏移」改为「圆心锚定在座位 15%/15% 处」（等于原来的圆心位置），这样以后再调直径圆心也不动；直径由 0.46×座径 改为 0.368×座径、字号随之联动同比缩小。魔典/间谍魔典/大厅·笔记三处座位圈一致生效。']},
   {v:'v2.42.2', d:'2026-08-12', items:['私聊分组色带收紧，紧贴座位：此前色带径向留了约座位半径 0.28 倍（~25px）的缝、两端角度外扩较多，整体偏胖。现在把径向缝收到约座位半径 0.11 倍（~10px）、两端角度 pad 收到极小，色带将将裹住成员座位（含两端的半圆弧端帽也随之贴合端座），不再空出一大圈。']},
   {v:'v2.42.1', d:'2026-08-12', items:['私聊分组色带的两端不再用直线切口，改为半圆弧端帽把端座整个包裹起来——内外两条同心圆弧不变，只把连接内外圈的两端由径向直线换成半径=径向厚度一半的半圆弧（因内外圈关于座位圈对称，半圆圆心正好落在座位圈上、恰好裹住端座），色带整体呈"沿弧线弯折的胶囊形"，更圆润。']},
