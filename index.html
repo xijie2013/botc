@@ -595,6 +595,16 @@
   #chatFab .cf-badge{position:absolute; top:-5px; right:-5px; min-width:20px; height:20px; padding:0 5px; border-radius:10px; box-sizing:border-box;
     background:#4aa8ff; color:#fff; font:800 12px sans-serif; display:none; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.5);}
   @media (max-width:720px){ #chatFab{width:52px; height:52px; left:10px; bottom:10px;} }
+  /* 说书人魔典左下角「解散私聊」按钮（与私聊图标同位同大）：有私聊时出现，两连点确认 */
+  #stDisbandFab{position:fixed; left:16px; bottom:16px; z-index:124; width:60px; height:60px; border-radius:50%;
+    background:linear-gradient(180deg,#5a2330,#361420); border:2px solid rgba(233,110,110,.72); color:#ffdede;
+    display:none; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.5); -webkit-tap-highlight-color:transparent;}
+  #stDisbandFab svg{width:60%; height:60%; display:block;}
+  #stDisbandFab .sdf-confirm{display:none; font:800 15px/1.05 sans-serif; text-align:center; letter-spacing:1px;}
+  #stDisbandFab.sdf-armed{background:linear-gradient(180deg,#c0392b,#7d1f16); border-color:#ffd7d7; box-shadow:0 0 16px rgba(231,76,60,.85); color:#fff;}
+  #stDisbandFab.sdf-armed svg{display:none;}
+  #stDisbandFab.sdf-armed .sdf-confirm{display:block;}
+  @media (max-width:720px){ #stDisbandFab{width:52px; height:52px; left:10px; bottom:10px;} #stDisbandFab .sdf-confirm{font-size:13px;} }
   /* 座位圈上的私聊按钮（组内第一二成员之间）：组内=退出(红)、组外=加入(蓝) */
   #tableZone .chatbtn{position:absolute; transform:translate(-50%,-50%); border-radius:50%; display:flex; align-items:center; justify-content:center;
     font-weight:800; color:#fff; cursor:pointer; z-index:5; box-shadow:0 2px 8px rgba(0,0,0,.55); user-select:none; white-space:nowrap; -webkit-tap-highlight-color:transparent;}
@@ -977,6 +987,13 @@
       </g>
       <g><circle cx="37" cy="35" r="9.2" fill="#4aa86a" stroke="#fff" stroke-width="1.6"/><path d="M37 30v10M32 35h10" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></g>
       </svg><span class="cf-badge"></span></div>
+    <div id="stDisbandFab" onclick="_stDisbandTap()" title="解散所有私聊，玩家回到原座位" style="display:none">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor">
+        <circle cx="13" cy="16" r="5"/><path d="M4 34c0-5.5 4-8.5 9-8.5s9 3 9 8.5z"/>
+        <circle cx="35" cy="16" r="5"/><path d="M26 34c0-5.5 4-8.5 9-8.5s9 3 9 8.5z"/>
+      </g>
+      <g stroke="#ffd7d7" stroke-width="3" stroke-linecap="round"><path d="M18 11 30 23M30 11 18 23"/></g>
+      </svg><span class="sdf-confirm">确认<br>解散</span></div>
     <div id="winIcon"></div>
     <video id="execVideo" playsinline preload="auto"></video>
   </div>
@@ -1181,6 +1198,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.46.0', d:'2026-08-12', items:['说书人魔典左下角新增「解散私聊」按钮（与玩家端发起私聊图标同位置、同大小，红色两小人打叉图标）：仅在场上存在私聊分组或未了结邀请时出现，两连点确认（第一次点亮红「确认解散」、3 秒内不再点则自动取消）。确认后清空全场所有私聊与待处理邀请，所有玩家的座位圈立即回到原本顺序、色带消失，随后即可开始提名。说书人只做解散这一操作，不参与私聊。']},
   {v:'v2.45.0', d:'2026-08-12', items:['说书人魔典的座位圈现在也同步显示私聊分组：和玩家端一样，把私聊成员的座位聚拢到一起、用该组颜色的弧形色带圈出，分组变化时实时更新。说书人只做「显示」——不出现加入/退出按钮和发起图标（说书人不参与私聊）。']},
   {v:'v2.44.2', d:'2026-08-12', items:['加入现存私聊未通过时，结果弹窗显示是「谁 拒绝了 谁 的加入申请」——申请人以及该私聊里其他仍持有弹窗的成员都能看到（此前只笼统显示「加入申请未通过」）。加入成功也改为显示「X 加入了私聊」，组员看得更清楚。（若无人明确拒绝、只是超时，显示「X 的加入申请未通过（有人未及时回应）」。）']},
   {v:'v2.44.1', d:'2026-08-12', items:['私聊邀请「忙碌」改为可排队：别人仍可以邀请正有未了结邀请的你（你会收到弹窗），只是要先处理旧的、再处理新的。多个邀请在下方堆叠——旧的在最下、新的在上，只有最下方那张可操作（同意/拒绝/取消/确定），上面的变暗并显示「⌛ 请先处理下方的邀请」，等最下方那张处理完消失后，上一张才变为可操作。（左下角发起图标仍在你有未了结邀请时保持灰色不可发起。）']},
@@ -2956,6 +2974,7 @@ function renderSeats(){
     zone.appendChild(s);
   }
   try{ if(window._chatDrawBands) window._chatDrawBands(zone,cx,cy,R,seatD/2,N,_chPosOf); }catch(e){}   // 说书人魔典座位圈：画私聊分组色带（与玩家端同步）
+  try{ if(window.updateStChatDisband) window.updateStChatDisband(); }catch(e){}   // 左下角「解散私聊」按钮随私聊状态出现/消失
 }
 function showHover(i){
   if(view!=="grim") return;
@@ -4175,6 +4194,18 @@ load(); render();
     const badge=fab.querySelector('.cf-badge'); const n=(_chatSelMode&&_chatSel)?_chatSel.size:0;
     if(badge){ badge.textContent=n||''; badge.style.display=n?'flex':'none'; } }
   window.updateChatFab=updateChatFab;
+  /* 说书人魔典：左下角「解散私聊」按钮（两连点确认 → 清空所有私聊，玩家回到原座位，随后可开始提名） */
+  window.__sdfArmed=false; window.__sdfT=null;
+  function _stHasChats(){ return !!((pub&&pub.chats&&Object.keys(pub.chats).length)||(pub&&pub.chatInv&&Object.keys(pub.chatInv).length)); }
+  window.updateStChatDisband=function(){ const el=document.getElementById('stDisbandFab'); if(!el) return;
+    if(!(role==='st'&&mode==='st'&&_stHasChats())){ el.style.display='none'; window.__sdfArmed=false; clearTimeout(window.__sdfT); return; }
+    el.style.display='flex'; el.classList.toggle('sdf-armed', !!window.__sdfArmed); };
+  window._stDisbandTap=function(){ if(!(role==='st'&&mode==='st')) return;
+    if(!window.__sdfArmed){ window.__sdfArmed=true; window.updateStChatDisband();   // 第一次点：进入「确认解散」态，3s 未再点自动取消
+      clearTimeout(window.__sdfT); window.__sdfT=setTimeout(function(){ window.__sdfArmed=false; window.updateStChatDisband(); },3000); return; }
+    clearTimeout(window.__sdfT); window.__sdfArmed=false;   // 第二次点：真正解散
+    try{ _chatReset(); }catch(e){} window.updateStChatDisband();
+    try{ toast('已解散所有私聊，玩家回到原座位'); }catch(e){} };
   window._chatRespond=function(iid,agree){ const from=myVoteSeat(); if(from<0||!notesRef) return;
     window.__chatMyResp[iid]=agree?1:0;   // 乐观：拒绝→弹窗立即消失、同意→立即显示「等待结果」
     try{ notesRef.child('chatResp').set({iid:iid,from:from,agree:agree?1:0,ts:Date.now()}).catch(function(){}); }catch(e){}
