@@ -459,7 +459,7 @@
     background:radial-gradient(circle at 50% 35%, rgba(60,40,70,.82), rgba(30,20,40,.9));
     display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; text-align:center; padding:2px;
     transition:transform .12s, box-shadow .12s, border-color .12s, opacity .12s; box-shadow:0 3px 8px rgba(0,0,0,.45);}
-  .seat .num{position:absolute; top:-8%; left:-8%; z-index:2; display:flex; align-items:center; justify-content:center;
+  .seat .num{position:absolute; top:15%; left:15%; transform:translate(-50%,-50%); z-index:2; display:flex; align-items:center; justify-content:center;   /* 圆心锚定在座位 15%/15% 处（=旧 -8% 偏移+0.46 直径时的圆心），缩放直径圆心不动 */
     border-radius:50%; background:rgba(28,18,42,.92); color:#ffd76b; font-weight:800; line-height:1;
     border:1.5px solid rgba(233,196,106,.9); box-shadow:0 1px 4px rgba(0,0,0,.55);}
   .seat .nm{line-height:1.1; color:#fff6df; font-weight:700; word-break:break-all; max-width:88%; text-shadow:0 1px 2px rgba(0,0,0,.65);}
@@ -1152,6 +1152,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.42.3', d:'2026-08-12', items:['玩家座位左上角的座号徽标（数字标号）直径与字号各缩小 20%，圆心位置保持不变——此前徽标偏大会挡住座位里的玩家名字/身份文字。改法：徽标定位从「左上角负偏移」改为「圆心锚定在座位 15%/15% 处」（等于原来的圆心位置），这样以后再调直径圆心也不动；直径由 0.46×座径 改为 0.368×座径、字号随之联动同比缩小。魔典/间谍魔典/大厅·笔记三处座位圈一致生效。']},
   {v:'v2.42.2', d:'2026-08-12', items:['私聊分组色带收紧，紧贴座位：此前色带径向留了约座位半径 0.28 倍（~25px）的缝、两端角度外扩较多，整体偏胖。现在把径向缝收到约座位半径 0.11 倍（~10px）、两端角度 pad 收到极小，色带将将裹住成员座位（含两端的半圆弧端帽也随之贴合端座），不再空出一大圈。']},
   {v:'v2.42.1', d:'2026-08-12', items:['私聊分组色带的两端不再用直线切口，改为半圆弧端帽把端座整个包裹起来——内外两条同心圆弧不变，只把连接内外圈的两端由径向直线换成半径=径向厚度一半的半圆弧（因内外圈关于座位圈对称，半圆圆心正好落在座位圈上、恰好裹住端座），色带整体呈"沿弧线弯折的胶囊形"，更圆润。']},
   {v:'v2.42.0', d:'2026-08-12', items:['新增「私聊分组」：玩家可在「玩家笔记 · 标记」页底部点「邀请玩家进入私聊」，进入选人态后点座位选人、再点「确认邀请」发出邀请。被邀请者收到底部弹窗「X 邀请你与 A、B 一起进入私聊」，可同意/拒绝，10 秒倒计时（超时=拒绝）。全部同意即组队；部分拒绝会给发起人「(X 拒绝了你)」提示、其余同意者仍组队。组队后座位圈会把成员拉到发起人身边聚拢、用该组颜色的细描边+淡填充弧形色带圈出（非成员留在原环序=大厅）。组内成员多一个「退出私聊」按钮；组内剩 ≤1 人自动解散。任何人可随时邀请任何人或被邀请，一人同一时刻只在一个私聊里；组内人再邀请=拉进当前私聊（并通知其他成员），大厅人邀请=新建私聊。分组全场公开、说书人魔典也会显示。（说书人跑状态机中转，玩家只写自己节点 chatReq/chatResp/chatLeave，无需改数据库规则。）']},
@@ -2863,7 +2864,7 @@ function renderSeats(){
   const cx=SW*0.71-zoneLeft, cy=SH*0.525-zoneTop, R=SH*0.34;
   tableCenter={x:SW*0.71, y:SH*0.525};
   const seatD=Math.max(R*0.26, Math.min(R*0.78, R*3.8/N));
-  const numD=seatD*0.46, numF=numD*0.6, nmF=Math.max(11,seatD*0.24), rF=Math.max(9,seatD*0.17);
+  const numD=seatD*0.368, numF=numD*0.6, nmF=Math.max(11,seatD*0.24), rF=Math.max(9,seatD*0.17);   /* 座号徽标直径较原 0.46 缩小 20%（字号 numF 随 numD 联动同缩），圆心不动、少挡名字 */
   for(let i=0;i<N;i++){
     const ang=-Math.PI/2+i*2*Math.PI/N;
     const x=cx+R*Math.cos(ang), y=cy+R*Math.sin(ang);
@@ -3550,7 +3551,7 @@ load(); render();
     const zoneLeft=0.40*SW, zoneTop=0.08*SH;
     const cx=SW*0.71-zoneLeft, cy=SH*0.525-zoneTop, R=SH*0.34;
     const seatD=Math.max(R*0.26, Math.min(R*0.78, R*3.8/NN));
-    const numD=seatD*0.46, numF=numD*0.6, nmF=Math.max(11,seatD*0.24), rF=Math.max(9,seatD*0.17);
+    const numD=seatD*0.368, numF=numD*0.6, nmF=Math.max(11,seatD*0.24), rF=Math.max(9,seatD*0.17);   /* 座号徽标直径较原 0.46 缩小 20%（字号 numF 随 numD 联动同缩），圆心不动、少挡名字 */
     seats.forEach(function(o,i){
       const ang=-Math.PI/2+i*2*Math.PI/NN; const x=cx+R*Math.cos(ang), y=cy+R*Math.sin(ang);
       const s=document.createElement('div'); s.className='seat'+(o.good?' good':(o.evil?' evil':''))+(o.dead?' dead':'');
@@ -4217,7 +4218,7 @@ load(); render();
     const stage=document.getElementById('stage'); const SW=stage.clientWidth, SH=stage.clientHeight;
     const zoneLeft=0.40*SW, zoneTop=0.08*SH, cx=SW*0.71-zoneLeft, cy=SH*0.525-zoneTop, R=SH*0.34;
     const N=pub.count, seats=pub.seats||[]; const seatD=Math.max(R*0.26, Math.min(R*0.78, R*3.8/N));
-    const numD=seatD*0.46, numF=numD*0.6, nmF=Math.max(11,seatD*0.24), rF=Math.max(9,seatD*0.17);
+    const numD=seatD*0.368, numF=numD*0.6, nmF=Math.max(11,seatD*0.24), rF=Math.max(9,seatD*0.17);   /* 座号徽标直径较原 0.46 缩小 20%（字号 numF 随 numD 联动同缩），圆心不动、少挡名字 */
     /* 私聊分组：把成员拉到发起人身边聚拢，非成员保持环序；posOf: 座位号 -> 显示位 k */
     const _chOrder=chatOrder(N, pubChats()); const posOf={}; _chOrder.forEach((o,k)=>{ posOf[o.seat]=k; });
     for(let i=0;i<N;i++){ const ps=seats[i]||{}, _k=(posOf[i]!=null?posOf[i]:i), ang=-Math.PI/2+_k*2*Math.PI/N, x=cx+R*Math.cos(ang), y=cy+R*Math.sin(ang);
