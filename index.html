@@ -1152,6 +1152,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.42.1', d:'2026-08-12', items:['私聊分组色带的两端不再用直线切口，改为半圆弧端帽把端座整个包裹起来——内外两条同心圆弧不变，只把连接内外圈的两端由径向直线换成半径=径向厚度一半的半圆弧（因内外圈关于座位圈对称，半圆圆心正好落在座位圈上、恰好裹住端座），色带整体呈"沿弧线弯折的胶囊形"，更圆润。']},
   {v:'v2.42.0', d:'2026-08-12', items:['新增「私聊分组」：玩家可在「玩家笔记 · 标记」页底部点「邀请玩家进入私聊」，进入选人态后点座位选人、再点「确认邀请」发出邀请。被邀请者收到底部弹窗「X 邀请你与 A、B 一起进入私聊」，可同意/拒绝，10 秒倒计时（超时=拒绝）。全部同意即组队；部分拒绝会给发起人「(X 拒绝了你)」提示、其余同意者仍组队。组队后座位圈会把成员拉到发起人身边聚拢、用该组颜色的细描边+淡填充弧形色带圈出（非成员留在原环序=大厅）。组内成员多一个「退出私聊」按钮；组内剩 ≤1 人自动解散。任何人可随时邀请任何人或被邀请，一人同一时刻只在一个私聊里；组内人再邀请=拉进当前私聊（并通知其他成员），大厅人邀请=新建私聊。分组全场公开、说书人魔典也会显示。（说书人跑状态机中转，玩家只写自己节点 chatReq/chatResp/chatLeave，无需改数据库规则。）']},
   {v:'v2.41.37', d:'2026-08-12', items:['修复：进入「说书人日志」页时，上方的「角色设置/夜晚/白天」三个标签和底部的「第X夜/随机发牌/重置角色」栏没有被隐藏（日志只是汇总记录，不该有这些操作标签）。根因：隐藏逻辑用 `document.querySelector(\'.grimoire\')` 取魔典面板，但后来新增的「间谍魔典」也用了 `.grimoire` 类且在 DOM 里更靠前，于是 `logview` 隐藏类被错加到了间谍魔典上、说书人魔典拿不到。改为精确选 `.grimoire.grim-only`（说书人魔典专属类），日志页正确隐藏标签栏与底栏，只显示记录。']},
   {v:'v2.41.36', d:'2026-08-11', items:['清理死代码 + 精简两处提示：①删除 16 个从未被调用的函数/常量（HAND_SVG 未用的举手SVG、exportPlayerNotes、ghostUsedAnywhere、impSuccessorOptions、inPlayRoles、poolEl、scheduleRouletteOut、seatEvil、setDrunk、setListMode、slayerUndo 及其专用的 _clearSlayerPubFromAll、toggleDead/togglePoison/toggleDrunk、旧固定说书人账号 ST_EMAIL）——多为历次重构后遗留、无任何入口触发。②删除对应的死 CSS：座位旧「状态按钮」`.stbtn/.stbtns`、旧状态角标容器 `.seat .st`、以及从不渲染的 `.votehand`。③死因表 CAUSE 精简为只留 img（此前的 t 文本与 emoji 图标 ⚖️/🩸/🎯 字段从未被读取）。④「已开始新的一局」toast 去掉 ✅。⑤「结束本夜 · 天亮了，钟表开始走时」精简为「天亮了」。（纯清理，无功能变化。）']},
@@ -4058,10 +4059,10 @@ load(); render();
     return out; }
   function pubChats(){ const o=(pub&&pub.chats)||{}; return Object.keys(o).map(k=>({id:k,members:(o[k].members||[]).slice(),anchor:o[k].anchor,color:o[k].color||0})); }
   function myChat(){ const seat=myVoteSeat(); if(seat<0) return null; return pubChats().find(c=>c.members.indexOf(seat)>=0)||null; }
-  function chatBand(cx,cy,R,k0,k1,N,rI,rO,pad){ const A0=-Math.PI/2+k0*2*Math.PI/N-pad, A1=-Math.PI/2+k1*2*Math.PI/N+pad;   // 弧形色带 annular sector
-    const P=(r,a)=>[cx+r*Math.cos(a),cy+r*Math.sin(a)]; const lg=(A1-A0)>Math.PI?1:0;
+  function chatBand(cx,cy,R,k0,k1,N,rI,rO,pad){ const A0=-Math.PI/2+k0*2*Math.PI/N-pad, A1=-Math.PI/2+k1*2*Math.PI/N+pad;   // 弧形色带：内外圈同心弧 + 两端半圆弧包裹端座（不用直线切口）
+    const P=(r,a)=>[cx+r*Math.cos(a),cy+r*Math.sin(a)]; const lg=(A1-A0)>Math.PI?1:0; const rc=(rO-rI)/2;   // rc=端帽半圆半径=径向厚度一半（内外圈关于座圈R对称，故半圆恰好圆心落在座圈上、包住端座）
     const o0=P(rO,A0),o1=P(rO,A1),i1=P(rI,A1),i0=P(rI,A0);
-    return 'M '+o0[0]+','+o0[1]+' A '+rO+','+rO+' 0 '+lg+',1 '+o1[0]+','+o1[1]+' L '+i1[0]+','+i1[1]+' A '+rI+','+rI+' 0 '+lg+',0 '+i0[0]+','+i0[1]+' Z'; }
+    return 'M '+o0[0]+','+o0[1]+' A '+rO+','+rO+' 0 '+lg+',1 '+o1[0]+','+o1[1]+' A '+rc+','+rc+' 0 0,1 '+i1[0]+','+i1[1]+' A '+rI+','+rI+' 0 '+lg+',0 '+i0[0]+','+i0[1]+' A '+rc+','+rc+' 0 0,1 '+o0[0]+','+o0[1]+' Z'; }
   // 座位圈里追加分组色带（供 drawSeats 调用）；posOf: seat->显示位k
   window._chatDrawBands=function(zone,cx,cy,R,seatR,N,posOf){ const chats=pubChats(); if(!chats.length) return;
     const pad=Math.PI/N*0.66, rI=Math.max(seatR*1.2,R-(seatR+seatR*0.28)), rO=R+(seatR+seatR*0.28);
