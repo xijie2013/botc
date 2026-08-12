@@ -1130,6 +1130,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.41.37', d:'2026-08-12', items:['修复：进入「说书人日志」页时，上方的「角色设置/夜晚/白天」三个标签和底部的「第X夜/随机发牌/重置角色」栏没有被隐藏（日志只是汇总记录，不该有这些操作标签）。根因：隐藏逻辑用 `document.querySelector(\'.grimoire\')` 取魔典面板，但后来新增的「间谍魔典」也用了 `.grimoire` 类且在 DOM 里更靠前，于是 `logview` 隐藏类被错加到了间谍魔典上、说书人魔典拿不到。改为精确选 `.grimoire.grim-only`（说书人魔典专属类），日志页正确隐藏标签栏与底栏，只显示记录。']},
   {v:'v2.41.36', d:'2026-08-11', items:['清理死代码 + 精简两处提示：①删除 16 个从未被调用的函数/常量（HAND_SVG 未用的举手SVG、exportPlayerNotes、ghostUsedAnywhere、impSuccessorOptions、inPlayRoles、poolEl、scheduleRouletteOut、seatEvil、setDrunk、setListMode、slayerUndo 及其专用的 _clearSlayerPubFromAll、toggleDead/togglePoison/toggleDrunk、旧固定说书人账号 ST_EMAIL）——多为历次重构后遗留、无任何入口触发。②删除对应的死 CSS：座位旧「状态按钮」`.stbtn/.stbtns`、旧状态角标容器 `.seat .st`、以及从不渲染的 `.votehand`。③死因表 CAUSE 精简为只留 img（此前的 t 文本与 emoji 图标 ⚖️/🩸/🎯 字段从未被读取）。④「已开始新的一局」toast 去掉 ✅。⑤「结束本夜 · 天亮了，钟表开始走时」精简为「天亮了」。（纯清理，无功能变化。）']},
   {v:'v2.41.35', d:'2026-08-11', items:['①删除猎手请求 toast 里的 🎯 图标（「猎手请求开枪，请到白天面板确认」）。②所有底部弹窗宽度统一固定 350px：此前只有夜晚信息条/猎手请求条/红唇接任条是 350px，现在把投票条(#voteBar)与猎手开枪结果条(#slayerResult)也改为固定 350px（内部下拉仍固定 120px）。③删除未使用的顶部胜负横幅 #winBanner（一直是空 div、无任何 JS 写入，从不显示；胜负已由结算动画与笔记/魔典里的横幅呈现）。']},
   {v:'v2.41.34', d:'2026-08-11', items:['修复拖放失效（自 v2.41.31 统一指针事件后一直存在的 bug）：松手结算函数 `_end` 先把拖拽状态 `_dg` 置成了 null，随后 `_drop` 又去读 `_dg.payload` → 抛异常被 try/catch 静默吞掉，导致所有拖放（魔典角色标签拖到座位、令牌移动、玩家笔记里状态/身份标记拖到座位）放手后都没生效。现在 `_drop` 改为显式接收 payload 参数、不再依赖已被清空的 `_dg`。（用无头 Chromium 真机指针/触摸事件回归验证：鼠标与触屏拖放均正确落点。）']},
@@ -2630,7 +2631,7 @@ function bluffSel(k){
 }
 function renderGrim(){
   ["list","night","day","log"].forEach(t=>{ const el=document.getElementById("gt-"+t); if(el) el.classList.toggle("on",gtab===t); });
-  const gm=document.querySelector('.grimoire'); if(gm) gm.classList.toggle('logview', gtab==='log');   // 日志页：隐藏标签栏与底栏，仅显示日志
+  const gm=document.querySelector('.grimoire.grim-only'); if(gm) gm.classList.toggle('logview', gtab==='log');   // 日志页：隐藏标签栏与底栏，仅显示日志（必须选说书人魔典 .grim-only：间谍魔典 .spyg-grim 在 DOM 里更靠前，用裸 .grimoire 会选错元素→标签栏不隐藏）
   const c=document.getElementById("gcontent"); let h="";
   if(gtab==="list"){
     const cd=(customDist||DIST[N]||[0,0,0,0]).slice();
