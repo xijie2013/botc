@@ -1152,6 +1152,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.42.2', d:'2026-08-12', items:['私聊分组色带收紧，紧贴座位：此前色带径向留了约座位半径 0.28 倍（~25px）的缝、两端角度外扩较多，整体偏胖。现在把径向缝收到约座位半径 0.11 倍（~10px）、两端角度 pad 收到极小，色带将将裹住成员座位（含两端的半圆弧端帽也随之贴合端座），不再空出一大圈。']},
   {v:'v2.42.1', d:'2026-08-12', items:['私聊分组色带的两端不再用直线切口，改为半圆弧端帽把端座整个包裹起来——内外两条同心圆弧不变，只把连接内外圈的两端由径向直线换成半径=径向厚度一半的半圆弧（因内外圈关于座位圈对称，半圆圆心正好落在座位圈上、恰好裹住端座），色带整体呈"沿弧线弯折的胶囊形"，更圆润。']},
   {v:'v2.42.0', d:'2026-08-12', items:['新增「私聊分组」：玩家可在「玩家笔记 · 标记」页底部点「邀请玩家进入私聊」，进入选人态后点座位选人、再点「确认邀请」发出邀请。被邀请者收到底部弹窗「X 邀请你与 A、B 一起进入私聊」，可同意/拒绝，10 秒倒计时（超时=拒绝）。全部同意即组队；部分拒绝会给发起人「(X 拒绝了你)」提示、其余同意者仍组队。组队后座位圈会把成员拉到发起人身边聚拢、用该组颜色的细描边+淡填充弧形色带圈出（非成员留在原环序=大厅）。组内成员多一个「退出私聊」按钮；组内剩 ≤1 人自动解散。任何人可随时邀请任何人或被邀请，一人同一时刻只在一个私聊里；组内人再邀请=拉进当前私聊（并通知其他成员），大厅人邀请=新建私聊。分组全场公开、说书人魔典也会显示。（说书人跑状态机中转，玩家只写自己节点 chatReq/chatResp/chatLeave，无需改数据库规则。）']},
   {v:'v2.41.37', d:'2026-08-12', items:['修复：进入「说书人日志」页时，上方的「角色设置/夜晚/白天」三个标签和底部的「第X夜/随机发牌/重置角色」栏没有被隐藏（日志只是汇总记录，不该有这些操作标签）。根因：隐藏逻辑用 `document.querySelector(\'.grimoire\')` 取魔典面板，但后来新增的「间谍魔典」也用了 `.grimoire` 类且在 DOM 里更靠前，于是 `logview` 隐藏类被错加到了间谍魔典上、说书人魔典拿不到。改为精确选 `.grimoire.grim-only`（说书人魔典专属类），日志页正确隐藏标签栏与底栏，只显示记录。']},
@@ -4065,7 +4066,7 @@ load(); render();
     return 'M '+o0[0]+','+o0[1]+' A '+rO+','+rO+' 0 '+lg+',1 '+o1[0]+','+o1[1]+' A '+rc+','+rc+' 0 0,1 '+i1[0]+','+i1[1]+' A '+rI+','+rI+' 0 '+lg+',0 '+i0[0]+','+i0[1]+' A '+rc+','+rc+' 0 0,1 '+o0[0]+','+o0[1]+' Z'; }
   // 座位圈里追加分组色带（供 drawSeats 调用）；posOf: seat->显示位k
   window._chatDrawBands=function(zone,cx,cy,R,seatR,N,posOf){ const chats=pubChats(); if(!chats.length) return;
-    const pad=Math.PI/N*0.66, rI=Math.max(seatR*1.2,R-(seatR+seatR*0.28)), rO=R+(seatR+seatR*0.28);
+    const pad=Math.PI/N*0.05, rI=Math.max(seatR*1.05,R-seatR*1.11), rO=R+seatR*1.11;   // 紧贴座位：径向只留 ≈座径*0.11(~10px) 的缝、两端角度 pad 极小，将将裹住端座
     let svg='<svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:visible">';
     chats.forEach(c=>{ const ks=c.members.map(m=>posOf[m]).filter(k=>k!=null).sort((a,b)=>a-b); if(!ks.length) return;
       const d=chatBand(cx,cy,R,ks[0],ks[ks.length-1],N,rI,rO,pad);
