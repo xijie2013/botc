@@ -34,10 +34,12 @@
     --sw: 1280px; --sh: 720px; --uiscale: 1; }
   *{box-sizing:border-box;}
   html,body{margin:0;height:100%;}
+  html{-webkit-text-size-adjust:100%; text-size-adjust:100%;}   /* 关闭 iOS 小字号自动放大：座位缩小时字号严格按 px 等比，不再被系统放大导致 Cooler 等名字在人多时换行 */
   body{
     font-family:-apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif;
     background:#1a1220;color:var(--ink);
     display:flex;align-items:center;justify-content:center;min-height:100vh;overflow:hidden;
+    -webkit-text-size-adjust:100%; text-size-adjust:100%;
   }
   .stage{
     position:relative; width:var(--sw); height:var(--sh); transform-origin:center center; flex:0 0 auto;
@@ -462,7 +464,7 @@
   .seat .num{position:absolute; top:9.8%; left:9.8%; transform:translate(-50%,-50%); z-index:2; display:flex; align-items:center; justify-content:center;   /* 圆心锚定座位 9.8%/9.8%：由原 15%/15%(恰在座位弧线上)沿对角线向外挪 0.2×徽标直径(=0.0736·seatD，每轴 5.2%)，不再挤在弧线上 */
     border-radius:50%; background:rgba(28,18,42,.92); color:#ffd76b; font-weight:800; line-height:1;
     border:1.5px solid rgba(233,196,106,.9); box-shadow:0 1px 4px rgba(0,0,0,.55);}
-  .seat .nm{line-height:1.1; color:#fff6df; font-weight:700; word-break:break-all; max-width:88%; text-shadow:0 1px 2px rgba(0,0,0,.65);}
+  .seat .nm{line-height:1.1; color:#fff6df; font-weight:700; word-break:break-all; max-width:94%; text-shadow:0 1px 2px rgba(0,0,0,.65);}   /* max-width 88%→94% 给名字多点余量，短拉丁名（如 Cooler）不被挤到换行 */
   .seat .deathcause{line-height:1.05; margin-top:1px; color:#ff9a8a; font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,.7);}
   .seat.hascause{opacity:1!important; filter:none!important;}
   .seat .shieldbadge{position:absolute; z-index:3; pointer-events:none; filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));}
@@ -529,7 +531,8 @@
   .vpanel .box-h{color:#6b4a1e;}
   .stage.grim .vpanel .box-h{color:#43286b;}
   /* 大厅客人名单 */
-  #hallPanel .namelist{flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; gap:4px;}
+  #hallPanel .namelist{flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; gap:4px; scrollbar-width:thin; scrollbar-color:rgba(233,196,106,.45) transparent;}
+  #hallPanel .namelist::-webkit-scrollbar{width:6px;} #hallPanel .namelist::-webkit-scrollbar-track{background:transparent;} #hallPanel .namelist::-webkit-scrollbar-thumb{background:rgba(233,196,106,.45); border-radius:3px;}   /* 去掉滚动条白色默认底：透明轨道+金色滑块 */
   .nameitem{display:flex; align-items:center; gap:7px; padding:4px 8px; border-radius:8px; background:rgba(255,250,235,.55);
     border:1px solid rgba(122,83,32,.35); font-size:calc(1.15 * var(--sw) / 100); color:var(--ink);}
   .nameitem .no{min-width:20px; height:20px; display:flex; align-items:center; justify-content:center; border-radius:50%;
@@ -543,8 +546,8 @@
   .nbtabs button{flex:1; padding:4.2px 2px; line-height:1.15; font-size:calc(16 * var(--sw) / 1280); font-weight:800; border-radius:6px; cursor:pointer;   /* 标签 16px；上下内边距 4.2px（较上一版增高约10%） */
     border:1px solid rgba(122,83,32,.4); background:rgba(255,250,235,.6); color:#6b4a1e;}
   .nbtabs button.on{background:rgba(184,134,11,.32); color:#6b4a1e; border-color:rgba(122,83,32,.6);}
-  #notesPanel .nbcontent{flex:1; min-height:0; overflow:auto; padding-right:3px; font-size:calc(1 * var(--sw) / 100); color:#3a2a12;}
-  #notesPanel .nbcontent::-webkit-scrollbar{width:6px;} #notesPanel .nbcontent::-webkit-scrollbar-thumb{background:rgba(74,43,107,.35); border-radius:3px;}
+  #notesPanel .nbcontent{flex:1; min-height:0; overflow:auto; padding-right:3px; font-size:calc(1 * var(--sw) / 100); color:#3a2a12; scrollbar-width:thin; scrollbar-color:rgba(122,83,32,.55) transparent;}
+  #notesPanel .nbcontent::-webkit-scrollbar{width:6px;} #notesPanel .nbcontent::-webkit-scrollbar-track{background:transparent;} #notesPanel .nbcontent::-webkit-scrollbar-thumb{background:rgba(122,83,32,.55); border-radius:3px;}   /* 玩家笔记/局内信息滚动条：改玩家笔记主题深金褐（原紫色），透明轨道 */
   .nb-sec{font-weight:800; color:#6b4a1e; margin:8px 0 4px; letter-spacing:.5px;}
   .nbtok{display:inline-flex; align-items:center; gap:4px; font-size:calc(1.02 * var(--sw) / 100); font-weight:700; padding:3px 9px; border-radius:14px; margin:0 5px 5px 0;
     border:1.5px solid rgba(122,83,32,.4); background:rgba(255,252,244,.85); color:#3a2a12; cursor:grab; user-select:none; white-space:nowrap; box-shadow:0 1px 2px rgba(0,0,0,.15);}   /* 与魔典/角色设置的 .rchip 一致：同字号/字重、彩色边框、阴影 */
@@ -1154,6 +1157,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.42.6', d:'2026-08-12', items:['①未登录大厅客人名单右侧滚动条去掉白色默认底，改透明轨道+金色滑块。②玩家笔记/局内信息右侧滚动条由紫色改为玩家笔记主题的深金褐色（透明轨道）。③修复座位人数多（约 11 人起）时玩家名字（如 Cooler）被换行：根因是 iOS 会自动放大过小的字号（-webkit-text-size-adjust），使字号不再严格等比、名字撑破换行；现关闭该自动放大（字号严格按 px 等比缩放），并把座位名字框余量从 88% 放宽到 94%。']},
   {v:'v2.42.5', d:'2026-08-12', items:['①未登录大厅：点客人名单里的名字，也会弹出玩家登录框（此前只有点墨水瓶才弹），并把该名字预填到 ID 框、光标落到密码框。②座位随人数变化缩放时，座位上的文字（玩家名、身份）、以及守护/红鲱鱼等状态标记，现在都严格按座位直径等比缩放——此前名字字号有 11px 下限、身份字号有 9px 下限、标记徽标有 18px 下限，人多座位小时这些下限让文字/标记相对偏大、和少人局的单座不一致；去掉下限后，放大一个 15 人局的单座就和 5 人局的单座完全一样（座号数字本就等比、不受影响）。']},
   {v:'v2.42.4', d:'2026-08-12', items:['座号徽标（座位左上角数字）圆心沿对角线向外挪 20% 个徽标直径：此前圆心恰好落在座位圆的弧线上，略显挤；现在把定位锚点从座位 15%/15% 改为 9.8%/9.8%（沿左上对角线、即径向朝外移 0.2×徽标直径≈每轴 5.2% 座径），徽标略微探出座位边缘、更透气。直径/字号不变。']},
   {v:'v2.42.3', d:'2026-08-12', items:['玩家座位左上角的座号徽标（数字标号）直径与字号各缩小 20%，圆心位置保持不变——此前徽标偏大会挡住座位里的玩家名字/身份文字。改法：徽标定位从「左上角负偏移」改为「圆心锚定在座位 15%/15% 处」（等于原来的圆心位置），这样以后再调直径圆心也不动；直径由 0.46×座径 改为 0.368×座径、字号随之联动同比缩小。魔典/间谍魔典/大厅·笔记三处座位圈一致生效。']},
