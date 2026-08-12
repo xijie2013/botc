@@ -1206,6 +1206,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.48.1', d:'2026-08-12', items:['说书人点「解散私聊」后，给全体玩家的通知弹窗措辞改为「私聊环节已结束 / 可以开始提名了，请大家回到大厅。」（此前为「说书人已解散所有私聊」，在当天没人私聊时显得别扭）；说书人端的确认提示也同步改为「私聊环节已结束、提名已开启」。']},
   {v:'v2.48.0', d:'2026-08-12', items:['提名改为「先解散私聊、再开始提名」的流程：天亮后，说书人白天面板的「＋提名」先锁住（显示灰色提示，须先点左下角「解散私聊」按钮），此时左下角「解散私聊」按钮即便当前没有私聊也可点击。点击（两连点确认）解散后——① 当天「解散私聊」按钮变灰、不可再点；② 全体玩家「发起私聊」左下角图标变灰、本轮不可再发起/加入私聊；③ 说书人「＋提名」解锁，可以开始提名。次日天亮自动重置（提名重新锁住、私聊重新开放）。']},
   {v:'v2.47.0', d:'2026-08-12', items:['「解散私聊」按钮改为纯等比缩放（去掉窄屏单独的 px 档位，与座位圈等元素一样随舞台整体等比缩放）。按钮改为常驻说书人魔典左下角：白天且场上有私聊/待处理邀请时红色可点，夜晚或白天无私聊时灰色不可点。说书人解散后，全体玩家会收到底部弹窗通知「说书人已解散所有私聊，请大家回到大厅，开始提名环节」（无 20 秒倒计时），点「确认收到」后弹窗消失。']},
   {v:'v2.46.0', d:'2026-08-12', items:['说书人魔典左下角新增「解散私聊」按钮（与玩家端发起私聊图标同位置、同大小，红色两小人打叉图标）：仅在场上存在私聊分组或未了结邀请时出现，两连点确认（第一次点亮红「确认解散」、3 秒内不再点则自动取消）。确认后清空全场所有私聊与待处理邀请，所有玩家的座位圈立即回到原本顺序、色带消失，随后即可开始提名。说书人只做解散这一操作，不参与私聊。']},
@@ -4228,7 +4229,7 @@ load(); render();
     window.updateStChatDisband();
     try{ if(typeof render==='function') render(); }catch(e){}   // 立即刷新说书人白天面板：提名表单解锁
     try{ if(typeof updateChatFab==='function') updateChatFab(); }catch(e){}
-    try{ toast('已解散所有私聊、开启提名，已通知全体玩家回到大厅'); }catch(e){} };
+    try{ toast('私聊环节已结束、提名已开启，已通知全体玩家'); }catch(e){} };
   window._chatRespond=function(iid,agree){ const from=myVoteSeat(); if(from<0||!notesRef) return;
     window.__chatMyResp[iid]=agree?1:0;   // 乐观：拒绝→弹窗立即消失、同意→立即显示「等待结果」
     try{ notesRef.child('chatResp').set({iid:iid,from:from,agree:agree?1:0,ts:Date.now()}).catch(function(){}); }catch(e){}
@@ -4290,7 +4291,7 @@ load(); render();
     const d=pub&&pub.chatDisband; const seat=(role==='player')?myVoteSeat():-1;
     Object.keys(window.__disbandAcked).forEach(id=>{ if(!d||String(d.id)!==id) delete window.__disbandAcked[id]; });   // 通知换了/清了→清本地已读态
     if(role!=='player'||seat<0||!d||!d.id||window.__disbandAcked[String(d.id)]){ pop.style.display='none'; pop.innerHTML=''; return; }
-    pop.innerHTML='<div class="cdb"><div class="cdb-t">说书人已解散所有私聊</div><div class="cdb-s">请大家回到大厅，开始提名环节。</div>'
+    pop.innerHTML='<div class="cdb"><div class="cdb-t">私聊环节已结束</div><div class="cdb-s">可以开始提名了，请大家回到大厅。</div>'
       +'<button class="cdb-ok" onclick="_chatDisbandAck(\''+d.id+'\')">确认收到</button></div>';
     pop.style.display='block'; }
   window.updateChatDisband=updateChatDisband;
