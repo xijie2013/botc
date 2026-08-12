@@ -535,6 +535,8 @@
   .nameitem .no{min-width:20px; height:20px; display:flex; align-items:center; justify-content:center; border-radius:50%;
     background:#2a1a10; color:#e9c46a; font-size:11px; font-weight:800; flex:0 0 auto;}
   .nameitem.dead{opacity:.5; text-decoration:line-through;} .nameitem .cz{margin-left:auto; font-size:.95em;}
+  .nameitem.clickable{cursor:pointer;}   /* 未登录大厅：客人名字可点=登录 */
+  .nameitem.clickable:hover{background:rgba(255,244,214,.85); border-color:rgba(122,83,32,.6);}
   .stage.grim .nameitem{background:rgba(240,235,250,.5); border-color:rgba(74,43,107,.3); color:#3a2456;}
   /* 玩家书本 3 个 tab */
   .nbtabs{display:flex; gap:4px; flex:0 0 auto;}
@@ -1152,6 +1154,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.42.5', d:'2026-08-12', items:['①未登录大厅：点客人名单里的名字，也会弹出玩家登录框（此前只有点墨水瓶才弹），并把该名字预填到 ID 框、光标落到密码框。②座位随人数变化缩放时，座位上的文字（玩家名、身份）、以及守护/红鲱鱼等状态标记，现在都严格按座位直径等比缩放——此前名字字号有 11px 下限、身份字号有 9px 下限、标记徽标有 18px 下限，人多座位小时这些下限让文字/标记相对偏大、和少人局的单座不一致；去掉下限后，放大一个 15 人局的单座就和 5 人局的单座完全一样（座号数字本就等比、不受影响）。']},
   {v:'v2.42.4', d:'2026-08-12', items:['座号徽标（座位左上角数字）圆心沿对角线向外挪 20% 个徽标直径：此前圆心恰好落在座位圆的弧线上，略显挤；现在把定位锚点从座位 15%/15% 改为 9.8%/9.8%（沿左上对角线、即径向朝外移 0.2×徽标直径≈每轴 5.2% 座径），徽标略微探出座位边缘、更透气。直径/字号不变。']},
   {v:'v2.42.3', d:'2026-08-12', items:['玩家座位左上角的座号徽标（数字标号）直径与字号各缩小 20%，圆心位置保持不变——此前徽标偏大会挡住座位里的玩家名字/身份文字。改法：徽标定位从「左上角负偏移」改为「圆心锚定在座位 15%/15% 处」（等于原来的圆心位置），这样以后再调直径圆心也不动；直径由 0.46×座径 改为 0.368×座径、字号随之联动同比缩小。魔典/间谍魔典/大厅·笔记三处座位圈一致生效。']},
   {v:'v2.42.2', d:'2026-08-12', items:['私聊分组色带收紧，紧贴座位：此前色带径向留了约座位半径 0.28 倍（~25px）的缝、两端角度外扩较多，整体偏胖。现在把径向缝收到约座位半径 0.11 倍（~10px）、两端角度 pad 收到极小，色带将将裹住成员座位（含两端的半圆弧端帽也随之贴合端座），不再空出一大圈。']},
@@ -2865,7 +2868,7 @@ function renderSeats(){
   const cx=SW*0.71-zoneLeft, cy=SH*0.525-zoneTop, R=SH*0.34;
   tableCenter={x:SW*0.71, y:SH*0.525};
   const seatD=Math.max(R*0.26, Math.min(R*0.78, R*3.8/N));
-  const numD=seatD*0.368, numF=numD*0.6, nmF=Math.max(11,seatD*0.24), rF=Math.max(9,seatD*0.17);   /* 座号徽标直径较原 0.46 缩小 20%（字号 numF 随 numD 联动同缩），圆心不动、少挡名字 */
+  const numD=seatD*0.368, numF=numD*0.6, nmF=seatD*0.24, rF=seatD*0.17;   /* v2.42.5 去掉字号下限，座位名字/身份字号纯按 seatD 等比（人数变→座位缩放，文字同比缩放，放大后与少人座一致） */   /* 座号徽标直径较原 0.46 缩小 20%（字号 numF 随 numD 联动同缩），圆心不动、少挡名字 */
   for(let i=0;i<N;i++){
     const ang=-Math.PI/2+i*2*Math.PI/N;
     const x=cx+R*Math.cos(ang), y=cy+R*Math.sin(ang);
@@ -2897,7 +2900,7 @@ function renderSeats(){
         s.style.background="url('"+deathCauseIcon(i)+"') "+pos+" / "+sz+" no-repeat, radial-gradient(circle at 50% 35%, rgba(48,34,58,.9), rgba(22,15,30,.95))"; }
       else if(isProtected(i)){ const rk=impKills[night]; const hit = rk && rk.type==="normal" && rk.target===i && rk.blocked;
         s.style.background=(hit?"url('assets/kp-demonkill.png') calc(50% + 6px) center / 60% no-repeat, ":"")+"url('assets/bg-shield.png') calc(50% + 6px) center / 78% no-repeat, radial-gradient(circle at 50% 35%, rgba(90,60,110,.9), rgba(45,28,60,.95))"; }
-      const r=seatD/2, bD=Math.max(18, seatD*0.24)*1.1, dist=r*1.3;
+      const r=seatD/2, bD=seatD*0.24*1.1, dist=r*1.3;   /* v2.42.5 去掉标记徽标下限，守护/红鲱鱼等标记纯按 seatD 等比缩放 */
       const badge=(deg,ic,t,scl,glow)=>{ const bd=bD*(scl||1); const a=deg*Math.PI/180, bx=r+dist*Math.sin(a), by=r-dist*Math.cos(a);
         const gf=glow?'filter:drop-shadow(0 0 2px '+glow+') drop-shadow(0 0 4px '+glow+');':'';
         return '<div class="shieldbadge" title="'+t+'" style="width:'+bd+'px;height:'+bd+'px;left:'+(bx-bd/2)+'px;top:'+(by-bd/2)+'px;'+gf+'"><img src="'+ic+'"></div>'; };
@@ -3552,7 +3555,7 @@ load(); render();
     const zoneLeft=0.40*SW, zoneTop=0.08*SH;
     const cx=SW*0.71-zoneLeft, cy=SH*0.525-zoneTop, R=SH*0.34;
     const seatD=Math.max(R*0.26, Math.min(R*0.78, R*3.8/NN));
-    const numD=seatD*0.368, numF=numD*0.6, nmF=Math.max(11,seatD*0.24), rF=Math.max(9,seatD*0.17);   /* 座号徽标直径较原 0.46 缩小 20%（字号 numF 随 numD 联动同缩），圆心不动、少挡名字 */
+    const numD=seatD*0.368, numF=numD*0.6, nmF=seatD*0.24, rF=seatD*0.17;   /* v2.42.5 去掉字号下限，座位名字/身份字号纯按 seatD 等比（人数变→座位缩放，文字同比缩放，放大后与少人座一致） */   /* 座号徽标直径较原 0.46 缩小 20%（字号 numF 随 numD 联动同缩），圆心不动、少挡名字 */
     seats.forEach(function(o,i){
       const ang=-Math.PI/2+i*2*Math.PI/NN; const x=cx+R*Math.cos(ang), y=cy+R*Math.sin(ang);
       const s=document.createElement('div'); s.className='seat'+(o.good?' good':(o.evil?' evil':''))+(o.dead?' dead':'');
@@ -3564,7 +3567,7 @@ load(); render();
       if(o.dead && o.deadIcon){ s.classList.add('hascause'); const isClaw=!!o.claw; const pos=isClaw?'calc(50% + 6px) center':'center', sz=isClaw?'80%':'62%';
         s.style.background="url('"+o.deadIcon+"') "+pos+" / "+sz+" no-repeat, radial-gradient(circle at 50% 35%, rgba(48,34,58,.9), rgba(22,15,30,.95))"; }
       else if(o.protectedBg){ s.style.background=(o.shieldHit?"url('assets/kp-demonkill.png') calc(50% + 6px) center / 60% no-repeat, ":"")+"url('assets/bg-shield.png') calc(50% + 6px) center / 78% no-repeat, radial-gradient(circle at 50% 35%, rgba(90,60,110,.9), rgba(45,28,60,.95))"; }
-      const r=seatD/2, bD=Math.max(18, seatD*0.24)*1.1, dist=r*1.3;
+      const r=seatD/2, bD=seatD*0.24*1.1, dist=r*1.3;   /* v2.42.5 去掉标记徽标下限，守护/红鲱鱼等标记纯按 seatD 等比缩放 */
       const badge=function(deg,ic,t,scl,glow){ const bd=bD*(scl||1); const a=deg*Math.PI/180, bx=r+dist*Math.sin(a), by=r-dist*Math.cos(a);
         const gf=glow?'filter:drop-shadow(0 0 2px '+glow+') drop-shadow(0 0 4px '+glow+');':'';
         return '<div class="shieldbadge" title="'+t+'" style="width:'+bd+'px;height:'+bd+'px;left:'+(bx-bd/2)+'px;top:'+(by-bd/2)+'px;'+gf+'"><img src="'+ic+'"></div>'; };
@@ -4219,7 +4222,7 @@ load(); render();
     const stage=document.getElementById('stage'); const SW=stage.clientWidth, SH=stage.clientHeight;
     const zoneLeft=0.40*SW, zoneTop=0.08*SH, cx=SW*0.71-zoneLeft, cy=SH*0.525-zoneTop, R=SH*0.34;
     const N=pub.count, seats=pub.seats||[]; const seatD=Math.max(R*0.26, Math.min(R*0.78, R*3.8/N));
-    const numD=seatD*0.368, numF=numD*0.6, nmF=Math.max(11,seatD*0.24), rF=Math.max(9,seatD*0.17);   /* 座号徽标直径较原 0.46 缩小 20%（字号 numF 随 numD 联动同缩），圆心不动、少挡名字 */
+    const numD=seatD*0.368, numF=numD*0.6, nmF=seatD*0.24, rF=seatD*0.17;   /* v2.42.5 去掉字号下限，座位名字/身份字号纯按 seatD 等比（人数变→座位缩放，文字同比缩放，放大后与少人座一致） */   /* 座号徽标直径较原 0.46 缩小 20%（字号 numF 随 numD 联动同缩），圆心不动、少挡名字 */
     /* 私聊分组：把成员拉到发起人身边聚拢，非成员保持环序；posOf: 座位号 -> 显示位 k */
     const _chOrder=chatOrder(N, pubChats()); const posOf={}; _chOrder.forEach((o,k)=>{ posOf[o.seat]=k; });
     for(let i=0;i<N;i++){ const ps=seats[i]||{}, _k=(posOf[i]!=null?posOf[i]:i), ang=-Math.PI/2+_k*2*Math.PI/N, x=cx+R*Math.cos(ang), y=cy+R*Math.sin(ang);
@@ -4233,7 +4236,7 @@ load(); render();
       if(dead&&ps.cause&&CAUSE[ps.cause]) s.style.background="url('"+CAUSE[ps.cause].img+"') center / 70% no-repeat, radial-gradient(circle at 50% 35%, rgba(48,34,58,.9), rgba(22,15,30,.95))";
       const marks=(mine&&mine.status)?mine.status.slice():[];
       if(dead && marks.indexOf('dead')<0) marks.push('dead');   // 出局也用魔典的骷髅图标
-      const r=seatD/2, bD=Math.max(18, seatD*0.24)*1.1, dist=r*1.3; let bhtml='';
+      const r=seatD/2, bD=seatD*0.24*1.1, dist=r*1.3;   /* v2.42.5 去掉标记徽标下限，守护/红鲱鱼等标记纯按 seatD 等比缩放 */ let bhtml='';
       ['dead','poison','drunk','shield','crossbow','master','herring'].forEach(k=>{ if(marks.indexOf(k)<0) return; const m2=MARK[k]; if(!m2) return;
         const bd=bD*(m2[2]||1), a=m2[0]*Math.PI/180, bx=r+dist*Math.sin(a), by=r-dist*Math.cos(a);
         const rmv=(mode==='notes'&&k!=='dead');   // 玩家笔记：点自己加的状态标记可移除（死亡标记除外，那是说书人给的）
@@ -4266,9 +4269,14 @@ load(); render();
     document.getElementById('hallTitle').textContent = '客人名单';
     if(!pub||!pub.count){ nl.innerHTML='<div style="color:#9a7c4a;font-size:12px;padding:6px">🕯️ 说书人还没开局</div>'; if(lg) lg.innerHTML=''; return; }
     const seats=pub.seats||[];   // 客人名单：仅显示座号+名字，不随状态变化、无结算横幅
-    nl.innerHTML=seats.map((s,i)=>'<div class="nameitem"><span class="no">'+(i+1)+'</span>'+(E(s.name)||'—')+'</div>').join('');
+    const _clk=(role==='anon');   // 未登录大厅：点客人名字=弹出该玩家登录框（同点墨水瓶，并预填 ID）
+    nl.innerHTML=seats.map((s,i)=>'<div class="nameitem'+((_clk&&s.name)?' clickable':'')+'" data-si="'+i+'"><span class="no">'+(i+1)+'</span>'+(E(s.name)||'—')+'</div>').join('');
+    if(_clk){ nl.querySelectorAll('.nameitem.clickable').forEach(function(el){ el.addEventListener('click',function(){ const si=+el.getAttribute('data-si'); const nm=(seats[si]&&seats[si].name)||''; if(nm) window._hallNameClick(nm); }); }); }
     if(lg) lg.innerHTML=nomLogHTML();
   }
+  /* 未登录大厅点客人名字：打开玩家登录门并预填该名字为 ID（ID 即显示名，见 _canonName） */
+  window._hallNameClick=function(name){ if(role!=='anon') return; try{ openPlayerGate(); }catch(e){}
+    setTimeout(function(){ const idEl=document.getElementById('pId'); if(idEl) idEl.value=name; const pwEl=document.getElementById('pPw'); if(pwEl) pwEl.focus(); },70); };
   function nomLogHTML(){ const noms=(pub&&pub.noms)||[], seats=(pub&&pub.seats)||[], days={}; noms.forEach(n=>{(days[n.day]=days[n.day]||[]).push(n);});
     const keys=Object.keys(days).sort((a,b)=>a-b);
     if(!keys.length) return '<div style="color:#9a7c4a;font-size:12px;padding:4px">还没有提名。有人提名后会实时出现在这里。</div>';
