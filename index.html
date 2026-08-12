@@ -1206,6 +1206,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.48.0', d:'2026-08-12', items:['提名改为「先解散私聊、再开始提名」的流程：天亮后，说书人白天面板的「＋提名」先锁住（显示灰色提示，须先点左下角「解散私聊」按钮），此时左下角「解散私聊」按钮即便当前没有私聊也可点击。点击（两连点确认）解散后——① 当天「解散私聊」按钮变灰、不可再点；② 全体玩家「发起私聊」左下角图标变灰、本轮不可再发起/加入私聊；③ 说书人「＋提名」解锁，可以开始提名。次日天亮自动重置（提名重新锁住、私聊重新开放）。']},
   {v:'v2.47.0', d:'2026-08-12', items:['「解散私聊」按钮改为纯等比缩放（去掉窄屏单独的 px 档位，与座位圈等元素一样随舞台整体等比缩放）。按钮改为常驻说书人魔典左下角：白天且场上有私聊/待处理邀请时红色可点，夜晚或白天无私聊时灰色不可点。说书人解散后，全体玩家会收到底部弹窗通知「说书人已解散所有私聊，请大家回到大厅，开始提名环节」（无 20 秒倒计时），点「确认收到」后弹窗消失。']},
   {v:'v2.46.0', d:'2026-08-12', items:['说书人魔典左下角新增「解散私聊」按钮（与玩家端发起私聊图标同位置、同大小，红色两小人打叉图标）：仅在场上存在私聊分组或未了结邀请时出现，两连点确认（第一次点亮红「确认解散」、3 秒内不再点则自动取消）。确认后清空全场所有私聊与待处理邀请，所有玩家的座位圈立即回到原本顺序、色带消失，随后即可开始提名。说书人只做解散这一操作，不参与私聊。']},
   {v:'v2.45.0', d:'2026-08-12', items:['说书人魔典的座位圈现在也同步显示私聊分组：和玩家端一样，把私聊成员的座位聚拢到一起、用该组颜色的弧形色带圈出，分组变化时实时更新。说书人只做「显示」——不出现加入/退出按钮和发起图标（说书人不参与私聊）。']},
@@ -2402,6 +2403,7 @@ function onBlock(day){ const noms=nominations[day]||[]; const thr=dayThreshold()
 /* 本日是否有正在进行（未停止计票）的投票——任意时刻只允许一个 */
 function voteInProgress(day){ return (nominations[day]||[]).some(n=>n&&!n.tallied); }
 function addNomination(nr,ne){ if(nr===""||ne==="") return; const day=night;
+  if(!window.__nomStarted) return;           // 未点「解散私聊」前，提名锁住
   if(executions[day]!==undefined) return;   // 本日处决结果已出 → 锁定，不再新增提名
   if(voteInProgress(day)) return;            // 已有投票在进行 → 必须先「停止计票」才能开新提名
   nr=+nr; ne=+ne;
@@ -2840,7 +2842,8 @@ function renderGrim(){
       h+='</div>'; });
     if(executions[day]!==undefined){ h+='<div class="impkill" style="opacity:.6;font-weight:400">本日处决已确定，不能再新增提名</div>'; }
     else if(voting){ h+='<div class="impkill" style="opacity:.6;font-weight:400">请先「停止计票」，再开启新的提名（同一时刻只能有一个投票进行）</div>'; }   // 停止计票后才能开新提名
-    else {   // 未处决且无投票进行 → 显示「＋提名」表单
+    else if(!window.__nomStarted){ h+='<div class="impkill" style="opacity:.55;font-weight:400;line-height:1.5">私聊环节进行中——请先点<b>左下角「解散私聊」按钮</b>结束私聊，才能开始提名</div>'; }   // 天亮后先锁提名：说书人点「解散私聊」后才解锁
+    else {   // 未处决且无投票进行且已解散私聊 → 显示「＋提名」表单
       const neSet=new Set(noms.map(x=>x.nominee)), nrSet=new Set(noms.map(x=>x.nominator));
       let nrOpt='<option value="">提名人</option>', neOpt='<option value="">被提名</option>';
       allSeats().forEach(i=>{ if(!nrSet.has(i)) nrOpt+='<option value="'+i+'">'+(i+1)+' '+nameAt(i)+(isDeadSeat(i)?'（已出局）':'')+'</option>'; });
@@ -3792,9 +3795,9 @@ load(); render();
   window._stResetPublic=function(){ if(role!=='st'||!curGid) return;
     try{ _lastResultSig=null; }catch(e){}
     try{ const p=(typeof buildPublic==='function')?buildPublic():null;
-      const upd={ result:null, vote:null, exec:null, phase:'night', clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null} };   // 重置角色→回第一夜，私聊冻结
+      const upd={ result:null, vote:null, exec:null, phase:'night', nomStarted:false, clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null} };   // 重置角色→回第一夜，私聊冻结、提名未开
       if(p){ upd.seats=p.seats; upd.noms=(p.noms&&p.noms.length)?p.noms:null; upd.day=p.day; upd.count=p.count; }
-      upd.chats=null; upd.chatInv=null; upd.chatNote=null;   // 私聊分组一并清零
+      upd.chats=null; upd.chatInv=null; upd.chatNote=null; upd.chatDisband=null;   // 私聊分组/解散通知一并清零
       db.ref('games/'+curGid+'/public').update(upd).catch(()=>{});
     }catch(e){} try{ _chatReset(); }catch(e){} };
 
@@ -3875,6 +3878,7 @@ load(); render();
       if(window.applyResult) window.applyResult(null);
       if(mode!=='st') renderView(); return; }
     pubBound=db.ref('games/'+curGid+'/public'); pubBound.on('value',s=>{ pub=s.val(); ensureS();
+      window.__nomStarted=!!(pub&&pub.nomStarted);   // 提名阶段是否已开启（说书人点了「解散私聊」按钮）：天亮=false 锁提名/私聊开放；解散后=true 开提名/私聊冻结
       window.__pubHasGame=!!(pub&&pub.count); window.__pubCount=(pub&&pub.count)||0;
       if(pub&&pub.count&&window._prefetchExec) window._prefetchExec();   // 开局后预取处决/射杀视频，避免首次卡顿
       if(window.clockApplyState) window.clockApplyState(pub&&pub.clock);
@@ -4184,6 +4188,7 @@ load(); render();
   function _myChatInv(){ return _myChatInvList()[0]||null; }   // 最早的一个=当前可操作的；有任意未了结即视为「忙」(左下角图标灰)
   window._chatFabTap=function(){ if(role!=='player'||myVoteSeat()<0) return;
     if(!isChatDay()){ try{toast('夜晚不能发起私聊');}catch(e){} return; }
+    if(pub&&pub.nomStarted){ try{toast('说书人已解散私聊、进入提名环节，本轮不能再私聊');}catch(e){} return; }   // 本轮已解散→冻结发起
     if(_myChatInv()&&!_chatSelMode){ try{toast('请先处理当前的私聊邀请');}catch(e){} return; }   // 有未了结邀请→不能发起新的
     _chatToggleInvite(); };
   window._chatToggleInvite=function(){ if(role!=='player'||myVoteSeat()<0||!isChatDay()) return; if(_myChatInv()&&!_chatSelMode) return;
@@ -4196,9 +4201,9 @@ load(); render();
   function updateChatFab(){ const fab=document.getElementById('chatFab'); if(!fab) return;
     const seated=(role==='player'&&myVoteSeat()>=0);
     if(!seated){ fab.style.display='none'; _chatSelMode=false; return; }
-    fab.style.display='flex'; const day=isChatDay(); const busy=!!_myChatInv();
-    if(!day||busy){ _chatSelMode=false; }
-    fab.classList.toggle('cf-off', !day||busy);   // 夜晚或有未了结邀请→灰掉
+    fab.style.display='flex'; const day=isChatDay(); const busy=!!_myChatInv(); const closed=!!(pub&&pub.nomStarted);
+    if(!day||busy||closed){ _chatSelMode=false; }
+    fab.classList.toggle('cf-off', !day||busy||closed);   // 夜晚 / 有未了结邀请 / 本轮已解散(进入提名)→灰掉
     fab.classList.toggle('cf-sel', !!_chatSelMode);
     const badge=fab.querySelector('.cf-badge'); const n=(_chatSelMode&&_chatSel)?_chatSel.size:0;
     if(badge){ badge.textContent=n||''; badge.style.display=n?'flex':'none'; } }
@@ -4206,21 +4211,24 @@ load(); render();
   /* 说书人魔典：左下角「解散私聊」按钮（两连点确认 → 清空所有私聊，玩家回到原座位，随后可开始提名） */
   window.__sdfArmed=false; window.__sdfT=null;
   function _stHasChats(){ return !!((pub&&pub.chats&&Object.keys(pub.chats).length)||(pub&&pub.chatInv&&Object.keys(pub.chatInv).length)); }
-  function _sdfActive(){ return isChatDay() && _stHasChats(); }   // 可点=白天且场上有私聊/待处理邀请
+  function _sdfActive(){ return isChatDay() && !window.__nomStarted; }   // 可点=白天且本轮尚未点过「解散私聊」（即便当前没有私聊也可点，用来结束私聊环节、开启提名）
   window.updateStChatDisband=function(){ const el=document.getElementById('stDisbandFab'); if(!el) return;
     if(!(role==='st'&&mode==='st')){ el.style.display='none'; window.__sdfArmed=false; clearTimeout(window.__sdfT); return; }
-    el.style.display='flex';   // 说书人魔典常驻；夜晚或白天无私聊→灰
+    el.style.display='flex';   // 说书人魔典常驻；夜晚 或 本轮已解散→灰
     const active=_sdfActive(); if(!active){ window.__sdfArmed=false; clearTimeout(window.__sdfT); }
     el.classList.toggle('sdf-off', !active); el.classList.toggle('sdf-armed', active&&!!window.__sdfArmed); };
   window._stDisbandTap=function(){ if(!(role==='st'&&mode==='st')) return;
-    if(!_sdfActive()){ try{ toast(isChatDay()?'当前没有正在进行的私聊':'夜晚无需解散私聊'); }catch(e){} return; }   // 灰态：给个提示，不动作
+    if(!_sdfActive()){ try{ toast(isChatDay()?'本轮已解散私聊、提名已开启':'夜晚无需解散私聊'); }catch(e){} return; }   // 灰态：给个提示，不动作
     if(!window.__sdfArmed){ window.__sdfArmed=true; window.updateStChatDisband();   // 第一次点：进入「确认解散」态，3s 未再点自动取消
       clearTimeout(window.__sdfT); window.__sdfT=setTimeout(function(){ window.__sdfArmed=false; window.updateStChatDisband(); },3000); return; }
     clearTimeout(window.__sdfT); window.__sdfArmed=false;   // 第二次点：真正解散
     try{ _chatReset(); }catch(e){}   // 清空所有私聊/邀请（各端座位圈回原序、色带消失）
-    try{ if(curGid){ const now=Date.now(); db.ref('games/'+curGid+'/public/chatDisband').set({id:now, ts:now}).catch(()=>{}); } }catch(e){}   // 广播「已解散」通知给全体玩家（底部弹窗，无倒计时）
+    window.__nomStarted=true;   // 乐观：立即开启提名、灰掉解散按钮、冻结玩家发起私聊
+    try{ if(curGid){ const now=Date.now(); db.ref('games/'+curGid+'/public').update({chatDisband:{id:now, ts:now}, nomStarted:true}).catch(()=>{}); } }catch(e){}   // 广播「已解散」通知(底部弹窗，无倒计时) + 开启提名阶段
     window.updateStChatDisband();
-    try{ toast('已解散所有私聊，已通知全体玩家回到大厅'); }catch(e){} };
+    try{ if(typeof render==='function') render(); }catch(e){}   // 立即刷新说书人白天面板：提名表单解锁
+    try{ if(typeof updateChatFab==='function') updateChatFab(); }catch(e){}
+    try{ toast('已解散所有私聊、开启提名，已通知全体玩家回到大厅'); }catch(e){} };
   window._chatRespond=function(iid,agree){ const from=myVoteSeat(); if(from<0||!notesRef) return;
     window.__chatMyResp[iid]=agree?1:0;   // 乐观：拒绝→弹窗立即消失、同意→立即显示「等待结果」
     try{ notesRef.child('chatResp').set({iid:iid,from:from,agree:agree?1:0,ts:Date.now()}).catch(function(){}); }catch(e){}
@@ -4234,6 +4242,7 @@ load(); render();
   window._chatLeave=function(){ const from=myVoteSeat(); if(from<0||!notesRef||!isChatDay()) return;
     try{ notesRef.child('chatLeave').set({from:from,ts:Date.now()}).catch(function(){}); }catch(e){} try{toast('已退出私聊');}catch(e){} };
   window._chatJoinReq=function(cid){ const from=myVoteSeat(); if(from<0||!notesRef) return; if(!isChatDay()){ try{toast('夜晚不能加入私聊');}catch(e){} return; }
+    if(pub&&pub.nomStarted){ try{toast('说书人已进入提名环节，本轮不能再加入私聊');}catch(e){} return; }
     if(_myChatInv()){ try{toast('请先处理当前的私聊邀请');}catch(e){} return; }
     try{ notesRef.child('chatJoin').set({chat:cid,from:from,ts:Date.now()}).catch(function(){}); }catch(e){} };
 
@@ -4305,13 +4314,15 @@ load(); render();
       else { if(v.from===seat) return true; if(v.resp[seat]!==0) return true; } }
     return false; }
   function _cHolders(v){ const h=[v.from]; v.targets.forEach(s=>{ if(v.resp[s]!==0 && h.indexOf(s)<0) h.push(s); }); return h; }   // 结算后仍持有弹窗、需点确定的人=发起人+未拒绝者
-  function _cReq(from,targets){ if(from==null||from<0||_cBusy(from)) return; targets=(targets||[]).filter(s=>s!==from&&s>=0);
+  function _cReq(from,targets){ if(from==null||from<0||_cBusy(from)) return; if(pub&&pub.nomStarted) return;   // 本轮已解散/进入提名→不再受理新私聊
+    targets=(targets||[]).filter(s=>s!==from&&s>=0);
     const fc=_cChatOf(from); targets=targets.filter(s=> !(fc&&_cChatOf(s)===fc));   // 同组的不邀请（不再过滤正忙者：别人仍可邀请正忙的我，我按队列先旧后新地处理）
     if(!targets.length) return;
     const now=Date.now(), iid='i'+(++__chat.iseq); __chat.inv[iid]={from:from,targets:targets,chat:fc,kind:'invite',ts:now,deadline:now+20000,resp:{},phase:'pending'};
     if(fc){ __chat.chats[fc].members.forEach(s=>{ if(s!==from && targets.indexOf(s)<0) _cNote(s,_cName(from)+' 邀请 '+targets.map(t=>_cName(t)).join('、')+' 进入当前私聊'); }); } }
   /* 加入申请：私聊外的 from 申请进 cid，需组内所有现有成员都同意 */
-  function _cJoinReq(from,cid){ if(from==null||from<0||_cBusy(from)) return; const c=__chat.chats[cid]; if(!c) return; if(c.members.indexOf(from)>=0) return;
+  function _cJoinReq(from,cid){ if(from==null||from<0||_cBusy(from)) return; if(pub&&pub.nomStarted) return;   // 本轮已解散/进入提名→不再受理加入
+    const c=__chat.chats[cid]; if(!c) return; if(c.members.indexOf(from)>=0) return;
     const targets=c.members.slice(); if(!targets.length) return;   // 正忙的成员也照发（他按队列处理），不再直接拒
     const now=Date.now(), iid='i'+(++__chat.iseq); __chat.inv[iid]={from:from,targets:targets,chat:cid,kind:'join',ts:now,deadline:now+20000,resp:{},phase:'pending'}; }
   function _cResp(iid,from,agree){ const v=__chat.inv[iid]; if(!v||v.phase==='resolved') return; if(v.targets.indexOf(from)<0) return; v.resp[from]=agree?1:0; }
@@ -4619,7 +4630,7 @@ load(); render();
     }catch(e){}
     const gid='t'+Date.now();
     const seats=[]; for(let i=0;i<N;i++){ const t=seatToken(i); seats.push({name:(t&&t.name)?t.name:'', dead:false, cause:''}); }
-    const g={ name:window.__botcGameName, count:N, day:night, seats:seats, locked:[...lockedRoles], dist:(customDist||DIST[N]||[0,0,0,0]), noms:[], clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null}, result:null, vote:null, phase:'night' };   /* 开局=第一夜，私聊冻结 */
+    const g={ name:window.__botcGameName, count:N, day:night, seats:seats, locked:[...lockedRoles], dist:(customDist||DIST[N]||[0,0,0,0]), noms:[], clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null}, result:null, vote:null, phase:'night', nomStarted:false };   /* 开局=第一夜，私聊冻结，提名未开 */
     try{ await db.ref('storytellerUid').set({uid:me.uid, sid:_stSid, name:(me&&me.displayName)||'', ts:firebase.database.ServerValue.TIMESTAMP}); try{ db.ref('storytellerUid').onDisconnect().remove(); }catch(e){} await db.ref('games/'+gid+'/public').set(g);
       /* 私密下发每位已登录玩家本局的角色（仅本人与说书人可读；酒鬼下发其自以为的镇民牌） */
       try{ const accSnap=await db.ref('accounts').once('value'); const accs=accSnap.val()||{}; const ru={};
@@ -4641,8 +4652,10 @@ load(); render();
     const p=buildPublic(); try{ await db.ref('games/'+curGid+'/public').update({seats:p.seats,noms:p.noms,day:p.day,count:p.count}); toast('📣 已公布第 '+p.day+' 天'); }
     catch(e){ toast('公布失败：'+(e.code||'')); } };
   window.stDawn=async function(){ if(role!=='st'){ toast('请先登录说书人'); return; } if(!curGid){ toast('先点开新局'); return; }
+    window.__nomStarted=false;   // 天亮：提名先锁住（灰），私聊开放；须点左下角「解散私聊」按钮后才开提名（乐观置位，pub 回传再确认）
     const p=buildPublic(); try{ await db.ref('games/'+curGid+'/public').update({seats:p.seats,noms:p.noms,day:p.day,count:p.count,
         phase:'day',   /* 天亮→白天：玩家端私聊功能解冻（左下角图标可点、座位圈加入/退出按钮出现） */
+        nomStarted:false,   /* 天亮先锁提名：说书人点「解散私聊」后才解锁 */
         vote:null, clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null}}); toast('天亮了'); }
     catch(e){ toast('更新失败：'+(e.code||'')); } };
   /* 入夜（结束本日）：公开 phase='night'，玩家端私聊整体冻结 */
