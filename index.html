@@ -601,10 +601,17 @@
     display:none; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.5); -webkit-tap-highlight-color:transparent;}
   #stDisbandFab svg{width:60%; height:60%; display:block;}
   #stDisbandFab .sdf-confirm{display:none; font:800 15px/1.05 sans-serif; text-align:center; letter-spacing:1px;}
+  #stDisbandFab.sdf-off{filter:grayscale(1) brightness(.72); opacity:.5; cursor:not-allowed; border-color:rgba(150,150,150,.4);}   /* 夜晚 / 白天无私聊：灰掉不可点 */
   #stDisbandFab.sdf-armed{background:linear-gradient(180deg,#c0392b,#7d1f16); border-color:#ffd7d7; box-shadow:0 0 16px rgba(231,76,60,.85); color:#fff;}
   #stDisbandFab.sdf-armed svg{display:none;}
   #stDisbandFab.sdf-armed .sdf-confirm{display:block;}
-  @media (max-width:720px){ #stDisbandFab{width:52px; height:52px; left:10px; bottom:10px;} #stDisbandFab .sdf-confirm{font-size:13px;} }
+  /* 说书人解散私聊后：全体玩家的底部通知弹窗（无倒计时，点确认收到即消失） */
+  #chatDisbandPop{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:123; display:none; pointer-events:none;}
+  #chatDisbandPop .cdb{width:350px; max-width:94vw; box-sizing:border-box; pointer-events:auto; background:linear-gradient(180deg,rgba(44,22,26,.98),rgba(28,13,16,.98));
+    border:1.4px solid rgba(233,110,110,.6); border-radius:14px; padding:14px 16px 12px; box-shadow:0 10px 34px rgba(0,0,0,.5);}
+  #chatDisbandPop .cdb-t{font-size:14px; font-weight:800; color:#ffdede; line-height:1.5; margin-bottom:8px; text-align:center;}
+  #chatDisbandPop .cdb-s{font-size:12.5px; color:#e8c9c9; text-align:center; line-height:1.55; margin-bottom:11px;}
+  #chatDisbandPop .cdb-ok{display:block; margin:0 auto; min-width:130px; padding:9px 0; border-radius:11px; font-size:14px; font-weight:800; cursor:pointer; border:none; background:linear-gradient(180deg,#c0392b,#8a2318); color:#fff;}
   /* 座位圈上的私聊按钮（组内第一二成员之间）：组内=退出(红)、组外=加入(蓝) */
   #tableZone .chatbtn{position:absolute; transform:translate(-50%,-50%); border-radius:50%; display:flex; align-items:center; justify-content:center;
     font-weight:800; color:#fff; cursor:pointer; z-index:5; box-shadow:0 2px 8px rgba(0,0,0,.55); user-select:none; white-space:nowrap; -webkit-tap-highlight-color:transparent;}
@@ -980,6 +987,7 @@
     <div id="slayerGun" title="把十字弩拖到目标座位开枪" style="display:none"><img src="assets/mk-crossbow.png" alt="" draggable="false"></div>
     <div id="slayerResult"></div>
     <div id="chatStack"></div>
+    <div id="chatDisbandPop"></div>
     <div id="chatFab" onclick="_chatFabTap()" title="发起/邀请私聊" style="display:none">
       <svg viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor">
         <circle cx="12" cy="15" r="5"/><path d="M3 33c0-5.5 4-8.5 9-8.5s9 3 9 8.5z"/>
@@ -1198,6 +1206,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.47.0', d:'2026-08-12', items:['「解散私聊」按钮改为纯等比缩放（去掉窄屏单独的 px 档位，与座位圈等元素一样随舞台整体等比缩放）。按钮改为常驻说书人魔典左下角：白天且场上有私聊/待处理邀请时红色可点，夜晚或白天无私聊时灰色不可点。说书人解散后，全体玩家会收到底部弹窗通知「说书人已解散所有私聊，请大家回到大厅，开始提名环节」（无 20 秒倒计时），点「确认收到」后弹窗消失。']},
   {v:'v2.46.0', d:'2026-08-12', items:['说书人魔典左下角新增「解散私聊」按钮（与玩家端发起私聊图标同位置、同大小，红色两小人打叉图标）：仅在场上存在私聊分组或未了结邀请时出现，两连点确认（第一次点亮红「确认解散」、3 秒内不再点则自动取消）。确认后清空全场所有私聊与待处理邀请，所有玩家的座位圈立即回到原本顺序、色带消失，随后即可开始提名。说书人只做解散这一操作，不参与私聊。']},
   {v:'v2.45.0', d:'2026-08-12', items:['说书人魔典的座位圈现在也同步显示私聊分组：和玩家端一样，把私聊成员的座位聚拢到一起、用该组颜色的弧形色带圈出，分组变化时实时更新。说书人只做「显示」——不出现加入/退出按钮和发起图标（说书人不参与私聊）。']},
   {v:'v2.44.2', d:'2026-08-12', items:['加入现存私聊未通过时，结果弹窗显示是「谁 拒绝了 谁 的加入申请」——申请人以及该私聊里其他仍持有弹窗的成员都能看到（此前只笼统显示「加入申请未通过」）。加入成功也改为显示「X 加入了私聊」，组员看得更清楚。（若无人明确拒绝、只是超时，显示「X 的加入申请未通过（有人未及时回应）」。）']},
@@ -3876,8 +3885,8 @@ load(); render();
       if(role==='st'&&stPlayersRef){ stPlayersRef.once('value').then(ss=>recomputeHands(ss.val())).catch(()=>{}); }
       updateVoteBar();
       try{ updateSlayerGun(); }catch(e){}   // 开局/结束/换天 → 更新猎手十字弩显隐
-      try{ if(role==='player'){ updateChatInv(); chatNotices(); updateChatFab(); } }catch(e){}   // 私聊：邀请弹窗 + 通知
-      try{ if(role==='st'&&mode==='st'){ const csig=JSON.stringify((pub&&pub.chats)||null); if(csig!==window.__stChatSig){ window.__stChatSig=csig; if(typeof renderSeats==='function') renderSeats(); } } }catch(e){}   // 说书人魔典：私聊分组变化时重排座位圈+重画色带（与玩家端同步）
+      try{ if(role==='player'){ updateChatInv(); chatNotices(); updateChatFab(); updateChatDisband(); } }catch(e){}   // 私聊：邀请弹窗 + 通知 + 解散通知
+      try{ if(role==='st'&&mode==='st'){ const csig=JSON.stringify((pub&&pub.chats)||null); if(csig!==window.__stChatSig){ window.__stChatSig=csig; if(typeof renderSeats==='function') renderSeats(); } if(window.updateStChatDisband) window.updateStChatDisband(); } }catch(e){}   // 说书人魔典：私聊分组变化时重排座位圈+重画色带；「解散私聊」按钮随昼夜/私聊状态灰亮
       if(mode!=='st') renderView(); }); }
   /* 说书人：满足胜负时自动公布（只传结果，不泄露角色；去重避免重复写） */
   let _lastResultSig=null;
@@ -4197,15 +4206,21 @@ load(); render();
   /* 说书人魔典：左下角「解散私聊」按钮（两连点确认 → 清空所有私聊，玩家回到原座位，随后可开始提名） */
   window.__sdfArmed=false; window.__sdfT=null;
   function _stHasChats(){ return !!((pub&&pub.chats&&Object.keys(pub.chats).length)||(pub&&pub.chatInv&&Object.keys(pub.chatInv).length)); }
+  function _sdfActive(){ return isChatDay() && _stHasChats(); }   // 可点=白天且场上有私聊/待处理邀请
   window.updateStChatDisband=function(){ const el=document.getElementById('stDisbandFab'); if(!el) return;
-    if(!(role==='st'&&mode==='st'&&_stHasChats())){ el.style.display='none'; window.__sdfArmed=false; clearTimeout(window.__sdfT); return; }
-    el.style.display='flex'; el.classList.toggle('sdf-armed', !!window.__sdfArmed); };
+    if(!(role==='st'&&mode==='st')){ el.style.display='none'; window.__sdfArmed=false; clearTimeout(window.__sdfT); return; }
+    el.style.display='flex';   // 说书人魔典常驻；夜晚或白天无私聊→灰
+    const active=_sdfActive(); if(!active){ window.__sdfArmed=false; clearTimeout(window.__sdfT); }
+    el.classList.toggle('sdf-off', !active); el.classList.toggle('sdf-armed', active&&!!window.__sdfArmed); };
   window._stDisbandTap=function(){ if(!(role==='st'&&mode==='st')) return;
+    if(!_sdfActive()){ try{ toast(isChatDay()?'当前没有正在进行的私聊':'夜晚无需解散私聊'); }catch(e){} return; }   // 灰态：给个提示，不动作
     if(!window.__sdfArmed){ window.__sdfArmed=true; window.updateStChatDisband();   // 第一次点：进入「确认解散」态，3s 未再点自动取消
       clearTimeout(window.__sdfT); window.__sdfT=setTimeout(function(){ window.__sdfArmed=false; window.updateStChatDisband(); },3000); return; }
     clearTimeout(window.__sdfT); window.__sdfArmed=false;   // 第二次点：真正解散
-    try{ _chatReset(); }catch(e){} window.updateStChatDisband();
-    try{ toast('已解散所有私聊，玩家回到原座位'); }catch(e){} };
+    try{ _chatReset(); }catch(e){}   // 清空所有私聊/邀请（各端座位圈回原序、色带消失）
+    try{ if(curGid){ const now=Date.now(); db.ref('games/'+curGid+'/public/chatDisband').set({id:now, ts:now}).catch(()=>{}); } }catch(e){}   // 广播「已解散」通知给全体玩家（底部弹窗，无倒计时）
+    window.updateStChatDisband();
+    try{ toast('已解散所有私聊，已通知全体玩家回到大厅'); }catch(e){} };
   window._chatRespond=function(iid,agree){ const from=myVoteSeat(); if(from<0||!notesRef) return;
     window.__chatMyResp[iid]=agree?1:0;   // 乐观：拒绝→弹窗立即消失、同意→立即显示「等待结果」
     try{ notesRef.child('chatResp').set({iid:iid,from:from,agree:agree?1:0,ts:Date.now()}).catch(function(){}); }catch(e){}
@@ -4260,6 +4275,17 @@ load(); render();
     const notes=(pub&&pub.chatNote)||[]; window.__chatSeen=window.__chatSeen||{};
     (Array.isArray(notes)?notes:Object.keys(notes).map(k=>notes[k])).forEach(n=>{ if(!n||n.to!==seat||window.__chatSeen[n.id]) return; window.__chatSeen[n.id]=1; try{toast(n.text);}catch(e){} }); }
   window.chatNotices=chatNotices;
+  /* 玩家端：说书人「解散私聊」广播通知（底部弹窗，无倒计时，点确认收到即消失；全体玩家可见） */
+  window.__disbandAcked=window.__disbandAcked||{};
+  function updateChatDisband(){ const pop=document.getElementById('chatDisbandPop'); if(!pop) return;
+    const d=pub&&pub.chatDisband; const seat=(role==='player')?myVoteSeat():-1;
+    Object.keys(window.__disbandAcked).forEach(id=>{ if(!d||String(d.id)!==id) delete window.__disbandAcked[id]; });   // 通知换了/清了→清本地已读态
+    if(role!=='player'||seat<0||!d||!d.id||window.__disbandAcked[String(d.id)]){ pop.style.display='none'; pop.innerHTML=''; return; }
+    pop.innerHTML='<div class="cdb"><div class="cdb-t">说书人已解散所有私聊</div><div class="cdb-s">请大家回到大厅，开始提名环节。</div>'
+      +'<button class="cdb-ok" onclick="_chatDisbandAck(\''+d.id+'\')">确认收到</button></div>';
+    pop.style.display='block'; }
+  window.updateChatDisband=updateChatDisband;
+  window._chatDisbandAck=function(id){ window.__disbandAcked[String(id)]=1; updateChatDisband(); };
 
   /* ---- 说书人端：私聊状态机（挂进 bindStPlayers + 1s 超时 tick）---- */
   let __chat={chats:{},inv:{},notes:[],cseq:0,iseq:0,nseq:0};
@@ -4331,7 +4357,7 @@ load(); render();
     try{ db.ref('games/'+curGid+'/public/chatInv').set(Object.keys(__chat.inv).length?__chat.inv:null).catch(()=>{}); }catch(e){}
     try{ db.ref('games/'+curGid+'/public/chatNote').set(__chat.notes.length?__chat.notes:null).catch(()=>{}); }catch(e){} }
   window._chatReset=function(){ __chat={chats:{},inv:{},notes:[],cseq:0,iseq:0,nseq:0}; __chatProc={}; __chatPubSig='';
-    try{ if(role==='st'&&curGid) db.ref('games/'+curGid+'/public').update({chats:null,chatInv:null,chatNote:null}).catch(()=>{}); }catch(e){} };
+    try{ if(role==='st'&&curGid) db.ref('games/'+curGid+'/public').update({chats:null,chatInv:null,chatNote:null,chatDisband:null}).catch(()=>{}); }catch(e){} };
 
   /* 说书人订阅玩家举手（实时看谁举手） */
   window.__playerHands={};
@@ -4383,7 +4409,7 @@ load(); render();
     if(window._syncNoms) window._syncNoms(); if(typeof render==='function') render(); };
 
   /* ---------- 渲染分发 ---------- */
-  function renderView(){ if(mode==='hall') renderHall(); else if(mode==='notes') renderNotes(); drawSeats(); if(window.renderClock) renderClock(); updateVoteBar(); updateNightBar(); try{ if(role==='player'){ updateChatInv(); chatNotices(); updateChatFab(); } }catch(e){} }
+  function renderView(){ if(mode==='hall') renderHall(); else if(mode==='notes') renderNotes(); drawSeats(); if(window.renderClock) renderClock(); updateVoteBar(); updateNightBar(); try{ if(role==='player'){ updateChatInv(); chatNotices(); updateChatFab(); updateChatDisband(); } }catch(e){} }
 
   /* ---------- 座位圈（访客，复刻说书人比例，画进 #tableZone） ---------- */
   function drawSeats(){ if(mode==='st') return; const zone=document.getElementById('tableZone'); if(!zone) return;
