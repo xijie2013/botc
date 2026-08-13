@@ -1272,6 +1272,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.50.1', d:'2026-08-13', items:['聊天室配色收尾：①说书人「私聊房间」旁观界面的最外层边框和内部分割线也统一成青色（之前还是紫色的；「旁观模式…」那行字保持紫色不变）。②聊天室右上角的 ✕ 号改为跟随当前 tab 的主题色（说书人=紫、大厅=金、当前私聊=该私聊色、旁观=青）。③私聊分组的配色改用 viridis 中段的一系列青色（绿→青→蓝），私聊色带和聊天室房间共用这套更协调的青色系。']},
   {v:'v2.50.0', d:'2026-08-13', items:['聊天室第二步——「当前私聊」上线：①玩家在某个私聊分组里时，聊天室多出「当前私聊」tab（不在私聊里就不显示）；tab、背景、聊天泡、发送按钮、图标提示点都用该私聊自己的颜色，私聊里别的玩家用私聊色、你自己仍是蓝色。②可见性规则：你只看得到自己「本次加入之后」的消息——A、B 建群聊了 5 分钟，C 中途加入只能看到自己加入后的内容；A 退出再回来只看得到最新一次加入后的（看不到上次的），全程在群里的 B 看得到从建群起的全部。③说书人多出「私聊房间」tab 可旁观所有私聊（上方选房间、仅查看不发言、看得到房间全部历史）；旁观里玩家聊天泡显示为蓝色。加入时间与消息时间都对齐服务器时钟，边界准确。']},
   {v:'v2.49.4', d:'2026-08-13', items:['聊天室配色微调：①「私聊环节已结束」通知弹窗改成和夜晚信息一样的紫底金边风格（不再是略吓人的红色）。②左下角聊天室图标上，说书人收到玩家私信/玩家收到说书人私信的提示点由红色改为紫色（大厅仍为黄色）；说书人「玩家私信」里玩家名旁的未读点也一并改紫。③「大厅聊天室」标题字改成金色，与大厅主题一致。④已复核：所有新加的图标（三个左下角按钮）、通知弹窗、聊天室页面都遵循全局等比缩放，未违反该原则。']},
   {v:'v2.49.3', d:'2026-08-13', items:['聊天室细节：①发言人名字加粗放大、并与其聊天泡同色系（蓝/紫/金），一眼看清是谁说的。②说书人「玩家私信」里，玩家名一行与下方聊天区之间加了明显分割线，不再糊成一片。③大厅聊天室的标题/输入区分割线和输入框边框改成金色主题（与大厅一致；说书人/私信仍是紫色不变）。④去掉每条消息下面的时间戳，更紧凑。']},
@@ -4215,7 +4216,7 @@ load(); render();
     db.ref('games/'+curGid+'/public/exec').set({kind:'slayer', full:true, ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); };
   /* ===================== 私聊分组系统（v2.42.0）=====================
      仅分组(无文字)、全场公开。玩家写自己节点 chatReq/chatResp/chatLeave；说书人跑状态机、发布 public/chats,chatInv,chatNote；所有人渲染。*/
-  const CHAT_RGB=['74,168,255','255,90,74','87,194,106','224,182,74','192,122,223'];
+  const CHAT_RGB=['53,183,121','31,158,137','35,138,141','42,116,142','49,104,142'];   // viridis 中段青色系（绿→蓝），私聊分组/房间共用
   function chatCol(idx,a){ return 'rgba('+CHAT_RGB[((idx%5)+5)%5]+','+a+')'; }
   function chatOrder(N, chats){ const map={}; (chats||[]).forEach(c=>c.members.forEach(m=>{map[m]=c;}));   // 成员段落锚定 anchor 原位、段内按座位号升序、非成员保持环序
     const out=[]; for(let s=0;s<N;s++){ const c=map[s];
@@ -4459,16 +4460,16 @@ load(); render();
     if(_crTab==='room') return _crIsSt()?'crb-blue':'crb-room';
     return 'crb-blue'; }
   function _crBg(){ const box=document.querySelector('#chatRoom .cr-box'); if(!box) return; box.classList.remove('crbg-st','crbg-lobby','crbg-room');
-    const head=box.querySelector('.cr-head'), inp=box.querySelector('.cr-input'), lm=box.querySelector('.cr-lockmsg'), ta=box.querySelector('.cr-input textarea'), title=box.querySelector('.cr-head b'), sendb=box.querySelector('.cr-input button');
-    box.style.background=''; if(head)head.style.borderBottomColor=''; if(inp)inp.style.borderTopColor=''; if(lm)lm.style.borderTopColor=''; if(ta)ta.style.borderColor=''; if(title)title.style.color=''; if(sendb)sendb.removeAttribute('style');
+    const head=box.querySelector('.cr-head'), inp=box.querySelector('.cr-input'), lm=box.querySelector('.cr-lockmsg'), ta=box.querySelector('.cr-input textarea'), title=box.querySelector('.cr-head b'), sendb=box.querySelector('.cr-input button'), cx=box.querySelector('.cr-x'), peers=box.querySelector('.cr-peers');
+    box.style.background=''; box.style.borderColor=''; if(head)head.style.borderBottomColor=''; if(inp)inp.style.borderTopColor=''; if(lm)lm.style.borderTopColor=''; if(ta)ta.style.borderColor=''; if(title)title.style.color=''; if(sendb)sendb.removeAttribute('style'); if(cx)cx.style.color=''; if(peers)peers.style.borderBottomColor='';
     if(_crTab==='room'){ box.classList.add('crbg-room');
-      if(_crIsSt()){ box.style.background='linear-gradient(180deg,rgba(58,150,138,.22),rgba(38,105,96,.32))'; const bd='rgba(90,200,185,.32)';   // 旁观：中性青底（配蓝色玩家聊天泡，避免同色低对比）
-        if(head)head.style.borderBottomColor=bd; if(inp)inp.style.borderTopColor=bd; if(lm)lm.style.borderTopColor=bd; if(ta)ta.style.borderColor='rgba(90,200,185,.5)'; if(title)title.style.color='#8fe6d8'; }
-      else { const col=_crRoomColor(), rgb=_crRGB(col), bd='rgba('+rgb.join(',')+',.34)';
-        box.style.background=_crRoomBgStyle(col);
-        if(head)head.style.borderBottomColor=bd; if(inp)inp.style.borderTopColor=bd; if(lm)lm.style.borderTopColor=bd; if(ta)ta.style.borderColor='rgba('+rgb.join(',')+',.5)';
-        if(title)title.style.color='rgb('+_crMul(rgb,1.05)+')'; if(sendb)sendb.style.cssText=_crRoomSendStyle(col); } }
-    else box.classList.add(_crTab==='lobby'?'crbg-lobby':'crbg-st'); }
+      if(_crIsSt()){ const t='rgba(90,200,185,'; box.style.background='linear-gradient(180deg,rgba(58,150,138,.22),rgba(38,105,96,.32))'; box.style.borderColor=t+'.5)'; const bd=t+'.34)';   // 旁观：中性青底+青边（配蓝色玩家聊天泡，避免同色低对比）
+        if(head)head.style.borderBottomColor=bd; if(inp)inp.style.borderTopColor=bd; if(lm)lm.style.borderTopColor=bd; if(ta)ta.style.borderColor=t+'.5)'; if(peers)peers.style.borderBottomColor=t+'.5)'; if(title)title.style.color='#8fe6d8'; if(cx)cx.style.color='#8fe6d8'; }
+      else { const col=_crRoomColor(), rgb=_crRGB(col), c='rgba('+rgb.join(',')+',', bd=c+'.34)';
+        box.style.background=_crRoomBgStyle(col); box.style.borderColor=c+'.5)';
+        if(head)head.style.borderBottomColor=bd; if(inp)inp.style.borderTopColor=bd; if(lm)lm.style.borderTopColor=bd; if(ta)ta.style.borderColor=c+'.5)';
+        if(title)title.style.color='rgb('+_crMul(rgb,1.1)+')'; if(cx)cx.style.color='rgb('+_crMul(rgb,1.15)+')'; if(sendb)sendb.style.cssText=_crRoomSendStyle(col); } }
+    else { box.classList.add(_crTab==='lobby'?'crbg-lobby':'crbg-st'); if(cx)cx.style.color=(_crTab==='lobby')?'#e8cf9a':'#c4b3ee'; } }
   window._crSwitch=function(tab){ _crTab=tab;
     const peers=document.getElementById('crPeers');
     if(_crIsSt() && tab==='st'){ peers.style.display='flex'; if(_crPeer<0) _crPeer=_crFirstPeer(); }
@@ -4532,7 +4533,7 @@ load(); render();
     let h=''; for(let i=0;i<_crMsgs.length;i++){ const m=_crMsgs[i]; const mine=(m.f===me);
       const stMsg=(m.f===-1); const nm=stMsg?'说书人':pname(m.f); const bc=_crBubbleCls(m.f);
       let bClass=bc, nClass=bc.replace('crb-','crn-'), bStyle='', nStyle='';
-      if(bc==='crb-room'){ bClass=''; nClass=''; bStyle=' style="'+_crRoomBubbleStyle(roomCol)+'"'; nStyle=' style="color:rgb('+_crRGB(roomCol).join(',')+')"'; }
+      if(bc==='crb-room'){ bClass=''; nClass=''; bStyle=' style="'+_crRoomBubbleStyle(roomCol)+'"'; nStyle=' style="color:rgb('+_crMul(_crRGB(roomCol),1.18)+')"'; }
       h+='<div class="cr-msg'+(mine?' me':'')+'">';
       if(!mine) h+='<div class="cr-name '+nClass+'"'+nStyle+'>'+_nbEsc(nm)+'</div>';
       h+='<div class="cr-bubble '+bClass+'"'+bStyle+'>'+_nbEsc(String(m.t))+'</div></div>'; }
