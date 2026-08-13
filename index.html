@@ -621,10 +621,10 @@
     background:rgba(10,8,16,.92); box-shadow:0 1px 4px rgba(0,0,0,.55);}   /* 新消息角标：一排彩色小点（说书人红/大厅黄/当前私聊对应色） */
   #chatRoomFab .cr-badge i{width:9px; height:9px; border-radius:50%; display:block; border:1px solid rgba(255,255,255,.55);}
   /* 聊天室页面（模态、随 --uiscale 等比缩放） */
-  #chatRoom{position:fixed; inset:0; z-index:205; display:none; align-items:center; justify-content:center; background:rgba(8,5,14,.66); padding:12px;}
+  #chatRoom{position:fixed; inset:0; z-index:205; display:none; align-items:center; justify-content:center; background:rgba(8,5,14,.44); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); padding:12px;}   /* 遮罩调淡+整屏毛玻璃：背后游戏画面被磨砂虚化 */
   #chatRoom.on{display:flex;}
-  #chatRoom .cr-box{zoom:var(--uiscale); width:min(94vw,430px); height:min(86dvh,660px); box-sizing:border-box; display:flex; flex-direction:column; overflow:hidden;
-    background:linear-gradient(180deg,#241a31,#1a1226); border:1.5px solid rgba(160,130,220,.4); border-radius:16px; box-shadow:0 16px 48px rgba(0,0,0,.6);}
+  #chatRoom .cr-box{zoom:var(--uiscale); width:min(94vw,430px); height:min(86dvh,660px); box-sizing:border-box; display:flex; flex-direction:column; overflow:hidden; backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);   /* 聊天框自身再叠一层毛玻璃 */
+    background:linear-gradient(180deg,rgba(36,26,49,.72),rgba(26,18,38,.78)); border:1.5px solid rgba(160,130,220,.4); border-radius:16px; box-shadow:0 16px 48px rgba(0,0,0,.6);}
   /* 各 tab 主题色的半透明背景：说书人=紫、大厅=深金、当前私聊=该私聊色(内联) */
   #chatRoom .cr-box.crbg-st{background:linear-gradient(180deg,rgba(128,104,190,.32),rgba(96,74,150,.42)); border-color:rgba(170,138,232,.5);}
   #chatRoom .cr-box.crbg-lobby{background:linear-gradient(180deg,rgba(216,180,104,.30),rgba(180,144,72,.40)); border-color:rgba(228,196,120,.55);}
@@ -1274,6 +1274,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.50.6', d:'2026-08-13', items:['整个聊天室加毛玻璃：打开聊天室后，背后的游戏画面会被磨砂虚化（遮罩调淡+`backdrop-filter` 模糊），聊天框本身也叠了一层毛玻璃，三个 tab（说书人/大厅/当前私聊）统一享有该效果。']},
   {v:'v2.50.5', d:'2026-08-13', items:['聊天室配色细调：①说书人「私聊房间」里的「当前没有私聊」提示和「旁观模式：仅查看，不参与私聊」改用私聊青主题色（不再是紫色）。②说书人「玩家私信」里选中某个玩家时，该玩家标签由蓝色改为紫色（与私信主题一致）。③私聊邀请弹窗做得更浅更透明（加了毛玻璃、深色底透明度降到 .30-.36）。④大厅聊天室三个 tab 下方加了一条金色主题分割线。']},
   {v:'v2.50.4', d:'2026-08-13', items:['四处修复/调整：①说书人未点「解散私聊」前，「处决 / 今日无人处决」和提名一样锁住（须先结束私聊环节）。②修复私聊导致座位圈重排后，猎手拖十字弩开枪会打到该位置「原本」玩家的问题——现在按当下显示位置命中正确的人。③私聊统一色由 rgb(118,214,201) 改为 rgb(74,194,180)（方案A，更饱满、聊天泡恢复白字）。④私聊邀请弹窗的青色调浅，做成与私聊聊天室页面一致的青色（不再是发暗的墨绿）。']},
   {v:'v2.50.3', d:'2026-08-13', items:['私聊青色调浅：私聊统一色由 rgb(48,176,162) 改为更浅的 rgb(118,214,201)，聊天室房间背景/聊天泡/tab/发送按钮与座位圈色带同步变浅（亮度过阈值后聊天泡文字自动切为深色以保证可读性）。']},
