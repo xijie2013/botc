@@ -1258,6 +1258,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.50.17', d:'2026-08-13', items:['信息类角色新增「按注册身份展示」：当场上有间谍/陌客时，说书人在这些角色健康的情况下也能主动把间谍/陌客按其合法注册身份展示给玩家（结果标「真」，区别于中毒时的可假信息）。具体：①调查员可把陌客展示为某个爪牙；②洗衣妇可把间谍展示为某个镇民；③图书管理员可把间谍展示为某个外来者（即使场上没有真外来者也能这样展示）；④送葬者处决到间谍/陌客、⑤守鸦人查到间谍/陌客时，都可选按注册身份告知。默认仍显示真身，入口仅在涉及间谍/陌客时才出现，不影响其他情况。']},
   {v:'v2.50.16', d:'2026-08-13', items:['①夜晚的胜负改为「天亮后」再公布：小恶魔夜里击杀导致的胜利/失败（如只剩两人、恶魔夜死）不再在夜里立即弹给全场，而是攒到说书人点「结束本夜」天亮、与死亡一起公布，避免提前剧透夜间死亡；白天的处决/猎人射杀触发的胜负仍即时。②图书管理员现在能看到「酒鬼」（酒鬼作为外来者可被展示给图管；且酒鬼不再被错误地当成镇民展示给洗衣妇）。③守鸦人查验酒鬼时显示其真身「酒鬼」，与送葬者一致。④中毒/醉酒的厨师、共情者、送葬者、占卜师，若说书人还没设定要告知的（可假）信息就点发送，不再自动把真实信息发出去，会提示先设定。⑤说书人改判/撤销处决导致胜负被撤回时，之前误记入永久战绩的那一条会一并删除，不再残留。']},
   {v:'v2.50.15', d:'2026-08-13', items:['修复胜负判定：①中毒/醉酒的圣徒被处决后，进入下一夜「毒失效」时会凭空自动判「邪恶胜利」并广播全场——现在改为在处决当刻快照圣徒是否有效，之后不再回溯误判。②白天结算面板的圣徒提示改用同一快照，中毒/醉酒圣徒会明确显示「能力无效、好人未落败」，不再与顶部胜负横幅自相矛盾。③猎人射中「被说书人注册为恶魔的非恶魔」（如隐士）时，魔典面板不再误写「恶魔死亡→好人胜利」，改为「并非真恶魔，好人未获胜」（射杀命中本身是规则允许的，不变）。④玩家开局身份大卡加了缺图占位与兜底：某张角色图加载失败时显示占位底图，而不是浏览器破图。⑤增补健壮性：结束本夜/本日加防重入守卫；处决确认弹窗后复检门控；结算徽章/投票时钟指针/结算徽记补上缺图兜底。']},
   {v:'v2.50.14', d:'2026-08-13', items:['①未登录（大厅）视角下不再显示左下角的两个私聊图标（之前从玩家登出后会残留）。②左下角两个图标放大约10%（60→66），并把它们之间的间距拉大，不再显得拥挤。']},
@@ -1570,6 +1571,10 @@ function infoRole(i){ return meta[i]?(meta[i].isDrunk?'drunk':(meta[i].role||nul
 function infoTeamOf(i){ const r=infoRole(i); return (r&&RMAP[r])?RMAP[r].team:null; }
 function infoTeamSeats(team){ const r=[]; for(let i=0;i<N;i++){ if(infoTeamOf(i)===team) r.push(i); } return r; }
 function outsiderSeats(){ return infoTeamSeats('out'); }   // 真实外来者（含酒鬼；供图书管理员判定）
+function _isRegRole(i){ return !!(meta[i] && (meta[i].role==='spy'||meta[i].role==='recluse')); }   // 间谍/陌客：可由 ST 按注册身份"真"展示给信息角色
+function _regCandFor(team){ const r=[]; meta.forEach((m,i)=>{ if(!m||!m.role) return;
+  if((team==='tf'||team==='out') && m.role==='spy') r.push(i);   // 间谍可注册为镇民(洗衣妇)/外来者(图管)
+  else if(team==='min' && m.role==='recluse') r.push(i); }); return r; }   // 陌客可注册为爪牙(调查员)；间谍本就是真爪牙无需覆盖
 function nameAt(i){ const t=seatToken(i); return t?esc(t.name):('座位'+(i+1)); }
 function nearestLiving(i,dir){ for(let s=1;s<N;s++){ const j=((i+dir*s)%N+N)%N; if(j===i) break; if(seatAlive(j)) return j; } return -1; }
 function computeNightInfo(id){
@@ -1653,7 +1658,7 @@ function ravenActive(){ const rk=meta.findIndex(m=>m&&m.role==='ravenkeeper'); i
   const rec=impKills[night]; return !!(rec && rec.type==='normal' && rec.death===rk); }
 function ravenPlayerResult(){ const rec=ravenPicks[night]||{}; if(rec.t==null) return '';
   const rk=meta.findIndex(m=>m&&m.role==='ravenkeeper'); const sick=rk>=0&&!healthy(rk);
-  const actual=infoRole(rec.t); const shown=(sick&&rec.role)?rec.role:actual;   // #3 酒鬼真身=酒鬼（与送葬者一致）
+  const actual=infoRole(rec.t); const shown=((sick||_isRegRole(rec.t))&&rec.role)?rec.role:actual;   // #3 酒鬼真身=酒鬼；健康+间谍/陌客可按注册身份展示（与送葬者一致）
   const rn=(shown&&RMAP[shown])?RMAP[shown].name:'（未知）';
   return '【守鸦人】你得知 '+nameAt(rec.t)+' 的真实角色是：'+rn+'。'; }
 function _resultDefaultText(id){ return id==='ravenkeeper'?ravenPlayerResult():ftResultText(); }   // 结果类步骤的默认文本（占卜/守鸦人）
@@ -1677,7 +1682,7 @@ function nightAutoText(id){
     const ut=meta.findIndex(m=>m&&m.role==='undertaker'); const sick=ut>=0&&!healthy(ut);
     if(sick&&!undertakerPicks[night]) return '';   // #4 中毒未设假身份 → 不自动发真值
     const trueRole=infoRole(ex);
-    const shown=(sick&&undertakerPicks[night])?undertakerPicks[night]:trueRole;
+    const shown=((sick||_isRegRole(ex))&&undertakerPicks[night])?undertakerPicks[night]:trueRole;   // 健康+间谍/陌客也可按注册身份展示
     const rn=(shown&&RMAP[shown])?RMAP[shown].name:'（未知）';
     return '【送葬者】昨日被处决的 '+nameAt(ex)+' 的真实角色是：'+rn+'。'; }
   if(id==='washerwoman'||id==='librarian'||id==='investigator') return pingPlayerText(id);
@@ -2013,10 +2018,13 @@ function numUI(roleId,label,maxV){ const info=numRole(roleId,label); const s=inf
 function undertakerResult(){
   const ut=meta.findIndex(m=>m&&m.role==="undertaker"); if(ut<0) return null;
   const ex=executions[night-1]; if(ex===undefined || ex<0) return null;
-  const trueRole = meta[ex] ? (meta[ex].isDrunk ? 'drunk' : meta[ex].role) : null;   // 酒鬼真身=酒鬼
+  const trueRole = infoRole(ex);   // 酒鬼真身=酒鬼
   const trueName = trueRole && RMAP[trueRole] ? RMAP[trueRole].name : null;
-  if(healthy(ut)){ if(!trueName) return null; return {text:'昨日处决 '+nameAt(ex)+' ＝ '+trueName+' · 真', truth:true}; }
-  const rec=undertakerPicks[night]; if(!rec) return null;
+  const rec=undertakerPicks[night];
+  if(healthy(ut)){
+    if(_isRegRole(ex) && rec && RMAP[rec]) return {text:'昨日处决 '+nameAt(ex)+' ＝ '+RMAP[rec].name+' · 真', truth:true};   // 间谍/陌客：按注册身份展示（真）
+    if(!trueName) return null; return {text:'昨日处决 '+nameAt(ex)+' ＝ '+trueName+' · 真', truth:true}; }
+  if(!rec) return null;
   const truth=(rec===trueRole); return {text:'昨日处决 '+nameAt(ex)+' ＝ '+RMAP[rec].name+' · '+(truth?'真':'假'), truth};
 }
 function undertakerSet(v){ if(v==="") delete undertakerPicks[night]; else undertakerPicks[night]=v; render(); }
@@ -2026,7 +2034,14 @@ function recordUndertaker(){ const ut=meta.findIndex(m=>m&&m.role==="undertaker"
 function undertakerUI(){
   const ut=meta.findIndex(m=>m&&m.role==="undertaker"); if(ut<0||isDeadSeat(ut)) return "";
   const ex=executions[night-1]; if(ex===undefined || ex<0) return "";
-  if(healthy(ut)) return "";                          // 健康：信息行已显示，自动记录
+  if(healthy(ut)){
+    if(!_isRegRole(ex)) return "";                    // 健康且死者非间谍/陌客：真身自动显示
+    let rOpt='<option value="">真身（默认）</option>';   // 间谍/陌客：可选按注册身份展示（真）
+    ROLES.filter(r=>!lockedRoles.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(undertakerPicks[night]===r.id?' selected':'')+'>'+r.name+'</option>'; });
+    let h='<div class="impkill" style="color:#2e6b52">'+RMAP[meta[ex].role].name+' 按注册身份展示：<select onchange="undertakerSet(this.value)">'+rOpt+'</select></div>';
+    const r=undertakerResult(); if(r) h+='<div class="impkill done">'+r.text+'</div>';
+    return h;
+  }
   let rOpt='<option value="">告知的角色</option>';
   ROLES.filter(r=>!lockedRoles.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(undertakerPicks[night]===r.id?' selected':'')+'>'+r.name+'</option>'; });
   let h='<div class="impkill warn">中毒·告知的假身份：<select onchange="undertakerSet(this.value)">'+rOpt+'</select></div>';
@@ -2038,7 +2053,9 @@ function ravenResult(){
   const rk=meta.findIndex(m=>m&&m.role==="ravenkeeper"); if(rk<0) return null;
   const rec=ravenPicks[night]||{}; if(rec.t==null) return null;
   const actual = infoRole(rec.t);   // #3 酒鬼真身=酒鬼
-  if(healthy(rk)){ if(!actual) return null; return {text:'得知 '+nameAt(rec.t)+' ＝ '+RMAP[actual].name+' · 真', truth:true}; }
+  if(healthy(rk)){
+    if(_isRegRole(rec.t) && rec.role && RMAP[rec.role]) return {text:'得知 '+nameAt(rec.t)+' ＝ '+RMAP[rec.role].name+' · 真', truth:true};   // 间谍/陌客：按注册身份展示（真）
+    if(!actual) return null; return {text:'得知 '+nameAt(rec.t)+' ＝ '+RMAP[actual].name+' · 真', truth:true}; }
   if(!rec.role) return null; const truth=actual===rec.role;
   return {text:'得知 '+nameAt(rec.t)+' ＝ '+RMAP[rec.role].name+' · '+(truth?'真':'假'), truth};
 }
@@ -2056,6 +2073,10 @@ function ravenUI(){
     let rOpt='<option value="">告知的角色</option>';
     ROLES.filter(r=>!lockedRoles.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(rec.role===r.id?' selected':'')+'>'+r.name+'</option>'; });
     h+='<div class="impkill warn">中毒·告知的假身份：<select onchange="ravenSet(\'role\',this.value)">'+rOpt+'</select></div>';
+  } else if(rec.t!=null && _isRegRole(rec.t)){       // 健康 + 查到间谍/陌客：可选按注册身份展示（真）
+    let rOpt='<option value="">真身（默认）</option>';
+    ROLES.filter(r=>!lockedRoles.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(rec.role===r.id?' selected':'')+'>'+r.name+'</option>'; });
+    h+='<div class="impkill" style="color:#2e6b52">'+RMAP[meta[rec.t].role].name+' 按注册身份展示：<select onchange="ravenSet(\'role\',this.value)">'+rOpt+'</select></div>';
   }
   const r=ravenResult(); if(r) h+='<div class="impkill '+(r.truth?'done':'warn')+'">'+r.text+'</div>';
   return h;
@@ -2160,9 +2181,12 @@ function pingResult(roleId){
   const seat=meta.findIndex(m=>m&&m.role===roleId); if(seat<0) return null;
   const team=pingTeam(roleId), rec=pingPicks[roleId]||{}, sick=!healthy(seat);
   const mk=(text,truth)=>({text:text+' · '+(truth?'真':'假'),truth});
-  if(!sick){                                        // 健康：第一个是真身，系统用其身份（infoRole：酒鬼算外来者「酒鬼」，且不会把酒鬼当镇民给洗衣妇 #2）
-    if(roleId==="librarian" && outsiderSeats().length===0) return mk('没有外来者',true);
+  if(!sick){                                        // 健康：第一个是真身，系统用其身份（infoRole）；间谍/陌客可由 ST 指定"注册身份"真展示
+    const _regC=_regCandFor(team);
+    if(roleId==="librarian" && outsiderSeats().length===0 && !(rec.a!=null && _regC.indexOf(rec.a)>=0 && rec.regRole)) return mk('没有外来者',true);
     if(rec.a==null||rec.b==null||rec.b===rec.a) return null;
+    if(_regC.indexOf(rec.a)>=0 && rec.regRole && RMAP[rec.regRole] && RMAP[rec.regRole].team===team)   // 按注册身份展示（合法真读数，标真）
+      return mk(nameAt(rec.a)+'、'+nameAt(rec.b)+' 中有一个是 '+RMAP[rec.regRole].name, true);
     const ra=infoRole(rec.a); if(!ra||RMAP[ra].team!==team) return null;
     return mk(nameAt(rec.a)+'、'+nameAt(rec.b)+' 中有一个是 '+RMAP[ra].name, true);
   } else {                                          // 中毒/醉酒：手选，系统对照真伪（infoRole 让酒鬼真身对照正确）
@@ -2178,14 +2202,14 @@ function pingPlayerText(roleId){ const r=pingResult(roleId); if(!r||!r.text) ret
   let core=r.text; const i=core.lastIndexOf(' · '); if(i>=0) core=core.slice(0,i);   // 剥掉末尾「· 真/假」
   return '【'+label+'】你所知：'+core+'。'; }
 function pingSet(roleId,field,v){ if(!pingPicks[roleId]) pingPicks[roleId]={}; const rec=pingPicks[roleId];
-  if(field==="role") rec.role = v===""?null:v; else rec[field] = v===""?null:+v;
+  if(field==="role"||field==="regRole") rec[field] = v===""?null:v; else rec[field] = v===""?null:+v;   // role/regRole 是角色 id（字符串），别 +v
   const seat=meta.findIndex(m=>m&&m.role===roleId); const r=pingResult(roleId); histSet(seat,'info', r?r.text:null); render(); }
 function pingUI(roleId){
   const seat=meta.findIndex(m=>m&&m.role===roleId); if(seat<0) return "";
   if(isDeadSeat(seat)) return '<div class="impkill done" style="color:#8a6a2a">已出局，未行动</div>';
   const team=pingTeam(roleId), rec=pingPicks[roleId]||{}, sick=!healthy(seat), teamName=TEAMLABEL[team];
-  if(!sick && roleId==="librarian" && outsiderSeats().length===0)
-    return '<div class="impkill done">答案：没有外来者 · 真</div>';
+  if(!sick && roleId==="librarian" && outsiderSeats().length===0 && _regCandFor('out').length===0)
+    return '<div class="impkill done">答案：没有外来者 · 真</div>';   // 有间谍可注册为外来者时不短路，给 ST 手选入口
   let h="";
   if(sick){                                         // 中毒：自由选 2 人 + 自定角色
     const pOpt=sel=>{ let o='<option value="">玩家</option>'; for(let i=0;i<N;i++){ o+='<option value="'+i+'"'+(sel===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+'</option>'; } return o; };
@@ -2196,12 +2220,19 @@ function pingUI(roleId){
     ROLES.filter(r=>r.team===team && !lockedRoles.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(rec.role===r.id?' selected':'')+'>'+r.name+'</option>'; });
     h+='<div class="impkill warn">中毒·自定信息：<select onchange="pingSet(\''+roleId+'\',\'role\',this.value)">'+rOpt+'</select></div>';
   } else {                                          // 健康：第一个只列该阵营，第二个列其余任意人
+    const _regC=_regCandFor(team);
     let o1='<option value="">'+teamName+'</option>';
     infoTeamSeats(team).forEach(i=>{ o1+='<option value="'+i+'"'+(rec.a===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+'</option>'; });   // #2 infoRole 口径：图管可选酒鬼、洗衣妇不再把酒鬼当镇民
+    _regC.forEach(i=>{ o1+='<option value="'+i+'"'+(rec.a===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+'（'+RMAP[meta[i].role].name+'·注册）</option>'; });   // 间谍/陌客：按注册身份展示
     let o2='<option value="">另一人</option>';
     for(let i=0;i<N;i++){ if(i===rec.a) continue; o2+='<option value="'+i+'"'+(rec.b===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+'</option>'; }
     h+='<div class="impkill">'+teamName+'：<select onchange="pingSet(\''+roleId+'\',\'a\',this.value)">'+o1+'</select>'
       +'另一人：<select onchange="pingSet(\''+roleId+'\',\'b\',this.value)">'+o2+'</select></div>';
+    if(rec.a!=null && _regC.indexOf(rec.a)>=0){       // 选中间谍/陌客 → 指定注册成该阵营的哪个角色（真展示）
+      let rOpt='<option value="">注册为…</option>';
+      ROLES.filter(r=>r.team===team && !lockedRoles.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(rec.regRole===r.id?' selected':'')+'>'+r.name+'</option>'; });
+      h+='<div class="impkill" style="color:#2e6b52">'+RMAP[meta[rec.a].role].name+' 按注册身份展示：<select onchange="pingSet(\''+roleId+'\',\'regRole\',this.value)">'+rOpt+'</select></div>';
+    }
   }
   const r=pingResult(roleId);
   if(r) h+='<div class="impkill '+(r.truth?'done':'warn')+'">答案：'+r.text+'</div>';
