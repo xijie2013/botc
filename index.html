@@ -566,7 +566,7 @@
     border-radius:8px; cursor:pointer; border:1px solid rgba(122,83,32,.55); background:rgba(255,250,235,.7); color:#6b4a1e; user-select:none;}
   .nb-clearall.confirm{background:rgba(184,134,11,.32); color:#5a3d16; border-color:rgba(122,83,32,.8);}
   /* 私聊：座位选中高亮 */
-  .seat.chatsel{outline:3px solid rgba(74,168,255,.9); outline-offset:2px; box-shadow:0 0 12px rgba(74,168,255,.7);}
+  .seat.chatsel{outline:3px solid rgba(74,194,180,.95); outline-offset:2px; box-shadow:0 0 12px rgba(74,194,180,.75);}   /* 选中座位=teal 高亮（v2.50.10，原蓝）*/
   /* 私聊：底部堆叠邀请弹窗 */
   #chatStack{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:123; display:flex; flex-direction:column-reverse; gap:10px; align-items:center; pointer-events:none;}
   #chatStack .civ{width:350px; max-width:94vw; box-sizing:border-box; pointer-events:auto; backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); background:linear-gradient(180deg,rgba(88,206,192,.30),rgba(74,194,180,.38)),linear-gradient(180deg,rgba(24,18,38,.30),rgba(16,11,28,.36));
@@ -589,10 +589,15 @@
   #chatFab{position:fixed; left:84px; bottom:16px; z-index:124; width:60px; height:60px;
     display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent;}   /* v2.50.8 去掉圆形按钮底，只留图标 */
   #chatFab img{width:100%; height:100%; object-fit:contain; display:block; filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));}
-  #chatFab.cf-sel img{filter:drop-shadow(0 0 6px rgba(74,168,255,.95)) drop-shadow(0 2px 3px rgba(0,0,0,.55));}   /* 选人模式：发光提示（图标已变火漆卷轴） */
+  #chatFab.cf-sel img{filter:drop-shadow(0 0 6px rgba(74,194,180,.98)) drop-shadow(0 2px 3px rgba(0,0,0,.55));}   /* 选人模式：teal 荧光（图标已变火漆卷轴，v2.50.10 原蓝改青） */
   #chatFab.cf-off{filter:grayscale(1) brightness(.8); opacity:.5; cursor:not-allowed;}
   #chatFab .cf-badge{position:absolute; top:-5px; right:-5px; min-width:20px; height:20px; padding:0 5px; border-radius:10px; box-sizing:border-box;
-    background:#4aa8ff; color:#fff; font:800 12px sans-serif; display:none; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.5);}
+    background:#2fb0a2; color:#fff; font:800 12px sans-serif; display:none; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.5);}   /* 选中人数角标=teal（v2.50.10）*/
+  /* 发起/解散群聊共用「两个兜帽小人」图标(ic-invite)，右下角叠加荧光符号：发起=teal「＋」、解散=红「✕」（v2.50.10）*/
+  #chatFab .fab-sym, #stDisbandFab .fab-sym{position:absolute; right:-3px; bottom:-3px; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font:900 19px/1 sans-serif; pointer-events:none; background:radial-gradient(circle at 50% 42%, rgba(12,18,24,.94), rgba(12,18,24,.7));}
+  #chatFab .cf-plus{color:#4fe6d0; border:1.6px solid rgba(79,230,208,.9); text-shadow:0 0 5px rgba(79,230,208,.98),0 0 11px rgba(79,230,208,.75); box-shadow:0 0 9px rgba(79,230,208,.6);}
+  #chatFab.cf-sel .cf-plus{display:none;}   /* 选人模式换成火漆卷轴，不再显示＋ */
+  #stDisbandFab .sdf-x{color:#ff5b5b; border:1.6px solid rgba(255,91,91,.9); text-shadow:0 0 5px rgba(255,91,91,.98),0 0 11px rgba(255,91,91,.75); box-shadow:0 0 9px rgba(255,91,91,.6);}
   /* 说书人魔典左下角「解散私聊」按钮（与私聊图标同位同大）：有私聊时出现，点击弹窗确认 v2.50.9 */
   #stDisbandFab{position:fixed; left:84px; bottom:16px; z-index:124; width:60px; height:60px;
     display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent;}   /* 纯图标，无圆底 */
@@ -616,7 +621,7 @@
   /* 聊天室页面（模态、随 --uiscale 等比缩放） */
   #chatRoom{position:fixed; inset:0; z-index:205; display:none; align-items:center; justify-content:center; background:rgba(8,5,14,.46); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); padding:12px;}   /* 遮罩+整屏毛玻璃（v2.50.7 blur 12→6 降磨砂）：背后游戏画面轻度虚化 */
   #chatRoom.on{display:flex;}
-  #chatRoom .cr-box{zoom:var(--uiscale); width:min(94vw,430px); height:min(86dvh,660px); box-sizing:border-box; display:flex; flex-direction:column; overflow:hidden; backdrop-filter:blur(1.5px); -webkit-backdrop-filter:blur(1.5px);   /* 聊天框自身再叠一层轻毛玻璃（v2.50.7 3→1.5）*/
+  #chatRoom .cr-box{zoom:var(--uiscale); width:calc(min(94vw,430px)/var(--uiscale)); height:calc(min(86dvh,660px)/var(--uiscale)); box-sizing:border-box; display:flex; flex-direction:column; overflow:hidden; backdrop-filter:blur(1.5px); -webkit-backdrop-filter:blur(1.5px);   /* v2.50.10 尺寸÷uiscale 抵消 zoom 二次缩放（原来手机端被缩成~50%）；轻毛玻璃 */
     background:linear-gradient(180deg,rgba(36,26,49,.72),rgba(26,18,38,.78)); border:1.5px solid rgba(160,130,220,.4); border-radius:16px; box-shadow:0 16px 48px rgba(0,0,0,.6);}
   /* 各 tab 主题色的半透明背景：说书人=紫、大厅=深金、当前私聊=该私聊色(内联) */
   #chatRoom .cr-box.crbg-st{background:linear-gradient(180deg,rgba(128,104,190,.32),rgba(96,74,150,.42)); border-color:rgba(170,138,232,.5);}
@@ -1043,9 +1048,9 @@
     <div id="chatStack"></div>
     <div id="chatDisbandPop"></div>
     <div id="chatFab" onclick="_chatFabTap()" title="发起/邀请私聊" style="display:none">
-      <img src="assets/ic-invite.png" alt="" draggable="false"><span class="cf-badge"></span></div>
+      <img src="assets/ic-invite.png" alt="" draggable="false"><span class="fab-sym cf-plus">＋</span><span class="cf-badge"></span></div>
     <div id="stDisbandFab" onclick="_stDisbandTap()" title="解散所有私聊，玩家回到原座位" style="display:none">
-      <img src="assets/ic-disband.png" alt="" draggable="false"></div>
+      <img src="assets/ic-invite.png" alt="" draggable="false"><span class="fab-sym sdf-x">✕</span></div>
     <div id="chatRoomFab" onclick="_openChatRoom()" title="聊天室" style="display:none">
       <img src="assets/ic-chat.png" alt="" draggable="false"><span class="cr-badge"></span></div>
     <div id="winIcon"></div>
@@ -1252,6 +1257,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.50.10', d:'2026-08-13', items:['①修复手机端聊天室框比电脑端小很多的问题：聊天框尺寸原来被 zoom 二次缩放，现在除以缩放系数抵消，手机端也能正常占满高度（与其它弹窗一致的等比 layout）。②发起群聊和解散群聊改用同一个「两个兜帽小人」图标，右下角叠加荧光符号区分：发起=teal 荧光「＋」、解散=红色荧光「✕」。③发起邀请（选人）时图标改闪 teal 荧光（原蓝色）；被选中的玩家改用 teal 高亮（原蓝色）；选中人数角标也改 teal。']},
   {v:'v2.50.9', d:'2026-08-13', items:['「解散私聊」「加入私聊」「退出私聊」三个操作改为弹窗确认（原来是点一下变「确认解散/确认」圆圈再点第二下）。现在图标点一下就弹出确认框，点「解散/加入/离开」执行、点「取消」放弃——图标彻底干净、不再有确认态的圆圈和文字。']},
   {v:'v2.50.8', d:'2026-08-13', items:['①夜晚大厅底部「夜晚大厅已关闭，白天再来」文字改成大厅金色主题色（原紫色）。②夜晚大厅中间的空态提示由「夜晚大厅已关闭」改为「大厅静悄悄的～」，不再和下方那句重复。③左下角三个图标和座位圈的加入/退出图标去掉了圆形按钮底，只保留图标本身（说书人「确认解散」和加入/退出的「确认」态仍保留有底的圆，便于看清文字）。']},
   {v:'v2.50.7', d:'2026-08-13', items:['①毛玻璃磨砂程度调低（整屏 blur 12→6、聊天框 3→1.5），不再太糊。②聊天室 tab 下方分割线改成和标题下方一样的细线。③玩家视角聊天室 tab 下方不再有分割线（仅说书人视角保留）。④换了一套手绘图标：聊天室=聊天泡、邀请私聊=兜帽小人、发出邀请=火漆卷轴、加入=双泡+箭头、退出=传送门、解散群聊=泡+✕。']},
