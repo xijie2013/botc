@@ -589,7 +589,7 @@
   #chatFab{position:fixed; left:84px; bottom:16px; z-index:124; width:60px; height:60px; border-radius:50%;
     background:linear-gradient(180deg,#3a2a52,#241633); border:2px solid rgba(233,196,106,.7); color:#ffe9b8;
     display:none; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.5); -webkit-tap-highlight-color:transparent;}
-  #chatFab svg{width:62%; height:62%; display:block;}
+  #chatFab img{width:88%; height:88%; object-fit:contain; display:block; filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));}
   #chatFab.cf-sel{border-color:rgba(74,168,255,.95); background:linear-gradient(180deg,#1f3d63,#12233b); color:#dbe8ff; box-shadow:0 0 16px rgba(74,168,255,.75);}
   #chatFab.cf-off{filter:grayscale(1) brightness(.75); opacity:.5; cursor:not-allowed; border-color:rgba(150,150,150,.4);}
   #chatFab .cf-badge{position:absolute; top:-5px; right:-5px; min-width:20px; height:20px; padding:0 5px; border-radius:10px; box-sizing:border-box;
@@ -598,11 +598,11 @@
   #stDisbandFab{position:fixed; left:84px; bottom:16px; z-index:124; width:60px; height:60px; border-radius:50%;
     background:linear-gradient(180deg,#5a2330,#361420); border:2px solid rgba(233,110,110,.72); color:#ffdede;
     display:none; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.5); -webkit-tap-highlight-color:transparent;}
-  #stDisbandFab svg{width:60%; height:60%; display:block;}
+  #stDisbandFab img{width:88%; height:88%; object-fit:contain; display:block; filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));}
   #stDisbandFab .sdf-confirm{display:none; font:800 15px/1.05 sans-serif; text-align:center; letter-spacing:1px;}
   #stDisbandFab.sdf-off{filter:grayscale(1) brightness(.72); opacity:.5; cursor:not-allowed; border-color:rgba(150,150,150,.4);}   /* 夜晚 / 白天无私聊：灰掉不可点 */
   #stDisbandFab.sdf-armed{background:linear-gradient(180deg,#c0392b,#7d1f16); border-color:#ffd7d7; box-shadow:0 0 16px rgba(231,76,60,.85); color:#fff;}
-  #stDisbandFab.sdf-armed svg{display:none;}
+  #stDisbandFab.sdf-armed img{display:none;}
   #stDisbandFab.sdf-armed .sdf-confirm{display:block;}
   /* 说书人解散私聊后：全体玩家的底部通知弹窗（无倒计时，点确认收到即消失） */
   #chatDisbandPop{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:123; display:none; pointer-events:none;}
@@ -616,14 +616,14 @@
   #chatRoomFab{position:fixed; left:16px; bottom:16px; z-index:124; width:60px; height:60px; border-radius:50%;
     background:linear-gradient(180deg,#1f4d47,#123330); border:2px solid rgba(90,210,190,.72); color:#d9fff6;
     display:none; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.5); -webkit-tap-highlight-color:transparent;}
-  #chatRoomFab svg{width:58%; height:58%; display:block;}
+  #chatRoomFab img{width:88%; height:88%; object-fit:contain; display:block; filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));}
   #chatRoomFab .cr-badge{position:absolute; top:-4px; right:-4px; display:none; gap:2px; align-items:center; padding:2px 3px; border-radius:9px;
     background:rgba(10,8,16,.92); box-shadow:0 1px 4px rgba(0,0,0,.55);}   /* 新消息角标：一排彩色小点（说书人红/大厅黄/当前私聊对应色） */
   #chatRoomFab .cr-badge i{width:9px; height:9px; border-radius:50%; display:block; border:1px solid rgba(255,255,255,.55);}
   /* 聊天室页面（模态、随 --uiscale 等比缩放） */
-  #chatRoom{position:fixed; inset:0; z-index:205; display:none; align-items:center; justify-content:center; background:rgba(8,5,14,.44); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); padding:12px;}   /* 遮罩调淡+整屏毛玻璃：背后游戏画面被磨砂虚化 */
+  #chatRoom{position:fixed; inset:0; z-index:205; display:none; align-items:center; justify-content:center; background:rgba(8,5,14,.46); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); padding:12px;}   /* 遮罩+整屏毛玻璃（v2.50.7 blur 12→6 降磨砂）：背后游戏画面轻度虚化 */
   #chatRoom.on{display:flex;}
-  #chatRoom .cr-box{zoom:var(--uiscale); width:min(94vw,430px); height:min(86dvh,660px); box-sizing:border-box; display:flex; flex-direction:column; overflow:hidden; backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);   /* 聊天框自身再叠一层毛玻璃 */
+  #chatRoom .cr-box{zoom:var(--uiscale); width:min(94vw,430px); height:min(86dvh,660px); box-sizing:border-box; display:flex; flex-direction:column; overflow:hidden; backdrop-filter:blur(1.5px); -webkit-backdrop-filter:blur(1.5px);   /* 聊天框自身再叠一层轻毛玻璃（v2.50.7 3→1.5）*/
     background:linear-gradient(180deg,rgba(36,26,49,.72),rgba(26,18,38,.78)); border:1.5px solid rgba(160,130,220,.4); border-radius:16px; box-shadow:0 16px 48px rgba(0,0,0,.6);}
   /* 各 tab 主题色的半透明背景：说书人=紫、大厅=深金、当前私聊=该私聊色(内联) */
   #chatRoom .cr-box.crbg-st{background:linear-gradient(180deg,rgba(128,104,190,.32),rgba(96,74,150,.42)); border-color:rgba(170,138,232,.5);}
@@ -641,7 +641,7 @@
   #chatRoom .cr-tabs button.crt-room{background:rgba(80,190,175,.16); color:#a7e6dc; border-color:rgba(90,200,185,.42);}   /* 说书人「私聊房间」tab 用中性青（玩家的「当前私聊」tab 由 JS 内联成该私聊色） */
   #chatRoom .cr-tabs button.crt-room.on{background:linear-gradient(180deg,#2f8f80,#1f6055); color:#eafff9; border-color:rgba(120,220,205,.7);}
   #chatRoom .cr-tabs button.crt-disabled{background:rgba(255,255,255,.04); color:#6b6484; border-color:rgba(150,150,170,.25); opacity:.6; cursor:not-allowed;}   /* 无私聊时「当前私聊」置灰 */
-  #chatRoom .cr-peers{flex:0 0 auto; display:flex; flex-wrap:wrap; gap:6px; padding:2px 12px 10px; margin-bottom:3px; border-bottom:1.5px solid rgba(170,138,232,.5);}   /* 玩家名行与聊天区的分割线 */
+  #chatRoom .cr-peers{flex:0 0 auto; display:flex; flex-wrap:wrap; gap:6px; padding:2px 12px 10px; margin-bottom:3px; border-bottom:1px solid rgba(160,130,220,.22);}   /* 玩家名行与聊天区的分割线（v2.50.7 改细，与 title 线一致；仅说书人视角显示）*/
   #chatRoom .cr-peers button{flex:0 0 auto; padding:5px 11px; border-radius:14px; font-size:12.5px; font-weight:700; cursor:pointer; border:1px solid rgba(160,130,220,.35); background:rgba(255,255,255,.04); color:#c9b9ee;}
   #chatRoom .cr-peers button.on{background:linear-gradient(180deg,#5a3f8c,#3f2a66); color:#fff; border-color:rgba(190,160,240,.78);}   /* 说书人玩家私信选中=紫（与私信主题一致，v2.50.5） */
   #chatRoom .cr-peers button .pd{display:inline-block; width:7px; height:7px; border-radius:50%; background:#a98be8; margin-left:5px; vertical-align:middle; visibility:hidden;}
@@ -667,7 +667,7 @@
   #chatRoom .cr-box.crbg-st .cr-input button{background:linear-gradient(180deg,#6f4fb0,#4a3082); color:#fff;}
   #chatRoom .cr-box.crbg-lobby .cr-input button{background:linear-gradient(180deg,#c99a3c,#9a7420); color:#3a2a08;}
   /* 大厅：head/input/lockmsg 的分割线 + 输入框边框改金色（私信/说书人仍为紫，不动） */
-  #chatRoom .cr-box.crbg-lobby .cr-tabs{border-bottom:1.5px solid rgba(228,196,120,.42);}   /* 大厅三 tab 下方金色分割线（v2.50.5） */
+  #chatRoom .cr-box.cr-stview.crbg-lobby .cr-tabs{border-bottom:1px solid rgba(228,196,120,.34);}   /* 大厅三 tab 下方金色细分割线（v2.50.7 改细、仅说书人视角；玩家视角不显示） */
   #chatRoom .cr-box.crbg-lobby .cr-head b{color:#f2d89c;}   /* 大厅标题金色 */
   #chatRoom .cr-box.crbg-lobby .cr-head{border-bottom-color:rgba(228,196,120,.34);}
   #chatRoom .cr-box.crbg-lobby .cr-input{border-top-color:rgba(228,196,120,.34);}
@@ -681,6 +681,8 @@
   #tableZone .chatbtn.cb-exit{background:linear-gradient(180deg,#b0483c,#7a3029); border:2px solid rgba(255,190,180,.75);}
   #tableZone .chatbtn.cb-join{background:linear-gradient(180deg,#2f6fb0,#1f4f7a); border:2px solid rgba(180,215,255,.75);}
   #tableZone .chatbtn.cb-confirm{background:linear-gradient(180deg,#e0a83a,#b8860b); border-color:#ffe9b8; color:#1a1226;}   /* 待确认态：金色 */
+  #tableZone .chatbtn img{width:86%; height:86%; object-fit:contain; display:block; pointer-events:none; filter:drop-shadow(0 1px 1px rgba(0,0,0,.5));}   /* 加入/退出图标（v2.50.7） */
+  #tableZone .chatbtn.cb-confirm img{display:none;}   /* 确认态显示文字 */
   .nb-note{padding:4px 2px; border-bottom:1px solid rgba(122,83,32,.14); line-height:1.35;}
   .nb-nom{border:1px solid rgba(74,43,107,.22); border-radius:8px; padding:6px 8px; margin:6px 0; background:rgba(255,252,244,.6);}
   .nb-nomhead{font-weight:700; color:#6b4a1e;}
@@ -1052,24 +1054,11 @@
     <div id="chatStack"></div>
     <div id="chatDisbandPop"></div>
     <div id="chatFab" onclick="_chatFabTap()" title="发起/邀请私聊" style="display:none">
-      <svg viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor">
-        <circle cx="12" cy="15" r="5"/><path d="M3 33c0-5.5 4-8.5 9-8.5s9 3 9 8.5z"/>
-        <circle cx="27" cy="12.5" r="4.4"/><path d="M19.5 29c0-5 3.4-7.6 7.5-7.6s7.5 2.6 7.5 7.6z" opacity=".82"/>
-      </g>
-      <g><circle cx="37" cy="35" r="9.2" fill="#4aa86a" stroke="#fff" stroke-width="1.6"/><path d="M37 30v10M32 35h10" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></g>
-      </svg><span class="cf-badge"></span></div>
+      <img src="assets/ic-invite.png" alt="" draggable="false"><span class="cf-badge"></span></div>
     <div id="stDisbandFab" onclick="_stDisbandTap()" title="解散所有私聊，玩家回到原座位" style="display:none">
-      <svg viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor">
-        <circle cx="13" cy="16" r="5"/><path d="M4 34c0-5.5 4-8.5 9-8.5s9 3 9 8.5z"/>
-        <circle cx="35" cy="16" r="5"/><path d="M26 34c0-5.5 4-8.5 9-8.5s9 3 9 8.5z"/>
-      </g>
-      <g stroke="#ffd7d7" stroke-width="3" stroke-linecap="round"><path d="M18 11 30 23M30 11 18 23"/></g>
-      </svg><span class="sdf-confirm">确认<br>解散</span></div>
+      <img src="assets/ic-disband.png" alt="" draggable="false"><span class="sdf-confirm">确认<br>解散</span></div>
     <div id="chatRoomFab" onclick="_openChatRoom()" title="聊天室" style="display:none">
-      <svg viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor">
-        <path d="M8 9h32a4 4 0 0 1 4 4v18a4 4 0 0 1-4 4H20l-9 7v-7H8a4 4 0 0 1-4-4V13a4 4 0 0 1 4-4z"/>
-      </g><g fill="#123330"><circle cx="16" cy="22" r="2.6"/><circle cx="24" cy="22" r="2.6"/><circle cx="32" cy="22" r="2.6"/></g>
-      </svg><span class="cr-badge"></span></div>
+      <img src="assets/ic-chat.png" alt="" draggable="false"><span class="cr-badge"></span></div>
     <div id="winIcon"></div>
     <video id="execVideo" playsinline preload="auto"></video>
   </div>
@@ -1274,6 +1263,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.50.7', d:'2026-08-13', items:['①毛玻璃磨砂程度调低（整屏 blur 12→6、聊天框 3→1.5），不再太糊。②聊天室 tab 下方分割线改成和标题下方一样的细线。③玩家视角聊天室 tab 下方不再有分割线（仅说书人视角保留）。④换了一套手绘图标：聊天室=聊天泡、邀请私聊=兜帽小人、发出邀请=火漆卷轴、加入=双泡+箭头、退出=传送门、解散群聊=泡+✕。']},
   {v:'v2.50.6', d:'2026-08-13', items:['整个聊天室加毛玻璃：打开聊天室后，背后的游戏画面会被磨砂虚化（遮罩调淡+`backdrop-filter` 模糊），聊天框本身也叠了一层毛玻璃，三个 tab（说书人/大厅/当前私聊）统一享有该效果。']},
   {v:'v2.50.5', d:'2026-08-13', items:['聊天室配色细调：①说书人「私聊房间」里的「当前没有私聊」提示和「旁观模式：仅查看，不参与私聊」改用私聊青主题色（不再是紫色）。②说书人「玩家私信」里选中某个玩家时，该玩家标签由蓝色改为紫色（与私信主题一致）。③私聊邀请弹窗做得更浅更透明（加了毛玻璃、深色底透明度降到 .30-.36）。④大厅聊天室三个 tab 下方加了一条金色主题分割线。']},
   {v:'v2.50.4', d:'2026-08-13', items:['四处修复/调整：①说书人未点「解散私聊」前，「处决 / 今日无人处决」和提名一样锁住（须先结束私聊环节）。②修复私聊导致座位圈重排后，猎手拖十字弩开枪会打到该位置「原本」玩家的问题——现在按当下显示位置命中正确的人。③私聊统一色由 rgb(118,214,201) 改为 rgb(74,194,180)（方案A，更饱满、聊天泡恢复白字）。④私聊邀请弹窗的青色调浅，做成与私聊聊天室页面一致的青色（不再是发暗的墨绿）。']},
@@ -4255,12 +4245,12 @@ load(); render();
     const bd=Math.max(18, seatR*1.0), rOut=R+seatR*1.11;   // 按钮直径≈座位半径；圆心落在外侧弧线上(=色带外弧半径)，避免遮挡座位标记
     chats.forEach(c=>{ const ks=c.members.map(m=>posOf[m]).filter(k=>k!=null).sort((a,b)=>a-b); if(ks.length<2) return;
       const midK=(ks[0]+ks[1])/2, ang=-Math.PI/2+midK*2*Math.PI/N, bx=cx+rOut*Math.cos(ang), by=cy+rOut*Math.sin(ang);
-      const inChat=!!(myc && myc.id===c.id), base=inChat?'退出':'加入';
+      const inChat=!!(myc && myc.id===c.id), base=inChat?'退出':'加入', iconHTML='<img src="assets/'+(inChat?'ic-leave':'ic-join')+'.png" alt="'+base+'" draggable="false">';
       const b=document.createElement('div'); b.className='chatbtn '+(inChat?'cb-exit':'cb-join');
       b.style.cssText='left:'+bx+'px;top:'+by+'px;width:'+bd+'px;height:'+bd+'px;font-size:'+(bd*0.3)+'px;';
-      b.textContent=base;
+      b.innerHTML=iconHTML;
       b.addEventListener('click',function(e){ e.stopPropagation();   // 两段确认，避免误触
-        if(!b._cf){ b._cf=true; b.classList.add('cb-confirm'); b.textContent='确认'; clearTimeout(b._t); b._t=setTimeout(function(){ b._cf=false; b.classList.remove('cb-confirm'); b.textContent=base; },3000); return; }
+        if(!b._cf){ b._cf=true; b.classList.add('cb-confirm'); b.textContent='确认'; clearTimeout(b._t); b._t=setTimeout(function(){ b._cf=false; b.classList.remove('cb-confirm'); b.innerHTML=iconHTML; },3000); return; }
         clearTimeout(b._t); if(inChat) window._chatLeave(); else window._chatJoinReq(c.id); });
       zone.appendChild(b); }); };
 
@@ -4301,7 +4291,8 @@ load(); render();
     fab.classList.toggle('cf-off', !day||busy||closed);   // 夜晚 / 有未了结邀请 / 本轮已解散(进入提名)→灰掉
     fab.classList.toggle('cf-sel', !!_chatSelMode);
     const badge=fab.querySelector('.cf-badge'); const n=(_chatSelMode&&_chatSel)?_chatSel.size:0;
-    if(badge){ badge.textContent=n||''; badge.style.display=n?'flex':'none'; } }
+    if(badge){ badge.textContent=n||''; badge.style.display=n?'flex':'none'; }
+    const icon=fab.querySelector('img'); if(icon){ const src='assets/'+(_chatSelMode?'ic-send':'ic-invite')+'.png'; if(icon.getAttribute('src')!==src) icon.setAttribute('src',src); } }   /* 选人模式=发出邀请(火漆卷轴)，否则=邀请私聊(兜帽小人) v2.50.7 */
   window.updateChatFab=updateChatFab;
   /* 说书人魔典：左下角「解散私聊」按钮（两连点确认 → 清空所有私聊，玩家回到原座位，随后可开始提名） */
   window.__sdfArmed=false; window.__sdfT=null;
@@ -4469,12 +4460,12 @@ load(); render();
     if(_crTab==='lobby') return 'crb-gold';
     if(_crTab==='room') return _crIsSt()?'crb-blue':'crb-room';
     return 'crb-blue'; }
-  function _crBg(){ const box=document.querySelector('#chatRoom .cr-box'); if(!box) return; box.classList.remove('crbg-st','crbg-lobby','crbg-room');
+  function _crBg(){ const box=document.querySelector('#chatRoom .cr-box'); if(!box) return; box.classList.remove('crbg-st','crbg-lobby','crbg-room'); box.classList.toggle('cr-stview', _crIsSt());   // 说书人视角标记：大厅 tab 分割线仅说书人显示
     const head=box.querySelector('.cr-head'), inp=box.querySelector('.cr-input'), lm=box.querySelector('.cr-lockmsg'), ta=box.querySelector('.cr-input textarea'), title=box.querySelector('.cr-head b'), sendb=box.querySelector('.cr-input button'), cx=box.querySelector('.cr-x'), peers=box.querySelector('.cr-peers');
     box.style.background=''; box.style.borderColor=''; if(head)head.style.borderBottomColor=''; if(inp)inp.style.borderTopColor=''; if(lm)lm.style.borderTopColor=''; if(ta)ta.style.borderColor=''; if(title)title.style.color=''; if(sendb)sendb.removeAttribute('style'); if(cx)cx.style.color=''; if(peers)peers.style.borderBottomColor='';
     if(_crTab==='room'){ box.classList.add('crbg-room'); const col=_crRoomColor(), rgb=_crRGB(col), c='rgba('+rgb.join(',')+',', bd=c+'.34)';   // 私聊统一青色（说书人旁观与玩家一致）
       box.style.background=_crRoomBgStyle(col); box.style.borderColor=c+'.5)';
-      if(head)head.style.borderBottomColor=bd; if(inp)inp.style.borderTopColor=bd; if(lm)lm.style.borderTopColor=bd; if(ta)ta.style.borderColor=c+'.5)'; if(peers)peers.style.borderBottomColor=c+'.5)';
+      if(head)head.style.borderBottomColor=bd; if(inp)inp.style.borderTopColor=bd; if(lm)lm.style.borderTopColor=bd; if(ta)ta.style.borderColor=c+'.5)'; if(peers)peers.style.borderBottomColor=bd;   /* peers 分割线与 head 同粗同色（细，v2.50.7） */
       if(title)title.style.color='rgb('+_crMul(rgb,1.1)+')'; if(cx)cx.style.color='rgb('+_crMul(rgb,1.15)+')'; if(sendb)sendb.style.cssText=_crRoomSendStyle(col); }
     else { box.classList.add(_crTab==='lobby'?'crbg-lobby':'crbg-st'); if(cx)cx.style.color=(_crTab==='lobby')?'#e8cf9a':'#c4b3ee'; } }
   function _crThemeColor(){ if(_crTab==='lobby') return '#d9b96a'; if(_crTab==='room') return 'rgb('+_crMul(_crRGB(_crRoomColor()),1.15)+')'; return '#b6a6dd'; }   // 空态提示/占位随主题色
