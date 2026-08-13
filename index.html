@@ -939,7 +939,7 @@
     <div id="cornerCard" onclick="window._openRoleCard&&_openRoleCard()" title="查看本局角色"><div class="rc-fallback"></div><img id="ccBackImg" src="assets/cardback.png" alt="" onerror="this.style.display='none'"></div>
     <div id="roleCardLayer" onclick="window._roleLayerClick&&_roleLayerClick(event)">
       <div id="roleCard"><div class="rc-inner">
-        <div class="rc-face rc-front"><img id="rcFrontImg" alt=""></div>
+        <div class="rc-face rc-front"><div class="rc-fallback"></div><img id="rcFrontImg" alt="" onerror="this.style.display='none'"></div>
         <div class="rc-face rc-back"><div class="rc-fallback"></div><img id="rcBackImg" src="assets/cardback.png" alt="" onerror="this.style.display='none'"></div>
       </div></div>
       <div id="rcHint">点击任意处收起</div>
@@ -1258,6 +1258,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.50.15', d:'2026-08-13', items:['修复胜负判定：①中毒/醉酒的圣徒被处决后，进入下一夜「毒失效」时会凭空自动判「邪恶胜利」并广播全场——现在改为在处决当刻快照圣徒是否有效，之后不再回溯误判。②白天结算面板的圣徒提示改用同一快照，中毒/醉酒圣徒会明确显示「能力无效、好人未落败」，不再与顶部胜负横幅自相矛盾。③猎人射中「被说书人注册为恶魔的非恶魔」（如隐士）时，魔典面板不再误写「恶魔死亡→好人胜利」，改为「并非真恶魔，好人未获胜」（射杀命中本身是规则允许的，不变）。④玩家开局身份大卡加了缺图占位与兜底：某张角色图加载失败时显示占位底图，而不是浏览器破图。⑤增补健壮性：结束本夜/本日加防重入守卫；处决确认弹窗后复检门控；结算徽章/投票时钟指针/结算徽记补上缺图兜底。']},
   {v:'v2.50.14', d:'2026-08-13', items:['①未登录（大厅）视角下不再显示左下角的两个私聊图标（之前从玩家登出后会残留）。②左下角两个图标放大约10%（60→66），并把它们之间的间距拉大，不再显得拥挤。']},
   {v:'v2.50.13', d:'2026-08-13', items:['①给左下角三个图标和座位圈的加入/退出图标加了互动反馈：鼠标悬停时放大发亮、点击（手指按下）时回弹，手感更灵动（灰色不可点状态不响应）。②点「发起私聊」进入选人模式后，在还没选任何人之前，左下角图标保持"邀请"样子（带荧光的选人提示），只有选中至少一名玩家后，才会变成"火漆卷轴（发出邀请）"图标。']},
   {v:'v2.50.12', d:'2026-08-13', items:['重做聊天室窗口尺寸：不再用 zoom 二次缩放（那会导致电脑上偏小、手机上偏宽、两端比例不一致）。改成固定 430:660 的比例、按视口自适应（高度取 90dvh 与 90vw 换算的较小值），这样电脑上恢复到接近最初的大小、并随屏幕放大，手机上也是同样的比例、大小合适；字号在各设备原生显示不再被缩小。']},
@@ -1916,8 +1917,8 @@ function syncPoisonToNight(){   // 投毒者的毒只在施放的那一夜(含�
   const cur=poisonPicks[night]; if(cur!=null && meta[cur]) meta[cur].poison=true;   // 只点亮当前夜的中毒目标
 }
 function stepNight(d){ night=Math.max(1,night+d); syncPoisonToNight(); render(); }
-function stEndNight(){ const d=night; (dayFlow[d]||(dayFlow[d]={})).dawn=true; try{ if(window.stDawn) window.stDawn(); }catch(e){} gtab='day'; save(); render(); }   // 结束本夜：只可点一次 → 天亮 + 跳白天tab
-function stEndDay(){ const d=night; (dayFlow[d]||(dayFlow[d]={})).dusk=true; gtab='night'; stepNight(1); save(); try{ if(window.stDusk) window.stDusk(); }catch(e){} }   // 结束本日：只可点一次 → 推进到下一夜(顺带清投毒者中毒) + 跳夜晚tab + 入夜冻结私聊
+function stEndNight(){ const d=night; if(dayFlow[d]&&dayFlow[d].dawn) return; (dayFlow[d]||(dayFlow[d]={})).dawn=true; try{ if(window.stDawn) window.stDawn(); }catch(e){} gtab='day'; save(); render(); }   // 结束本夜：只可点一次 → 天亮 + 跳白天tab
+function stEndDay(){ const d=night; if(dayFlow[d]&&dayFlow[d].dusk) return; (dayFlow[d]||(dayFlow[d]={})).dusk=true; gtab='night'; stepNight(1); save(); try{ if(window.stDusk) window.stDusk(); }catch(e){} }   // 结束本日：只可点一次 → 推进到下一夜(顺带清投毒者中毒) + 跳夜晚tab + 入夜冻结私聊
 
 /* ---------- 小恶魔夜间击杀 / 自杀转移 ---------- */
 function isDeadSeat(i){ const t=seatToken(i); return t?!!t.dead:!!(meta[i]&&meta[i].dead); }
@@ -2239,8 +2240,8 @@ function checkWin(){
   if(!dealtDemon) return null;                       // 尚未发牌
   const alive=livingSeats();
   const demonAlive = meta.some((m,i)=>m&&m.role&&RMAP[m.role].team==="dem" && !isDeadSeat(i));
-  for(const d in executions){ const ex=executions[d];   // 圣徒被处决 → 好人落败
-    if(ex>=0 && meta[ex] && meta[ex].role==="saint" && healthy(ex)) return {w:'evil', r:'圣徒被处决 → 好人落败'}; }
+  for(const d in executions){ const ex=executions[d];   // 圣徒被处决 → 好人落败（读处决当刻的健康快照 _saintLoss，毒失效后不回溯误判 #1）
+    if(ex>=0 && meta[ex] && meta[ex].role==="saint" && meta[ex]._saintLoss) return {w:'evil', r:'圣徒被处决 → 好人落败'}; }
   const _spRec=impKills[night]; const _starpassPending=_spRec && _spRec.type==='starpass' && _spRec.newImp==null && meta.some((m,i)=>m&&m.role&&RMAP[m.role]&&RMAP[m.role].team==='min' && !isDeadSeat(i));
   if(!demonAlive && !_starpassPending) return {w:'good', r:'恶魔已死 → 好人胜利'};   // 恶魔自杀·星传待继任（尚有存活爪牙）时先不判好人胜，等说书人指定继任
   if(alive.length<=2) return {w:'evil', r:'仅剩 '+alive.length+' 名存活 → 邪恶胜利'};
@@ -2391,7 +2392,7 @@ function clockBuild(geo,layer){ layer.innerHTML='';
     el.style.width=Wd+'px'; el.style.height=Hd+'px';
     el.style.left=(geo.cx-p.px*Wd+(shadow?dx:0))+'px'; el.style.top=(geo.cy-p.py*Hd+(shadow?dy:0))+'px';
     el.style.transformOrigin=(p.px*100)+'% '+(p.py*100)+'%';
-    el.innerHTML='<img src="assets/clock-hand-'+kind+'.png">'; layer.appendChild(el); return el; };
+    el.innerHTML='<img src="assets/clock-hand-'+kind+'.png" onerror="this.parentNode.style.display=\'none\'">'; layer.appendChild(el); return el; };   // #9 缺图兜底
   /* 顺序：表盘 → 影子(分,时) → 真针分 → 真针时（时针在最上层） */
   const shMin=mk('minute',geo.R*0.86,true), shHour=mk('hour',geo.R*0.58,true);
   const hMin=mk('minute',geo.R*0.86,false), hHour=mk('hour',geo.R*0.58,false);
@@ -2549,7 +2550,8 @@ function slayerUI(){
   const sl=meta.findIndex(m=>m&&m.role==="slayer"); if(sl<0) return "";
   let h='<div class="gsec">猎人（每局一次·白天）</div>';
   if(slayerShot){ const t=slayerShot.target; let res;
-    if(slayerShot.hit){ const sw=meta[t]&&meta[t]._swSeat; res=(sw!=null)?'命中！红唇女郎 '+nameAt(sw)+' 接任':'<b class="onblock">命中！恶魔死亡 → 好人胜利</b>'; }
+    if(slayerShot.hit){ const sw=meta[t]&&meta[t]._swSeat; const _rd=meta[t]&&meta[t].role&&RMAP[meta[t].role]&&RMAP[meta[t].role].team==="dem";   // #3 区分真恶魔与"被注册为恶魔的非恶魔"(如隐士)
+      res=(sw!=null)?'命中！红唇女郎 '+nameAt(sw)+' 接任':(_rd?'<b class="onblock">命中！恶魔死亡 → 好人胜利</b>':'命中！目标死亡（被注册为恶魔，但并非真恶魔，好人未获胜）'); }
     else res='未命中（非恶魔或猎人失效）';
     return h+'<div class="rrow" style="border:none">第 '+slayerShot.day+' 天 · '+nameAt(sl)+' 射向 '+nameAt(t)+' → '+res+'</div>';
   }
@@ -2566,6 +2568,8 @@ async function confirmExecute(seat){   /* 处决 / 今日无人处决 都先弹�
                      : '确认处决 '+nameAt(seat)+'？确认后本日将不能再新增提名。';
   const ok = await uiConfirm(msg,{title:'确认处决',ok:'确认执行',cancel:'取消'});
   if(!ok) return;
+  if(voteInProgress(night)) return;   // #7 await 弹窗期间状态可能已变 → 复检门控（改判由 doExecute 内部安全处理，故不拦已处决）
+  if(!window.__nomStarted) return;
   doExecute(seat);
 }
 /* 处决广播：向所有玩家局内信息写入/清除【处决信息】（每天同 key，改判时覆盖，无人处决/撤销时清除；dp=true→抬头「第X天」） */
@@ -2594,10 +2598,12 @@ function _clearSwTakeover(swSeat, day){ if(swSeat==null||swSeat<0) return;
 function doExecute(seat){ const day=night; const prev=executions[day];
   if(prev!=null && prev>=0){ const prevSw=(meta[prev]&&meta[prev]._swSeat!=null)?meta[prev]._swSeat:null;
     demonRevived(prev); killSeat(prev,false); histSet(prev,'death',null);   // 撤销上次处决
+    if(meta[prev]) meta[prev]._saintLoss=false;   // 撤销处决 → 清掉圣徒落败快照 #1
     if(prevSw!=null) try{ _clearSwTakeover(prevSw, day); }catch(e){} }   // 撤销上次处决触发的红唇接任通知
   try{ _clearExecFromAll(day); }catch(e){}   // 清掉本日旧的处决广播（改判/无人处决/撤销）
   if(seat<0){ executions[day]=-1; if(window._syncNoms) window._syncNoms(); if(window._syncSeats) window._syncSeats(); render(); return; }
   executions[day]=seat; killSeat(seat,true); histSet(seat,'death','第'+day+'天被处决出局');
+  if(meta[seat]) meta[seat]._saintLoss=(meta[seat].role==="saint" && healthy(seat));   // #1 处决当刻快照圣徒是否有效：毒/醉失效后 checkWin 不再回溯误判"邪恶胜利"
   try{ _broadcastExecToAll(day, seat); }catch(e){}   // 向所有玩家局内信息写入【xxx被处决】
   const _isDem=!!(meta[seat]&&meta[seat].role&&RMAP[meta[seat].role]&&RMAP[meta[seat].role].team==='dem');
   const _ei=Math.floor(Math.random()*EXEC_VIDEOS.length);
@@ -2936,7 +2942,7 @@ function renderGrim(){
       if(ex===-1) h+='<div class="rrow" style="color:#2e7d43">今日无人处决 ✓</div>';
       else { const r=meta[ex]&&meta[ex].role?RMAP[meta[ex].role]:null;
         h+='<div class="rrow" style="color:#b0402e">已处决：'+nameAt(ex)+'（'+(r?r.name+(meta[ex].isDrunk?'-酒鬼':''):'未分配')+'）✓</div>';
-        if(meta[ex]&&meta[ex].role==="saint") h+='<div class="rrow onblock">⚠ 圣徒被处决 → 好人落败</div>';
+        if(meta[ex]&&meta[ex].role==="saint"){ if(meta[ex]._saintLoss) h+='<div class="rrow onblock">⚠ 圣徒被处决 → 好人落败</div>'; else h+='<div class="rrow" style="color:#8a5f28">圣徒被处决，但其中毒/醉酒 → 能力无效，好人未落败</div>'; }   // #2 与 checkWin 用同一快照，不再自相矛盾
         if(r&&r.team==="dem"){ const m2=meta[ex];
           if(m2&&m2._swSeat!=null) h+='<div class="rrow onblock">恶魔被处决 → 红唇女郎 '+nameAt(m2._swSeat)+' 接任成为新恶魔</div>';
           else h+='<div class="rrow" style="color:#2e7d43;font-weight:800">恶魔被处决 → 好人胜利！</div>'; }
@@ -3268,7 +3274,7 @@ load(); render();
 <div id="resultLayer">
   <div class="backdrop"></div><div class="rays"></div><div class="parts" id="rlParts"></div>
   <button class="rclose" onclick="hideResult()" title="收起">✕</button>
-  <div class="emblem"><img id="rlEmblem" alt=""></div>
+  <div class="emblem"><img id="rlEmblem" alt="" onerror="this.style.display='none'"></div>
   <div class="rtitle" id="rlTitle"></div>
   <div class="rreason" id="rlReason"></div>
 </div>
@@ -3598,10 +3604,10 @@ load(); render();
     if(fi.getAttribute('src')===url && fi.complete && fi.naturalWidth){ cb(); return; }
     let done=false; const go=()=>{ if(done) return; done=true; cb(); };
     const pre=new Image();
-    pre.onload=()=>{ fi.src=url; go(); };
-    pre.onerror=()=>{ fi.src=url; go(); };
+    pre.onload=()=>{ fi.style.display=''; fi.src=url; go(); };
+    pre.onerror=()=>{ fi.removeAttribute('src'); fi.style.display='none'; go(); };   // #4 预载失败不硬塞失败URL：藏掉 img 露出占位底图，而非浏览器破图
     pre.src=url;
-    if(pre.complete && pre.naturalWidth){ fi.src=url; go(); return; }   // 已在缓存中，立即就绪
+    if(pre.complete && pre.naturalWidth){ fi.style.display=''; fi.src=url; go(); return; }   // 已在缓存中，立即就绪
     setTimeout(go, 1500);   // 兜底：最多等 1.5s，网络异常也不至于卡住不出卡
   }
   function updateRoleCard(gid, rid){ if(role!=='player') return; const {cc,layer}=_rcEls();
@@ -4001,7 +4007,7 @@ load(); render();
     }catch(e){} }
   function resultBadgeHTML(){ if(!pub||!pub.result||!pub.result.w) return '';
     const w=pub.result.w, t=w==='good'?'好人胜利':'邪恶胜利';
-    return '<div class="resbadge '+w+'"><img src="assets/win-'+w+'.png"><div><b>'+t+'</b><div class="rb-r">'+E(pub.result.r||'')+'</div></div></div>'; }
+    return '<div class="resbadge '+w+'"><img src="assets/win-'+w+'.png" onerror="this.style.display=\'none\'"><div><b>'+t+'</b><div class="rb-r">'+E(pub.result.r||'')+'</div></div></div>'; }   // #9 缺图兜底
   /* 说书人：广播提名给时钟（所有端同步指向） */
   window._clockBroadcastNom=function(nr,ne){ if(role!=='st'||!curGid) return;
     db.ref('games/'+curGid+'/public/clock/nom').set({nr:nr, ne:ne, ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); };
