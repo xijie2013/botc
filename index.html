@@ -617,13 +617,17 @@
     background:linear-gradient(180deg,#1f4d47,#123330); border:2px solid rgba(90,210,190,.72); color:#d9fff6;
     display:none; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.5); -webkit-tap-highlight-color:transparent;}
   #chatRoomFab svg{width:58%; height:58%; display:block;}
-  #chatRoomFab .cr-badge{position:absolute; top:-5px; right:-5px; min-width:20px; height:20px; padding:0 5px; border-radius:10px; box-sizing:border-box;
-    background:#e05a5a; color:#fff; font:800 12px sans-serif; display:none; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.5);}
+  #chatRoomFab .cr-badge{position:absolute; top:-4px; right:-4px; display:none; gap:2px; align-items:center; padding:2px 3px; border-radius:9px;
+    background:rgba(10,8,16,.92); box-shadow:0 1px 4px rgba(0,0,0,.55);}   /* 新消息角标：一排彩色小点（说书人红/大厅黄/当前私聊对应色） */
+  #chatRoomFab .cr-badge i{width:9px; height:9px; border-radius:50%; display:block; border:1px solid rgba(255,255,255,.55);}
   /* 聊天室页面（模态、随 --uiscale 等比缩放） */
   #chatRoom{position:fixed; inset:0; z-index:205; display:none; align-items:center; justify-content:center; background:rgba(8,5,14,.66); padding:12px;}
   #chatRoom.on{display:flex;}
   #chatRoom .cr-box{zoom:var(--uiscale); width:min(94vw,430px); height:min(86dvh,660px); box-sizing:border-box; display:flex; flex-direction:column; overflow:hidden;
     background:linear-gradient(180deg,#241a31,#1a1226); border:1.5px solid rgba(160,130,220,.4); border-radius:16px; box-shadow:0 16px 48px rgba(0,0,0,.6);}
+  /* 各 tab 主题色的半透明背景：说书人=紫、大厅=深金、当前私聊=该私聊色(内联) */
+  #chatRoom .cr-box.crbg-st{background:linear-gradient(180deg,rgba(72,50,116,.88),rgba(44,29,72,.92)); border-color:rgba(170,138,232,.5);}
+  #chatRoom .cr-box.crbg-lobby{background:linear-gradient(180deg,rgba(112,86,26,.86),rgba(60,45,13,.92)); border-color:rgba(220,180,90,.5);}
   #chatRoom .cr-head{flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; padding:12px 15px; border-bottom:1px solid rgba(160,130,220,.22);}
   #chatRoom .cr-head b{font-size:16px; color:#e8ddff; font-weight:800;}
   #chatRoom .cr-x{cursor:pointer; color:#b9a8dd; font-size:18px; line-height:1; padding:2px 6px;}
@@ -1249,6 +1253,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.49.1', d:'2026-08-13', items:['聊天室修复+完善：①修复大厅消息发不出去、永远空白的 bug（大厅消息路径层级不对、被规则校验挡下，已改为 chat/lobby/main）。②说书人「玩家私信」的红点改为「有新消息才亮、看过就消失」（不再是只要有消息就常亮）。③每个 tab 的背景改成各自主题色的半透明底：说书人=紫、大厅=深金（当前私聊 tab 用该私聊的颜色，随第二步上线）。④聊天室入口图标上会显示新消息小圆点：说书人有新私信=红点、大厅有新消息=黄点（当前私聊=对应颜色，随第二步）。']},
   {v:'v2.49.0', d:'2026-08-12', items:['新增「聊天室」（第一步）：左下角私聊图标右边多了一个聊天泡泡入口，点开是聊天室页面。玩家有「说书人」「大厅」两个 tab（「当前私聊」tab 下一步再加）——「说书人」全程可与说书人私聊；「大厅」是所有玩家共享的聊天室、只在白天开放（夜晚锁定输入）。说书人端有「玩家私信」（逐个玩家回复，有消息的玩家标红点）「大厅」两个 tab。消息实时同步。⚠️ 需要先在 Firebase 部署新版数据库规则（已随本次一起给你），否则收发会失败。']},
   {v:'v2.48.1', d:'2026-08-12', items:['说书人点「解散私聊」后，给全体玩家的通知弹窗措辞改为「私聊环节已结束 / 可以开始提名了，请大家回到大厅。」（此前为「说书人已解散所有私聊」，在当天没人私聊时显得别扭）；说书人端的确认提示也同步改为「私聊环节已结束、提名已开启」。']},
   {v:'v2.48.0', d:'2026-08-12', items:['提名改为「先解散私聊、再开始提名」的流程：天亮后，说书人白天面板的「＋提名」先锁住（显示灰色提示，须先点左下角「解散私聊」按钮），此时左下角「解散私聊」按钮即便当前没有私聊也可点击。点击（两连点确认）解散后——① 当天「解散私聊」按钮变灰、不可再点；② 全体玩家「发起私聊」左下角图标变灰、本轮不可再发起/加入私聊；③ 说书人「＋提名」解锁，可以开始提名。次日天亮自动重置（提名重新锁住、私聊重新开放）。']},
@@ -4353,54 +4358,74 @@ load(); render();
   window._chatDisbandAck=function(id){ window.__disbandAcked[String(id)]=1; updateChatDisband(); };
 
   /* ============ 聊天室（step1：说书人私信 / 大厅；当前私聊 tab 见 step2）============
-     消息直写 firebase：games/{gid}/chat/{lobby|st/{seat}}/{pushId}={f(发送者座位, -1=说书人), t(文本), ts}。
-     需已部署新版 database.rules.json（chat 子树允许登录用户读写）；未部署前 push 会被拒→toast「发送失败」。 */
-  window.__crOpen=false; let _crTab='st', _crPeer=-1, _crRef=null, _crStRef=null, _crMsgs=[];
+     消息直写 firebase：games/{gid}/chat/{lobby/main | st/{seat}}/{pushId}={f(座位, -1=说书人), t, ts}。
+     ⚠️ 各 section 统一 3 层深（chat/$section/$bucket/$msgId）以配合规则里的 $msgId .validate，所以大厅是 chat/lobby/main/{id}。
+     后台常驻监听 lobby + 自己/全部 st 线程，用于图标角标红/黄点；打开时直接从内存渲染，不二次订阅。
+     已读态存 localStorage(botc_crread_{gid}_{role})：某 section 有比「已读 key」更新的、来自他人的消息 → 未读。 */
+  window.__crOpen=false; let _crTab='st', _crPeer=-1, _crMsgs=[], _crW={lobby:null,st:null}, _crWatchKey=null;
+  window.__crRead=window.__crRead||{}; window.__crLobby=window.__crLobby||{}; window.__crMySt=window.__crMySt||{}; window.__crStThreads=window.__crStThreads||{};
   function _crIsSt(){ return role==='st'; }
   function _crMe(){ return _crIsSt()? -1 : myVoteSeat(); }
   function _crCanOpen(){ return (role==='player'&&myVoteSeat()>=0) || (role==='st'&&mode==='st'); }
-  function _updateChatRoomFab(){ const el=document.getElementById('chatRoomFab'); if(!el) return; el.style.display=_crCanOpen()?'flex':'none'; }
-  window._updateChatRoomFab=_updateChatRoomFab;
   function _crTabsDef(){ return _crIsSt()? [{k:'st',label:'玩家私信'},{k:'lobby',label:'大厅'}] : [{k:'st',label:'说书人'},{k:'lobby',label:'大厅'}]; }
   function _crTime(ts){ const d=new Date(ts||Date.now()); return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); }
   function _crNorm(val){ return Object.keys(val||{}).map(k=>Object.assign({_k:k},val[k])).filter(m=>m&&m.t!=null).sort((a,b)=>((a.ts||0)-(b.ts||0))||(a._k<b._k?-1:1)); }
+  function _crMaxKey(data,filt){ let mx=''; const d=data||{}; Object.keys(d).forEach(function(k){ const m=d[k]; if(m&&m.t!=null&&(!filt||filt(m))&&k>mx) mx=k; }); return mx; }
+  function _crReadKey(){ return 'botc_crread_'+curGid+'_'+role; }
+  function _crReadLoad(){ try{ window.__crRead=JSON.parse(localStorage.getItem(_crReadKey())||'{}')||{}; }catch(e){ window.__crRead={}; } }
+  function _crReadSave(){ try{ localStorage.setItem(_crReadKey(), JSON.stringify(window.__crRead||{})); }catch(e){} }
+  /* 后台监听（图标显示时常驻，随身份变化重绑） */
+  function _crStopWatch(){ if(_crW.lobby){try{_crW.lobby.off();}catch(e){} _crW.lobby=null;} if(_crW.st){try{_crW.st.off();}catch(e){} _crW.st=null;} _crWatchKey=null; }
+  function _crEnsureWatch(){ if(!curGid) return; const key=role+':'+(_crIsSt()?'st':myVoteSeat())+':'+curGid; if(key===_crWatchKey) return; _crStopWatch(); _crWatchKey=key; _crReadLoad();
+    _crW.lobby=db.ref('games/'+curGid+'/chat/lobby/main'); _crW.lobby.on('value',function(s){ window.__crLobby=s.val()||{}; _crWatchUpdate('lobby'); });
+    if(_crIsSt()){ _crW.st=db.ref('games/'+curGid+'/chat/st'); _crW.st.on('value',function(s){ window.__crStThreads=s.val()||{}; _crWatchUpdate('st'); }); }
+    else { const seat=myVoteSeat(); if(seat>=0){ _crW.st=db.ref('games/'+curGid+'/chat/st/'+seat); _crW.st.on('value',function(s){ window.__crMySt=s.val()||{}; _crWatchUpdate('st'); }); } } }
+  function _crWatchUpdate(kind){ _crIconDots(); if(window.__crOpen){ if(_crIsSt()&&kind==='st') _crRenderPeers(); if(_crTab===kind) _crRenderActive(); } }
+  function _updateChatRoomFab(){ const el=document.getElementById('chatRoomFab'); if(!el) return; const can=_crCanOpen(); el.style.display=can?'flex':'none';
+    if(can) _crEnsureWatch(); else _crStopWatch(); _crIconDots(); }
+  window._updateChatRoomFab=_updateChatRoomFab;
+  /* 图标角标：说书人有新私信→红点、大厅有新消息→黄点（来自他人、比已读 key 新才算） */
+  function _crIconDots(){ const el=document.getElementById('chatRoomFab'); if(!el) return; const badge=el.querySelector('.cr-badge'); if(!badge) return; const rd=window.__crRead||{}, dots=[];
+    if(_crIsSt()){ let anyP=false; const th=window.__crStThreads||{}; Object.keys(th).forEach(function(seat){ if(_crMaxKey(th[seat],function(m){return m.f!==-1;}) > (rd['p'+seat]||'')) anyP=true; }); if(anyP) dots.push('#e05a5a');
+      if(_crMaxKey(window.__crLobby,function(m){return m.f!==-1;}) > (rd['lobby']||'')) dots.push('#f5c542'); }
+    else { const seat=myVoteSeat(); if(_crMaxKey(window.__crMySt,function(m){return m.f===-1;}) > (rd['st']||'')) dots.push('#e05a5a');
+      if(_crMaxKey(window.__crLobby,function(m){return m.f!==seat;}) > (rd['lobby']||'')) dots.push('#f5c542'); }
+    badge.innerHTML=dots.map(function(c){return '<i style="background:'+c+'"></i>';}).join(''); badge.style.display=dots.length?'flex':'none'; }
+  window._crIconDots=_crIconDots;
   window._openChatRoom=function(){ if(!_crCanOpen()){ try{toast('先坐到座位上再打开聊天室');}catch(e){} return; }
-    window.__crOpen=true; const m=document.getElementById('chatRoom'); if(m) m.classList.add('on');
+    window.__crOpen=true; _crEnsureWatch(); const m=document.getElementById('chatRoom'); if(m) m.classList.add('on');
     if(!_crTabsDef().some(t=>t.k===_crTab)) _crTab='st';
     _crRenderTabs(); _crSwitch(_crTab);
     const t=document.getElementById('crText'); if(t){ t.onkeydown=function(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); _crSend(); } }; setTimeout(function(){try{t.focus();}catch(e){}},80); } };
-  window._closeChatRoom=function(){ window.__crOpen=false; _crDetachAll(); const m=document.getElementById('chatRoom'); if(m) m.classList.remove('on'); };
-  function _crDetachMsg(){ if(_crRef){ try{_crRef.off();}catch(e){} _crRef=null; } }
-  function _crDetachAll(){ _crDetachMsg(); if(_crStRef){ try{_crStRef.off();}catch(e){} _crStRef=null; } }
+  window._closeChatRoom=function(){ window.__crOpen=false; const m=document.getElementById('chatRoom'); if(m) m.classList.remove('on'); };
   function _crRenderTabs(){ const box=document.getElementById('crTabs'); if(!box) return;
     box.innerHTML=_crTabsDef().map(function(t){ return '<button class="'+(t.k===_crTab?'on':'')+'" onclick="_crSwitch(\''+t.k+'\')">'+t.label+'</button>'; }).join(''); }
-  function _crPath(){ if(!curGid) return null;
-    if(_crTab==='lobby') return db.ref('games/'+curGid+'/chat/lobby');
-    if(_crTab==='st'){ const seat=_crIsSt()? _crPeer : myVoteSeat(); if(seat<0) return null; return db.ref('games/'+curGid+'/chat/st/'+seat); }
-    return null; }
-  window._crSwitch=function(tab){ _crTab=tab; _crRenderTabs(); _crDetachAll();
+  function _crBg(){ const box=document.querySelector('#chatRoom .cr-box'); if(!box) return; box.classList.remove('crbg-st','crbg-lobby','crbg-room'); box.style.background='';
+    box.classList.add(_crTab==='lobby'?'crbg-lobby':_crTab==='st'?'crbg-st':'crbg-room'); }
+  window._crSwitch=function(tab){ _crTab=tab; _crRenderTabs(); _crBg();
     const peers=document.getElementById('crPeers');
-    if(_crIsSt() && tab==='st'){ peers.style.display='flex'; if(_crPeer<0) _crPeer=_crFirstPeer(); _crBindPeers(); }
+    if(_crIsSt() && tab==='st'){ peers.style.display='flex'; if(_crPeer<0) _crPeer=_crFirstPeer(); _crRenderPeers(); }
     else { peers.style.display='none'; }
     document.getElementById('crTitle').textContent = (tab==='lobby')?'大厅聊天室' : (_crIsSt()?'玩家私信':'与说书人私聊');
-    _crApplyLock();
-    const ref=_crPath(); if(ref){ _crRef=ref; _crRef.on('value', function(s){ _crMsgs=_crNorm(s.val()); _crRenderMsgs(); }); }
-    else { _crMsgs=[]; _crRenderMsgs(); } };
+    _crApplyLock(); _crRenderActive(); };
   function _crApplyLock(){ const input=document.getElementById('crInput'), lock=document.getElementById('crLock'); if(!input||!lock) return;
     const lobbyClosed=(_crTab==='lobby' && !isChatDay());
     const noPeer=(_crIsSt() && _crTab==='st' && _crPeer<0);
     if(lobbyClosed){ input.style.display='none'; lock.style.display='block'; lock.textContent='🌙 夜晚大厅已关闭，白天再来'; }
     else { input.style.display='flex'; lock.style.display='none'; input.classList.toggle('cr-locked', noPeer); } }
   function _crFirstPeer(){ const seats=(pub&&pub.seats)||[]; for(let i=0;i<seats.length;i++){ if(seats[i]&&seats[i].name) return i; } return 0; }
-  function _crBindPeers(){ if(_crStRef){ try{_crStRef.off();}catch(e){} } _crStRef=db.ref('games/'+curGid+'/chat/st');
-    _crStRef.on('value', function(s){ window.__crStThreads=s.val()||{}; _crRenderPeers(); }); }
   function _crRenderPeers(){ const box=document.getElementById('crPeers'); if(!box||!_crIsSt()) return;
-    const seats=(pub&&pub.seats)||[], threads=window.__crStThreads||{}; let h='';
-    for(let i=0;i<seats.length;i++){ if(!seats[i]||!seats[i].name) continue; const has=threads[i]&&Object.keys(threads[i]).length;
-      h+='<button class="'+(i===_crPeer?'on':'')+(has?' unread':'')+'" onclick="_crPickPeer('+i+')">'+_nbEsc(seats[i].name)+'<span class="pd"></span></button>'; }
+    const seats=(pub&&pub.seats)||[], threads=window.__crStThreads||{}, rd=window.__crRead||{}; let h='';
+    for(let i=0;i<seats.length;i++){ if(!seats[i]||!seats[i].name) continue; const unread=_crMaxKey(threads[i],function(m){return m.f!==-1;}) > (rd['p'+i]||'');
+      h+='<button class="'+(i===_crPeer?'on':'')+(unread?' unread':'')+'" onclick="_crPickPeer('+i+')">'+_nbEsc(seats[i].name)+'<span class="pd"></span></button>'; }
     box.innerHTML=h||'<span style="color:#8a7cb0;font-size:12.5px;padding:5px 2px">暂无玩家</span>'; }
-  window._crPickPeer=function(seat){ _crPeer=seat; _crRenderPeers(); _crDetachMsg(); _crApplyLock();
-    const ref=_crPath(); if(ref){ _crRef=ref; _crRef.on('value', function(s){ _crMsgs=_crNorm(s.val()); _crRenderMsgs(); }); } };
+  window._crPickPeer=function(seat){ _crPeer=seat; _crApplyLock(); _crRenderActive(); _crRenderPeers(); };
+  function _crActiveData(){ if(_crTab==='lobby') return window.__crLobby; if(_crTab==='st'){ return _crIsSt()? (window.__crStThreads||{})[_crPeer] : window.__crMySt; } return null; }
+  function _crActivePath(){ if(!curGid) return null; if(_crTab==='lobby') return db.ref('games/'+curGid+'/chat/lobby/main');
+    if(_crTab==='st'){ const seat=_crIsSt()?_crPeer:myVoteSeat(); if(seat<0) return null; return db.ref('games/'+curGid+'/chat/st/'+seat); } return null; }
+  function _crRenderActive(){ _crMsgs=_crNorm(_crActiveData()); _crRenderMsgs(); _crMarkActiveRead(); }
+  function _crMarkActiveRead(){ if(!window.__crOpen) return; const last=_crMsgs.length?_crMsgs[_crMsgs.length-1]._k:''; if(!last) return;
+    const key=(_crTab==='lobby')?'lobby':(_crIsSt()?('p'+_crPeer):'st'); if((window.__crRead[key]||'')<last){ window.__crRead[key]=last; _crReadSave(); if(_crIsSt()&&_crTab==='st') _crRenderPeers(); _crIconDots(); } }
   function _crRenderMsgs(){ const body=document.getElementById('crBody'); if(!body) return; const me=_crMe();
     if(!_crMsgs.length){ body.innerHTML='<div class="cr-empty">'+((_crTab==='lobby'&&!isChatDay())?'🌙 夜晚大厅已关闭':'还没有消息，来说第一句吧～')+'</div>'; return; }
     let h=''; for(let i=0;i<_crMsgs.length;i++){ const m=_crMsgs[i]; const mine=(m.f===me);
@@ -4413,9 +4438,9 @@ load(); render();
     if(_crTab==='lobby' && !isChatDay()){ try{toast('夜晚大厅已关闭');}catch(e){} return; }
     const from=_crMe(); if(!_crIsSt() && from<0){ try{toast('先坐到座位上');}catch(e){} return; }
     if(_crIsSt() && _crTab==='st' && _crPeer<0){ try{toast('先选择一个玩家');}catch(e){} return; }
-    const ref=_crPath(); if(!ref) return; ta.value='';
+    const ref=_crActivePath(); if(!ref) return; ta.value='';
     try{ ref.push({f:from, t:txt, ts:firebase.database.ServerValue.TIMESTAMP}).catch(function(err){ try{toast('发送失败'+(err&&err.code?'：'+err.code:'（请先部署聊天室规则）'));}catch(e){} }); }catch(e){} };
-  function _crOnPubChange(){ if(!window.__crOpen) return; _crApplyLock(); if(_crIsSt()&&_crTab==='st') _crRenderPeers(); if(_crTab==='lobby') _crRenderMsgs(); }
+  function _crOnPubChange(){ if(!window.__crOpen) return; _crApplyLock(); if(_crIsSt()&&_crTab==='st') _crRenderPeers(); }
   window._crOnPubChange=_crOnPubChange;
 
   /* ---- 说书人端：私聊状态机（挂进 bindStPlayers + 1s 超时 tick）---- */
