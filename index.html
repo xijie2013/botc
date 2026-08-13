@@ -613,6 +613,10 @@
   #chatRoomFab .cr-badge{position:absolute; top:-4px; right:-4px; display:none; gap:2px; align-items:center; padding:2px 3px; border-radius:9px;
     background:rgba(10,8,16,.92); box-shadow:0 1px 4px rgba(0,0,0,.55);}   /* 新消息角标：一排彩色小点（说书人红/大厅黄/当前私聊对应色） */
   #chatRoomFab .cr-badge i{width:9px; height:9px; border-radius:50%; display:block; border:1px solid rgba(255,255,255,.55);}
+  /* 三个左下角图标：悬停放大发亮、按下回弹（v2.50.13 互动反馈；灰态不响应） */
+  #chatFab, #stDisbandFab, #chatRoomFab{ transition:transform .14s cubic-bezier(.34,1.56,.64,1), filter .16s ease; }
+  #chatFab:not(.cf-off):hover, #stDisbandFab:not(.sdf-off):hover, #chatRoomFab:hover{ transform:scale(1.14); filter:brightness(1.13); }
+  #chatFab:not(.cf-off):active, #stDisbandFab:not(.sdf-off):active, #chatRoomFab:active{ transform:scale(.9); filter:brightness(1.05); }
   /* 聊天室页面（模态；v2.50.12 起不再随 --uiscale zoom，改固定比例按视口自适应） */
   #chatRoom{position:fixed; inset:0; z-index:205; display:none; align-items:center; justify-content:center; background:rgba(8,5,14,.46); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); padding:12px;}   /* 遮罩+整屏毛玻璃（v2.50.7 blur 12→6 降磨砂）：背后游戏画面轻度虚化 */
   #chatRoom.on{display:flex;}
@@ -670,7 +674,9 @@
   #chatRoom .cr-lockmsg{flex:0 0 auto; text-align:center; color:#a596c8; font-size:12.5px; padding:10px 12px 12px; border-top:1px solid rgba(160,130,220,.22);}
   /* 座位圈上的私聊按钮（组内第一二成员之间）：组内=退出(红)、组外=加入(蓝) */
   #tableZone .chatbtn{position:absolute; transform:translate(-50%,-50%); display:flex; align-items:center; justify-content:center;
-    cursor:pointer; z-index:5; user-select:none; -webkit-tap-highlight-color:transparent;}   /* v2.50.8 纯图标无圆底；v2.50.9 点击弹窗确认 */
+    cursor:pointer; z-index:5; user-select:none; -webkit-tap-highlight-color:transparent; transition:transform .14s cubic-bezier(.34,1.56,.64,1), filter .16s ease;}   /* v2.50.8 纯图标无圆底；v2.50.9 点击弹窗确认；v2.50.13 悬停/按下互动 */
+  #tableZone .chatbtn:hover{ transform:translate(-50%,-50%) scale(1.16); filter:brightness(1.13); }
+  #tableZone .chatbtn:active{ transform:translate(-50%,-50%) scale(.9); }
   #tableZone .chatbtn img{width:100%; height:100%; object-fit:contain; display:block; pointer-events:none; filter:drop-shadow(0 1px 2px rgba(0,0,0,.7));}   /* 加入/退出图标 */
   .nb-note{padding:4px 2px; border-bottom:1px solid rgba(122,83,32,.14); line-height:1.35;}
   .nb-nom{border:1px solid rgba(74,43,107,.22); border-radius:8px; padding:6px 8px; margin:6px 0; background:rgba(255,252,244,.6);}
@@ -1252,6 +1258,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.50.13', d:'2026-08-13', items:['①给左下角三个图标和座位圈的加入/退出图标加了互动反馈：鼠标悬停时放大发亮、点击（手指按下）时回弹，手感更灵动（灰色不可点状态不响应）。②点「发起私聊」进入选人模式后，在还没选任何人之前，左下角图标保持"邀请"样子（带荧光的选人提示），只有选中至少一名玩家后，才会变成"火漆卷轴（发出邀请）"图标。']},
   {v:'v2.50.12', d:'2026-08-13', items:['重做聊天室窗口尺寸：不再用 zoom 二次缩放（那会导致电脑上偏小、手机上偏宽、两端比例不一致）。改成固定 430:660 的比例、按视口自适应（高度取 90dvh 与 90vw 换算的较小值），这样电脑上恢复到接近最初的大小、并随屏幕放大，手机上也是同样的比例、大小合适；字号在各设备原生显示不再被缩小。']},
   {v:'v2.50.11', d:'2026-08-13', items:['更新了一套重新调色的聊天图标：发起私聊直接用 ic-invite、解散私聊直接用 ic-disband（＋号和✕号已经画进图标里，不再由程序额外叠加荧光符号）。']},
   {v:'v2.50.10', d:'2026-08-13', items:['①修复手机端聊天室框比电脑端小很多的问题：聊天框尺寸原来被 zoom 二次缩放，现在除以缩放系数抵消，手机端也能正常占满高度（与其它弹窗一致的等比 layout）。②发起群聊和解散群聊改用同一个「两个兜帽小人」图标，右下角叠加荧光符号区分：发起=teal 荧光「＋」、解散=红色荧光「✕」。③发起邀请（选人）时图标改闪 teal 荧光（原蓝色）；被选中的玩家改用 teal 高亮（原蓝色）；选中人数角标也改 teal。']},
@@ -4286,7 +4293,7 @@ load(); render();
     fab.classList.toggle('cf-sel', !!_chatSelMode);
     const badge=fab.querySelector('.cf-badge'); const n=(_chatSelMode&&_chatSel)?_chatSel.size:0;
     if(badge){ badge.textContent=n||''; badge.style.display=n?'flex':'none'; }
-    const icon=fab.querySelector('img'); if(icon){ const src='assets/'+(_chatSelMode?'ic-send':'ic-invite')+'.png'; if(icon.getAttribute('src')!==src) icon.setAttribute('src',src); } }   /* 选人模式=发出邀请(火漆卷轴)，否则=邀请私聊(兜帽小人) v2.50.7 */
+    const icon=fab.querySelector('img'); if(icon){ const src='assets/'+((_chatSelMode&&n>0)?'ic-send':'ic-invite')+'.png'; if(icon.getAttribute('src')!==src) icon.setAttribute('src',src); } }   /* 选人模式且已选≥1人=发出邀请(火漆卷轴)；未选人时仍是邀请图标(兜帽小人) v2.50.13 */
   window.updateChatFab=updateChatFab;
   /* 说书人魔典：左下角「解散私聊」按钮（两连点确认 → 清空所有私聊，玩家回到原座位，随后可开始提名） */
   window.__sdfArmed=false; window.__sdfT=null;
