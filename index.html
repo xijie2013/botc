@@ -569,8 +569,8 @@
   .seat.chatsel{outline:3px solid rgba(74,168,255,.9); outline-offset:2px; box-shadow:0 0 12px rgba(74,168,255,.7);}
   /* 私聊：底部堆叠邀请弹窗 */
   #chatStack{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:123; display:flex; flex-direction:column-reverse; gap:10px; align-items:center; pointer-events:none;}
-  #chatStack .civ{width:350px; max-width:94vw; box-sizing:border-box; pointer-events:auto; background:linear-gradient(180deg,rgba(22,46,43,.98),rgba(13,30,28,.98));
-    border:1.4px solid rgba(72,196,178,.6); border-radius:14px; padding:13px 16px 11px; box-shadow:0 10px 34px rgba(0,0,0,.5);}   /* 私聊邀请：teal 底 teal 边 */
+  #chatStack .civ{width:350px; max-width:94vw; box-sizing:border-box; pointer-events:auto; background:linear-gradient(180deg,rgba(74,194,180,.34),rgba(74,194,180,.44)),linear-gradient(180deg,#161022,#120c1c);
+    border:1.5px solid rgba(74,194,180,.6); border-radius:14px; padding:13px 16px 11px; box-shadow:0 10px 34px rgba(0,0,0,.5);}   /* 私聊邀请：与私聊聊天室同色（74,194,180 青叠深底），更浅 */
   #chatStack .civ-t{font-size:14px; font-weight:700; color:#d6f0ea; line-height:1.5; margin-bottom:10px; text-align:center;}
   #chatStack .civ-btns{display:flex; gap:10px; justify-content:center; margin-bottom:9px;}
   #chatStack .civ-yes,#chatStack .civ-no,#chatStack .civ-ok{min-width:96px; padding:8px 0; border-radius:11px; font-size:14px; font-weight:800; cursor:pointer; border:none;}
@@ -1273,6 +1273,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.50.4', d:'2026-08-13', items:['四处修复/调整：①说书人未点「解散私聊」前，「处决 / 今日无人处决」和提名一样锁住（须先结束私聊环节）。②修复私聊导致座位圈重排后，猎手拖十字弩开枪会打到该位置「原本」玩家的问题——现在按当下显示位置命中正确的人。③私聊统一色由 rgb(118,214,201) 改为 rgb(74,194,180)（方案A，更饱满、聊天泡恢复白字）。④私聊邀请弹窗的青色调浅，做成与私聊聊天室页面一致的青色（不再是发暗的墨绿）。']},
   {v:'v2.50.3', d:'2026-08-13', items:['私聊青色调浅：私聊统一色由 rgb(48,176,162) 改为更浅的 rgb(118,214,201)，聊天室房间背景/聊天泡/tab/发送按钮与座位圈色带同步变浅（亮度过阈值后聊天泡文字自动切为深色以保证可读性）。']},
   {v:'v2.50.2', d:'2026-08-13', items:['聊天室与弹窗配色统一：①所有私聊统一用一种青色（不再按组分不同颜色），色带与聊天室房间共用。②聊天室空态提示（「还没有消息…」等）也随当前 tab 主题色变化。③「当前私聊」tab 常驻，不在任何私聊里时置灰不可点。④去掉猎手向说书人申请开枪弹窗前面的 🎯 图标。⑤统一所有底部弹窗配色：说书人发给玩家的（夜晚信息、解散通知、猎手开枪结果…）=紫底金边；玩家发给说书人的（猎手开枪申请、红唇女郎确认接任…）=蓝底蓝边；私聊邀请相关的=青底青边。']},
   {v:'v2.50.1', d:'2026-08-13', items:['聊天室配色收尾：①说书人「私聊房间」旁观界面的最外层边框和内部分割线也统一成青色（之前还是紫色的；「旁观模式…」那行字保持紫色不变）。②聊天室右上角的 ✕ 号改为跟随当前 tab 的主题色（说书人=紫、大厅=金、当前私聊=该私聊色、旁观=青）。③私聊分组的配色改用 viridis 中段的一系列青色（绿→青→蓝），私聊色带和聊天室房间共用这套更协调的青色系。']},
@@ -2565,6 +2566,7 @@ function slayerUI(){
 }
 async function confirmExecute(seat){   /* 处决 / 今日无人处决 都先弹确认弹窗，确认后才执行 */
   if(voteInProgress(night)) return;   // 计票进行中不允许处决/无人处决（需先停止计票）
+  if(!window.__nomStarted) return;    // 未点「解散私聊」前，处决/无人处决 一并锁住（兜底拦截）
   const msg = seat<0 ? '确认「今日无人处决」？确认后本日将不能再新增提名。'
                      : '确认处决 '+nameAt(seat)+'？确认后本日将不能再新增提名。';
   const ok = await uiConfirm(msg,{title:'确认处决',ok:'确认执行',cancel:'取消'});
@@ -2931,6 +2933,7 @@ function renderGrim(){
     h+='<div class="gsec">处决</div>';
     if(executions[day]!==undefined){ /* 已处决/无人处决 → 不再显示处决按钮（下方有结果 ✓） */ }
     else if(voting) h+='<div class="rrow" style="border:none;opacity:.6">请先「停止计票」，再决定处决 / 今日无人处决</div>';   /* 计票进行中 → 不可选处决/无人处决 */
+    else if(!window.__nomStarted) h+='<div class="rrow" style="border:none;opacity:.55">私聊环节进行中——请先点<b>左下角「解散私聊」按钮</b>结束私聊，才能处决 / 今日无人处决</div>';   /* 未点解散私聊前，处决/无人处决 一并锁住（与提名同门控） */
     else if(block>=0) h+='<div class="rrow" style="border:none">上台：<b class="onblock">'+nameAt(block)+'</b> <span class="regbtn" onclick="confirmExecute('+block+')">处决</span></div>';
     else h+='<div class="rrow" style="border:none;display:flex;align-items:center;gap:10px"><span style="opacity:.7">暂无人达处决票数（或平票）</span><span class="regbtn" onclick="confirmExecute(-1)">今日无人处决</span></div>';   /* 「今日无人处决」与提示同行；有人上台(block>=0)后两者一起消失 */
     const ex=executions[day];
@@ -3776,9 +3779,10 @@ load(); render();
     const sc=(sr.width/SW)||1;   // 舞台 transform 缩放比（把舞台布局坐标换到真实视口像素）
     const zoneLeft=0.40*SW, zoneTop=0.08*SH, cx0=SW*0.71-zoneLeft, cy0=SH*0.525-zoneTop, R=SH*0.34;
     const NN=pub.count, seatD=Math.max(R*0.26, Math.min(R*0.78, R*3.8/NN)); const hitR=seatD*0.62*sc;
-    for(let i=0;i<NN;i++){ const ang=-Math.PI/2+i*2*Math.PI/NN; const x=cx0+R*Math.cos(ang), y=cy0+R*Math.sin(ang);
+    let _ord=null; try{ _ord=chatOrder(NN, pubChats()); }catch(e){}   // 私聊重排：显示位 k → 实际座位号（否则会打到该位置原本的玩家）
+    for(let k=0;k<NN;k++){ const ang=-Math.PI/2+k*2*Math.PI/NN; const x=cx0+R*Math.cos(ang), y=cy0+R*Math.sin(ang);
       const vx=sr.left+(zoneLeft+x)*sc, vy=sr.top+(zoneTop+y)*sc;
-      if(Math.hypot(clientX-vx, clientY-vy)<=hitR) return i; }
+      if(Math.hypot(clientX-vx, clientY-vy)<=hitR) return (_ord&&_ord[k]&&_ord[k].seat!=null)?_ord[k].seat:k; }
     return -1; }
   function _slayerHighlight(idx){ const zone=document.getElementById('tableZone'); if(!zone) return;
     zone.querySelectorAll('.seat').forEach(function(s){ s.classList.toggle('slayer-target', (+s.dataset.seat)===idx); }); }
@@ -4219,7 +4223,7 @@ load(); render();
     db.ref('games/'+curGid+'/public/exec').set({kind:'slayer', full:true, ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); };
   /* ===================== 私聊分组系统（v2.42.0）=====================
      仅分组(无文字)、全场公开。玩家写自己节点 chatReq/chatResp/chatLeave；说书人跑状态机、发布 public/chats,chatInv,chatNote；所有人渲染。*/
-  const CHAT_RGB=['118,214,201','118,214,201','118,214,201','118,214,201','118,214,201'];   // 私聊统一用一种浅青色（不再按组区分），色带/房间共用；亮度>160→_crDark 自动切深字
+  const CHAT_RGB=['74,194,180','74,194,180','74,194,180','74,194,180','74,194,180'];   // 私聊统一用一种青色（方案A，亮度157<160→白字），色带/房间共用
   function chatCol(idx,a){ return 'rgba('+CHAT_RGB[((idx%5)+5)%5]+','+a+')'; }
   function chatOrder(N, chats){ const map={}; (chats||[]).forEach(c=>c.members.forEach(m=>{map[m]=c;}));   // 成员段落锚定 anchor 原位、段内按座位号升序、非成员保持环序
     const out=[]; for(let s=0;s<N;s++){ const c=map[s];
