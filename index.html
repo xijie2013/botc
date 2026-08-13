@@ -586,7 +586,7 @@
   @keyframes civShrink{from{transform:scaleX(1);}to{transform:scaleX(0);}}
   @media (max-width:720px){ #chatStack{bottom:6px;} #chatStack .civ{padding:11px 13px 9px;} #chatStack .civ-t{font-size:12.5px; margin-bottom:8px;} }
   /* 左下角私聊发起图标（三小人+加号）：夜晚灰、白天可点；选人态高亮+人数角标 */
-  #chatFab{position:fixed; left:16px; bottom:16px; z-index:124; width:60px; height:60px; border-radius:50%;
+  #chatFab{position:fixed; left:84px; bottom:16px; z-index:124; width:60px; height:60px; border-radius:50%;
     background:linear-gradient(180deg,#3a2a52,#241633); border:2px solid rgba(233,196,106,.7); color:#ffe9b8;
     display:none; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.5); -webkit-tap-highlight-color:transparent;}
   #chatFab svg{width:62%; height:62%; display:block;}
@@ -594,9 +594,8 @@
   #chatFab.cf-off{filter:grayscale(1) brightness(.75); opacity:.5; cursor:not-allowed; border-color:rgba(150,150,150,.4);}
   #chatFab .cf-badge{position:absolute; top:-5px; right:-5px; min-width:20px; height:20px; padding:0 5px; border-radius:10px; box-sizing:border-box;
     background:#4aa8ff; color:#fff; font:800 12px sans-serif; display:none; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.5);}
-  @media (max-width:720px){ #chatFab{width:52px; height:52px; left:10px; bottom:10px;} }
   /* 说书人魔典左下角「解散私聊」按钮（与私聊图标同位同大）：有私聊时出现，两连点确认 */
-  #stDisbandFab{position:fixed; left:16px; bottom:16px; z-index:124; width:60px; height:60px; border-radius:50%;
+  #stDisbandFab{position:fixed; left:84px; bottom:16px; z-index:124; width:60px; height:60px; border-radius:50%;
     background:linear-gradient(180deg,#5a2330,#361420); border:2px solid rgba(233,110,110,.72); color:#ffdede;
     display:none; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.5); -webkit-tap-highlight-color:transparent;}
   #stDisbandFab svg{width:60%; height:60%; display:block;}
@@ -613,7 +612,7 @@
   #chatDisbandPop .cdb-s{font-size:12.5px; color:#e8c9c9; text-align:center; line-height:1.55; margin-bottom:11px;}
   #chatDisbandPop .cdb-ok{display:block; margin:0 auto; min-width:130px; padding:9px 0; border-radius:11px; font-size:14px; font-weight:800; cursor:pointer; border:none; background:linear-gradient(180deg,#c0392b,#8a2318); color:#fff;}
   /* 聊天室入口：私聊图标右侧的聊天泡泡（纯等比，随舞台缩放） */
-  #chatRoomFab{position:fixed; left:84px; bottom:16px; z-index:124; width:60px; height:60px; border-radius:50%;
+  #chatRoomFab{position:fixed; left:16px; bottom:16px; z-index:124; width:60px; height:60px; border-radius:50%;
     background:linear-gradient(180deg,#1f4d47,#123330); border:2px solid rgba(90,210,190,.72); color:#d9fff6;
     display:none; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.5); -webkit-tap-highlight-color:transparent;}
   #chatRoomFab svg{width:58%; height:58%; display:block;}
@@ -626,16 +625,19 @@
   #chatRoom .cr-box{zoom:var(--uiscale); width:min(94vw,430px); height:min(86dvh,660px); box-sizing:border-box; display:flex; flex-direction:column; overflow:hidden;
     background:linear-gradient(180deg,#241a31,#1a1226); border:1.5px solid rgba(160,130,220,.4); border-radius:16px; box-shadow:0 16px 48px rgba(0,0,0,.6);}
   /* 各 tab 主题色的半透明背景：说书人=紫、大厅=深金、当前私聊=该私聊色(内联) */
-  #chatRoom .cr-box.crbg-st{background:linear-gradient(180deg,rgba(72,50,116,.88),rgba(44,29,72,.92)); border-color:rgba(170,138,232,.5);}
-  #chatRoom .cr-box.crbg-lobby{background:linear-gradient(180deg,rgba(112,86,26,.86),rgba(60,45,13,.92)); border-color:rgba(220,180,90,.5);}
+  #chatRoom .cr-box.crbg-st{background:linear-gradient(180deg,rgba(128,104,190,.32),rgba(96,74,150,.42)); border-color:rgba(170,138,232,.5);}
+  #chatRoom .cr-box.crbg-lobby{background:linear-gradient(180deg,rgba(216,180,104,.30),rgba(180,144,72,.40)); border-color:rgba(228,196,120,.55);}
   #chatRoom .cr-head{flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; padding:12px 15px; border-bottom:1px solid rgba(160,130,220,.22);}
   #chatRoom .cr-head b{font-size:16px; color:#e8ddff; font-weight:800;}
   #chatRoom .cr-x{cursor:pointer; color:#b9a8dd; font-size:18px; line-height:1; padding:2px 6px;}
   #chatRoom .cr-tabs{flex:0 0 auto; display:flex; gap:6px; padding:9px 12px 8px;}
-  #chatRoom .cr-tabs button{flex:1; padding:8px 0; border-radius:10px; font-size:13.5px; font-weight:700; cursor:pointer; border:1px solid rgba(160,130,220,.35); background:rgba(255,255,255,.04); color:#c9b9ee; -webkit-tap-highlight-color:transparent; position:relative;}
-  #chatRoom .cr-tabs button.on{background:linear-gradient(180deg,#5a3f8c,#3f2a66); color:#fff; border-color:rgba(190,160,240,.7);}
-  #chatRoom .cr-tabs button .cr-tdot{position:absolute; top:4px; right:6px; width:8px; height:8px; border-radius:50%; background:#e05a5a; display:none;}
-  #chatRoom .cr-peers{flex:0 0 auto; display:flex; gap:6px; padding:2px 12px 8px; overflow-x:auto; white-space:nowrap;}
+  #chatRoom .cr-tabs button{flex:1; padding:8px 0; border-radius:10px; font-size:13.5px; font-weight:700; cursor:pointer; border:1px solid transparent; -webkit-tap-highlight-color:transparent; position:relative;}
+  /* 每个 tab 按钮=各自主题色：说书人/私信=紫（选中深、未选浅），大厅=金（选中深、未选浅） */
+  #chatRoom .cr-tabs button.crt-st{background:rgba(122,94,202,.16); color:#c7b6ef; border-color:rgba(150,120,220,.4);}
+  #chatRoom .cr-tabs button.crt-st.on{background:linear-gradient(180deg,#5a3f8c,#3f2a66); color:#fff; border-color:rgba(190,160,240,.75);}
+  #chatRoom .cr-tabs button.crt-lobby{background:rgba(204,164,72,.18); color:#e7cf9c; border-color:rgba(212,176,92,.42);}
+  #chatRoom .cr-tabs button.crt-lobby.on{background:linear-gradient(180deg,#b8860b,#8a6408); color:#fff8ea; border-color:rgba(236,202,122,.75);}
+  #chatRoom .cr-peers{flex:0 0 auto; display:flex; flex-wrap:wrap; gap:6px; padding:2px 12px 8px;}
   #chatRoom .cr-peers button{flex:0 0 auto; padding:5px 11px; border-radius:14px; font-size:12.5px; font-weight:700; cursor:pointer; border:1px solid rgba(160,130,220,.35); background:rgba(255,255,255,.04); color:#c9b9ee;}
   #chatRoom .cr-peers button.on{background:linear-gradient(180deg,#4aa8ff,#2f74c0); color:#fff; border-color:rgba(140,200,255,.8);}
   #chatRoom .cr-peers button .pd{display:inline-block; width:7px; height:7px; border-radius:50%; background:#e05a5a; margin-left:5px; vertical-align:middle; visibility:hidden;}
@@ -645,13 +647,18 @@
   #chatRoom .cr-msg.me{align-self:flex-end; align-items:flex-end;}
   #chatRoom .cr-name{font-size:11px; color:#9d8cc4; margin:0 4px 2px;}
   #chatRoom .cr-bubble{padding:8px 12px; border-radius:13px; font-size:14px; line-height:1.45; color:#eae2fb; background:#33254a; word-break:break-word; white-space:pre-wrap;}
-  #chatRoom .cr-msg.me .cr-bubble{background:linear-gradient(180deg,#3f74c0,#2f5a99); color:#fff;}
-  #chatRoom .cr-bubble.st{background:linear-gradient(180deg,#b8860b,#8a6408); color:#fff9ec;}
+  /* 聊天泡按语义上色：蓝=自己(玩家)/私聊里的玩家(说书人视角)；紫=说书人；金=大厅里别的玩家；私聊色=当前私聊里别的玩家(step2 内联) */
+  #chatRoom .cr-bubble.crb-blue{background:linear-gradient(180deg,#3f74c0,#2f5a99); color:#fff;}
+  #chatRoom .cr-bubble.crb-purple{background:linear-gradient(180deg,#6f4fb0,#4a3082); color:#fff;}
+  #chatRoom .cr-bubble.crb-gold{background:linear-gradient(180deg,#c99a3c,#9a7420); color:#fff7e8;}
   #chatRoom .cr-time{font-size:10px; color:#7d6ea0; margin:2px 5px 0;}
   #chatRoom .cr-empty{margin:auto; color:#8a7cb0; font-size:13px; text-align:center; line-height:1.6; padding:20px;}
   #chatRoom .cr-input{flex:0 0 auto; display:flex; gap:8px; padding:9px 12px 12px; border-top:1px solid rgba(160,130,220,.22);}
   #chatRoom .cr-input textarea{flex:1; resize:none; height:40px; max-height:96px; padding:9px 11px; border-radius:11px; border:1px solid rgba(160,130,220,.4); background:rgba(255,255,255,.05); color:#eee; font:400 14px/1.35 inherit; outline:none;}
   #chatRoom .cr-input button{flex:0 0 auto; min-width:62px; border-radius:11px; border:none; font-size:14px; font-weight:800; cursor:pointer; background:linear-gradient(180deg,#5a3f8c,#3f2a66); color:#fff;}
+  /* 发送按钮随 tab 主题色 */
+  #chatRoom .cr-box.crbg-st .cr-input button{background:linear-gradient(180deg,#6f4fb0,#4a3082); color:#fff;}
+  #chatRoom .cr-box.crbg-lobby .cr-input button{background:linear-gradient(180deg,#c99a3c,#9a7420); color:#3a2a08;}
   #chatRoom .cr-input.cr-locked{opacity:.55; pointer-events:none;}
   #chatRoom .cr-lockmsg{flex:0 0 auto; text-align:center; color:#a596c8; font-size:12.5px; padding:10px 12px 12px; border-top:1px solid rgba(160,130,220,.22);}
   /* 座位圈上的私聊按钮（组内第一二成员之间）：组内=退出(红)、组外=加入(蓝) */
@@ -1253,6 +1260,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.49.2', d:'2026-08-13', items:['聊天室外观调整：①各 tab 背景改浅、更透明（大厅不再是暗黄）。②tab 按钮用各自主题色——说书人/玩家私信=紫（选中深紫、未选浅紫），大厅=金（选中深金、未选浅金）。③说书人「玩家私信」的玩家名不再横向滚动，一行放不下自动换行全部显示。④左下角按钮位置对调：聊天室在左、发起/解散私聊在右。⑤聊天泡和发送按钮按语义配色：玩家视角——自己永远蓝、说书人永远紫、大厅里别的玩家金、私聊里别的玩家用该私聊色（随第二步）；说书人视角——自己永远紫、私信/私聊里的玩家蓝、大厅里的玩家金。发送按钮跟随当前 tab 主题色。']},
   {v:'v2.49.1', d:'2026-08-13', items:['聊天室修复+完善：①修复大厅消息发不出去、永远空白的 bug（大厅消息路径层级不对、被规则校验挡下，已改为 chat/lobby/main）。②说书人「玩家私信」的红点改为「有新消息才亮、看过就消失」（不再是只要有消息就常亮）。③每个 tab 的背景改成各自主题色的半透明底：说书人=紫、大厅=深金（当前私聊 tab 用该私聊的颜色，随第二步上线）。④聊天室入口图标上会显示新消息小圆点：说书人有新私信=红点、大厅有新消息=黄点（当前私聊=对应颜色，随第二步）。']},
   {v:'v2.49.0', d:'2026-08-12', items:['新增「聊天室」（第一步）：左下角私聊图标右边多了一个聊天泡泡入口，点开是聊天室页面。玩家有「说书人」「大厅」两个 tab（「当前私聊」tab 下一步再加）——「说书人」全程可与说书人私聊；「大厅」是所有玩家共享的聊天室、只在白天开放（夜晚锁定输入）。说书人端有「玩家私信」（逐个玩家回复，有消息的玩家标红点）「大厅」两个 tab。消息实时同步。⚠️ 需要先在 Firebase 部署新版数据库规则（已随本次一起给你），否则收发会失败。']},
   {v:'v2.48.1', d:'2026-08-12', items:['说书人点「解散私聊」后，给全体玩家的通知弹窗措辞改为「私聊环节已结束 / 可以开始提名了，请大家回到大厅。」（此前为「说书人已解散所有私聊」，在当天没人私聊时显得别扭）；说书人端的确认提示也同步改为「私聊环节已结束、提名已开启」。']},
@@ -4399,7 +4407,14 @@ load(); render();
     const t=document.getElementById('crText'); if(t){ t.onkeydown=function(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); _crSend(); } }; setTimeout(function(){try{t.focus();}catch(e){}},80); } };
   window._closeChatRoom=function(){ window.__crOpen=false; const m=document.getElementById('chatRoom'); if(m) m.classList.remove('on'); };
   function _crRenderTabs(){ const box=document.getElementById('crTabs'); if(!box) return;
-    box.innerHTML=_crTabsDef().map(function(t){ return '<button class="'+(t.k===_crTab?'on':'')+'" onclick="_crSwitch(\''+t.k+'\')">'+t.label+'</button>'; }).join(''); }
+    box.innerHTML=_crTabsDef().map(function(t){ return '<button class="crt-'+t.k+(t.k===_crTab?' on':'')+'" onclick="_crSwitch(\''+t.k+'\')">'+t.label+'</button>'; }).join(''); }
+  /* 聊天泡语义色：蓝=自己(玩家)/私聊里的玩家(ST 视角)；紫=说书人/自己(ST)；金=大厅里别人；私聊色=step2 */
+  function _crBubbleCls(f){ const me=_crMe();
+    if(f===me) return _crIsSt()?'crb-purple':'crb-blue';
+    if(f===-1) return 'crb-purple';
+    if(_crTab==='lobby') return 'crb-gold';
+    if(_crTab==='room') return 'crb-room';
+    return 'crb-blue'; }
   function _crBg(){ const box=document.querySelector('#chatRoom .cr-box'); if(!box) return; box.classList.remove('crbg-st','crbg-lobby','crbg-room'); box.style.background='';
     box.classList.add(_crTab==='lobby'?'crbg-lobby':_crTab==='st'?'crbg-st':'crbg-room'); }
   window._crSwitch=function(tab){ _crTab=tab; _crRenderTabs(); _crBg();
@@ -4429,10 +4444,10 @@ load(); render();
   function _crRenderMsgs(){ const body=document.getElementById('crBody'); if(!body) return; const me=_crMe();
     if(!_crMsgs.length){ body.innerHTML='<div class="cr-empty">'+((_crTab==='lobby'&&!isChatDay())?'🌙 夜晚大厅已关闭':'还没有消息，来说第一句吧～')+'</div>'; return; }
     let h=''; for(let i=0;i<_crMsgs.length;i++){ const m=_crMsgs[i]; const mine=(m.f===me);
-      const stMsg=(m.f===-1); const nm=stMsg?'说书人':pname(m.f);
+      const stMsg=(m.f===-1); const nm=stMsg?'说书人':pname(m.f); const bc=_crBubbleCls(m.f);
       h+='<div class="cr-msg'+(mine?' me':'')+'">';
       if(!mine) h+='<div class="cr-name">'+_nbEsc(nm)+'</div>';
-      h+='<div class="cr-bubble'+(stMsg?' st':'')+'">'+_nbEsc(String(m.t))+'</div><div class="cr-time">'+_crTime(m.ts)+'</div></div>'; }
+      h+='<div class="cr-bubble '+bc+'">'+_nbEsc(String(m.t))+'</div><div class="cr-time">'+_crTime(m.ts)+'</div></div>'; }
     body.innerHTML=h; body.scrollTop=body.scrollHeight; }
   window._crSend=function(){ const ta=document.getElementById('crText'); if(!ta) return; const txt=(ta.value||'').trim(); if(!txt) return;
     if(_crTab==='lobby' && !isChatDay()){ try{toast('夜晚大厅已关闭');}catch(e){} return; }
