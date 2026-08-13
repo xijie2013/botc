@@ -586,22 +586,20 @@
   @keyframes civShrink{from{transform:scaleX(1);}to{transform:scaleX(0);}}
   @media (max-width:720px){ #chatStack{bottom:6px;} #chatStack .civ{padding:11px 13px 9px;} #chatStack .civ-t{font-size:12.5px; margin-bottom:8px;} }
   /* 左下角私聊发起图标（三小人+加号）：夜晚灰、白天可点；选人态高亮+人数角标 */
-  #chatFab{position:fixed; left:84px; bottom:16px; z-index:124; width:60px; height:60px; border-radius:50%;
-    background:linear-gradient(180deg,#3a2a52,#241633); border:2px solid rgba(233,196,106,.7); color:#ffe9b8;
-    display:none; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.5); -webkit-tap-highlight-color:transparent;}
-  #chatFab img{width:88%; height:88%; object-fit:contain; display:block; filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));}
-  #chatFab.cf-sel{border-color:rgba(74,168,255,.95); background:linear-gradient(180deg,#1f3d63,#12233b); color:#dbe8ff; box-shadow:0 0 16px rgba(74,168,255,.75);}
-  #chatFab.cf-off{filter:grayscale(1) brightness(.75); opacity:.5; cursor:not-allowed; border-color:rgba(150,150,150,.4);}
+  #chatFab{position:fixed; left:84px; bottom:16px; z-index:124; width:60px; height:60px;
+    display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent;}   /* v2.50.8 去掉圆形按钮底，只留图标 */
+  #chatFab img{width:100%; height:100%; object-fit:contain; display:block; filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));}
+  #chatFab.cf-sel img{filter:drop-shadow(0 0 6px rgba(74,168,255,.95)) drop-shadow(0 2px 3px rgba(0,0,0,.55));}   /* 选人模式：发光提示（图标已变火漆卷轴） */
+  #chatFab.cf-off{filter:grayscale(1) brightness(.8); opacity:.5; cursor:not-allowed;}
   #chatFab .cf-badge{position:absolute; top:-5px; right:-5px; min-width:20px; height:20px; padding:0 5px; border-radius:10px; box-sizing:border-box;
     background:#4aa8ff; color:#fff; font:800 12px sans-serif; display:none; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.5);}
   /* 说书人魔典左下角「解散私聊」按钮（与私聊图标同位同大）：有私聊时出现，两连点确认 */
   #stDisbandFab{position:fixed; left:84px; bottom:16px; z-index:124; width:60px; height:60px; border-radius:50%;
-    background:linear-gradient(180deg,#5a2330,#361420); border:2px solid rgba(233,110,110,.72); color:#ffdede;
-    display:none; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.5); -webkit-tap-highlight-color:transparent;}
-  #stDisbandFab img{width:88%; height:88%; object-fit:contain; display:block; filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));}
+    display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent; color:#fff;}   /* v2.50.8 去掉圆形底；仅「确认解散」态显示红圈 */
+  #stDisbandFab img{width:100%; height:100%; object-fit:contain; display:block; filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));}
   #stDisbandFab .sdf-confirm{display:none; font:800 15px/1.05 sans-serif; text-align:center; letter-spacing:1px;}
-  #stDisbandFab.sdf-off{filter:grayscale(1) brightness(.72); opacity:.5; cursor:not-allowed; border-color:rgba(150,150,150,.4);}   /* 夜晚 / 白天无私聊：灰掉不可点 */
-  #stDisbandFab.sdf-armed{background:linear-gradient(180deg,#c0392b,#7d1f16); border-color:#ffd7d7; box-shadow:0 0 16px rgba(231,76,60,.85); color:#fff;}
+  #stDisbandFab.sdf-off{filter:grayscale(1) brightness(.8); opacity:.5; cursor:not-allowed;}   /* 夜晚 / 白天无私聊：灰掉不可点 */
+  #stDisbandFab.sdf-armed{background:linear-gradient(180deg,#c0392b,#7d1f16); border:2px solid #ffd7d7; box-shadow:0 0 16px rgba(231,76,60,.85); color:#fff;}   /* 确认解散态：红圈+文字 */
   #stDisbandFab.sdf-armed img{display:none;}
   #stDisbandFab.sdf-armed .sdf-confirm{display:block;}
   /* 说书人解散私聊后：全体玩家的底部通知弹窗（无倒计时，点确认收到即消失） */
@@ -613,10 +611,9 @@
   #chatDisbandPop .cdb-ok{display:block; margin:0 auto; min-width:130px; padding:9px 0; border-radius:12px; font-size:14px; font-weight:800; cursor:pointer;
     border:1.5px solid rgba(233,196,106,.7); background:linear-gradient(180deg,rgba(60,38,78,.98),rgba(34,20,44,.98)); color:#e9c46a;}
   /* 聊天室入口：私聊图标右侧的聊天泡泡（纯等比，随舞台缩放） */
-  #chatRoomFab{position:fixed; left:16px; bottom:16px; z-index:124; width:60px; height:60px; border-radius:50%;
-    background:linear-gradient(180deg,#1f4d47,#123330); border:2px solid rgba(90,210,190,.72); color:#d9fff6;
-    display:none; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.5); -webkit-tap-highlight-color:transparent;}
-  #chatRoomFab img{width:88%; height:88%; object-fit:contain; display:block; filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));}
+  #chatRoomFab{position:fixed; left:16px; bottom:16px; z-index:124; width:60px; height:60px;
+    display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent;}   /* v2.50.8 去掉圆形按钮底 */
+  #chatRoomFab img{width:100%; height:100%; object-fit:contain; display:block; filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));}
   #chatRoomFab .cr-badge{position:absolute; top:-4px; right:-4px; display:none; gap:2px; align-items:center; padding:2px 3px; border-radius:9px;
     background:rgba(10,8,16,.92); box-shadow:0 1px 4px rgba(0,0,0,.55);}   /* 新消息角标：一排彩色小点（说书人红/大厅黄/当前私聊对应色） */
   #chatRoomFab .cr-badge i{width:9px; height:9px; border-radius:50%; display:block; border:1px solid rgba(255,255,255,.55);}
@@ -677,11 +674,9 @@
   #chatRoom .cr-lockmsg{flex:0 0 auto; text-align:center; color:#a596c8; font-size:12.5px; padding:10px 12px 12px; border-top:1px solid rgba(160,130,220,.22);}
   /* 座位圈上的私聊按钮（组内第一二成员之间）：组内=退出(红)、组外=加入(蓝) */
   #tableZone .chatbtn{position:absolute; transform:translate(-50%,-50%); border-radius:50%; display:flex; align-items:center; justify-content:center;
-    font-weight:800; color:#fff; cursor:pointer; z-index:5; box-shadow:0 2px 8px rgba(0,0,0,.55); user-select:none; white-space:nowrap; -webkit-tap-highlight-color:transparent;}
-  #tableZone .chatbtn.cb-exit{background:linear-gradient(180deg,#b0483c,#7a3029); border:2px solid rgba(255,190,180,.75);}
-  #tableZone .chatbtn.cb-join{background:linear-gradient(180deg,#2f6fb0,#1f4f7a); border:2px solid rgba(180,215,255,.75);}
-  #tableZone .chatbtn.cb-confirm{background:linear-gradient(180deg,#e0a83a,#b8860b); border-color:#ffe9b8; color:#1a1226;}   /* 待确认态：金色 */
-  #tableZone .chatbtn img{width:86%; height:86%; object-fit:contain; display:block; pointer-events:none; filter:drop-shadow(0 1px 1px rgba(0,0,0,.5));}   /* 加入/退出图标（v2.50.7） */
+    font-weight:800; color:#fff; cursor:pointer; z-index:5; user-select:none; white-space:nowrap; -webkit-tap-highlight-color:transparent;}   /* v2.50.8 去掉圆形底，只留图标 */
+  #tableZone .chatbtn.cb-confirm{background:linear-gradient(180deg,#e0a83a,#b8860b); border:2px solid #ffe9b8; color:#1a1226; box-shadow:0 2px 8px rgba(0,0,0,.5);}   /* 待确认态：金色圆（有文字，需要底）*/
+  #tableZone .chatbtn img{width:100%; height:100%; object-fit:contain; display:block; pointer-events:none; filter:drop-shadow(0 1px 2px rgba(0,0,0,.7));}   /* 加入/退出图标（v2.50.8 无圆底、加深投影）*/
   #tableZone .chatbtn.cb-confirm img{display:none;}   /* 确认态显示文字 */
   .nb-note{padding:4px 2px; border-bottom:1px solid rgba(122,83,32,.14); line-height:1.35;}
   .nb-nom{border:1px solid rgba(74,43,107,.22); border-radius:8px; padding:6px 8px; margin:6px 0; background:rgba(255,252,244,.6);}
@@ -1263,6 +1258,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.50.8', d:'2026-08-13', items:['①夜晚大厅底部「夜晚大厅已关闭，白天再来」文字改成大厅金色主题色（原紫色）。②夜晚大厅中间的空态提示由「夜晚大厅已关闭」改为「大厅静悄悄的～」，不再和下方那句重复。③左下角三个图标和座位圈的加入/退出图标去掉了圆形按钮底，只保留图标本身（说书人「确认解散」和加入/退出的「确认」态仍保留有底的圆，便于看清文字）。']},
   {v:'v2.50.7', d:'2026-08-13', items:['①毛玻璃磨砂程度调低（整屏 blur 12→6、聊天框 3→1.5），不再太糊。②聊天室 tab 下方分割线改成和标题下方一样的细线。③玩家视角聊天室 tab 下方不再有分割线（仅说书人视角保留）。④换了一套手绘图标：聊天室=聊天泡、邀请私聊=兜帽小人、发出邀请=火漆卷轴、加入=双泡+箭头、退出=传送门、解散群聊=泡+✕。']},
   {v:'v2.50.6', d:'2026-08-13', items:['整个聊天室加毛玻璃：打开聊天室后，背后的游戏画面会被磨砂虚化（遮罩调淡+`backdrop-filter` 模糊），聊天框本身也叠了一层毛玻璃，三个 tab（说书人/大厅/当前私聊）统一享有该效果。']},
   {v:'v2.50.5', d:'2026-08-13', items:['聊天室配色细调：①说书人「私聊房间」里的「当前没有私聊」提示和「旁观模式：仅查看，不参与私聊」改用私聊青主题色（不再是紫色）。②说书人「玩家私信」里选中某个玩家时，该玩家标签由蓝色改为紫色（与私信主题一致）。③私聊邀请弹窗做得更浅更透明（加了毛玻璃、深色底透明度降到 .30-.36）。④大厅聊天室三个 tab 下方加了一条金色主题分割线。']},
@@ -4485,7 +4481,7 @@ load(); render();
     const noPeer=(_crIsSt() && _crTab==='st' && _crPeer<0);
     const stRoom=(_crIsSt() && _crTab==='room');
     const noRoom=(!_crIsSt() && _crTab==='room' && !_crMyChat());
-    if(lobbyClosed){ input.style.display='none'; lock.style.display='block'; lock.textContent='🌙 夜晚大厅已关闭，白天再来'; }
+    if(lobbyClosed){ input.style.display='none'; lock.style.display='block'; lock.style.color=_crThemeColor(); lock.textContent='🌙 夜晚大厅已关闭，白天再来'; }   /* 大厅主题色（金）v2.50.8 */
     else if(stRoom){ input.style.display='none'; lock.style.display='block'; lock.style.color=_crThemeColor(); lock.textContent='👁 旁观模式：仅查看，不参与私聊'; }
     else if(noRoom){ input.style.display='none'; lock.style.display='block'; lock.textContent='你当前不在任何私聊里'; }
     else { input.style.display='flex'; lock.style.display='none'; input.classList.toggle('cr-locked', noPeer); } }
@@ -4523,7 +4519,7 @@ load(); render();
     else if(_crTab==='room'){ const cid=_crIsSt()?_crRoomSel:((_crMyChat()||{}).cid); if(!cid) return; key='room:'+cid; }
     else key=(_crIsSt()?('p'+_crPeer):'st');
     if((window.__crRead[key]||'')<last){ window.__crRead[key]=last; _crReadSave(); if(_crIsSt()&&_crTab==='st') _crRenderPeers(); if(_crIsSt()&&_crTab==='room') _crRenderRooms(); _crIconDots(); } }
-  function _crEmptyText(){ if(_crTab==='lobby'&&!isChatDay()) return '🌙 夜晚大厅已关闭';
+  function _crEmptyText(){ if(_crTab==='lobby'&&!isChatDay()) return '大厅静悄悄的～';
     if(_crTab==='room'&&_crIsSt()) return _crRoomSel?'这个私聊还没有消息～':'当前没有私聊房间';
     if(_crTab==='room'&&!_crIsSt()) return _crMyChat()?'这个私聊还没有消息（你只看得到加入之后的）～':'你当前不在任何私聊里';
     return '还没有消息，来说第一句吧～'; }
