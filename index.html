@@ -613,10 +613,10 @@
   #chatRoomFab .cr-badge{position:absolute; top:-4px; right:-4px; display:none; gap:2px; align-items:center; padding:2px 3px; border-radius:9px;
     background:rgba(10,8,16,.92); box-shadow:0 1px 4px rgba(0,0,0,.55);}   /* 新消息角标：一排彩色小点（说书人红/大厅黄/当前私聊对应色） */
   #chatRoomFab .cr-badge i{width:9px; height:9px; border-radius:50%; display:block; border:1px solid rgba(255,255,255,.55);}
-  /* 聊天室页面（模态、随 --uiscale 等比缩放） */
+  /* 聊天室页面（模态；v2.50.12 起不再随 --uiscale zoom，改固定比例按视口自适应） */
   #chatRoom{position:fixed; inset:0; z-index:205; display:none; align-items:center; justify-content:center; background:rgba(8,5,14,.46); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); padding:12px;}   /* 遮罩+整屏毛玻璃（v2.50.7 blur 12→6 降磨砂）：背后游戏画面轻度虚化 */
   #chatRoom.on{display:flex;}
-  #chatRoom .cr-box{zoom:var(--uiscale); width:calc(min(94vw,430px)/var(--uiscale)); height:calc(min(86dvh,660px)/var(--uiscale)); box-sizing:border-box; display:flex; flex-direction:column; overflow:hidden; backdrop-filter:blur(1.5px); -webkit-backdrop-filter:blur(1.5px);   /* v2.50.10 尺寸÷uiscale 抵消 zoom 二次缩放（原来手机端被缩成~50%）；轻毛玻璃 */
+  #chatRoom .cr-box{width:auto; height:min(90dvh, 90vw*660/430); aspect-ratio:430/660; box-sizing:border-box; display:flex; flex-direction:column; overflow:hidden; backdrop-filter:blur(1.5px); -webkit-backdrop-filter:blur(1.5px);   /* v2.50.12 不再用 zoom：固定 430:660 比例、按视口自适应（高度受 90dvh 与 90vw 双限），电脑手机比例一致、桌面随屏放大≈原始大小、字号原生不缩 */
     background:linear-gradient(180deg,rgba(36,26,49,.72),rgba(26,18,38,.78)); border:1.5px solid rgba(160,130,220,.4); border-radius:16px; box-shadow:0 16px 48px rgba(0,0,0,.6);}
   /* 各 tab 主题色的半透明背景：说书人=紫、大厅=深金、当前私聊=该私聊色(内联) */
   #chatRoom .cr-box.crbg-st{background:linear-gradient(180deg,rgba(128,104,190,.32),rgba(96,74,150,.42)); border-color:rgba(170,138,232,.5);}
@@ -1252,6 +1252,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.50.12', d:'2026-08-13', items:['重做聊天室窗口尺寸：不再用 zoom 二次缩放（那会导致电脑上偏小、手机上偏宽、两端比例不一致）。改成固定 430:660 的比例、按视口自适应（高度取 90dvh 与 90vw 换算的较小值），这样电脑上恢复到接近最初的大小、并随屏幕放大，手机上也是同样的比例、大小合适；字号在各设备原生显示不再被缩小。']},
   {v:'v2.50.11', d:'2026-08-13', items:['更新了一套重新调色的聊天图标：发起私聊直接用 ic-invite、解散私聊直接用 ic-disband（＋号和✕号已经画进图标里，不再由程序额外叠加荧光符号）。']},
   {v:'v2.50.10', d:'2026-08-13', items:['①修复手机端聊天室框比电脑端小很多的问题：聊天框尺寸原来被 zoom 二次缩放，现在除以缩放系数抵消，手机端也能正常占满高度（与其它弹窗一致的等比 layout）。②发起群聊和解散群聊改用同一个「两个兜帽小人」图标，右下角叠加荧光符号区分：发起=teal 荧光「＋」、解散=红色荧光「✕」。③发起邀请（选人）时图标改闪 teal 荧光（原蓝色）；被选中的玩家改用 teal 高亮（原蓝色）；选中人数角标也改 teal。']},
   {v:'v2.50.9', d:'2026-08-13', items:['「解散私聊」「加入私聊」「退出私聊」三个操作改为弹窗确认（原来是点一下变「确认解散/确认」圆圈再点第二下）。现在图标点一下就弹出确认框，点「解散/加入/离开」执行、点「取消」放弃——图标彻底干净、不再有确认态的圆圈和文字。']},
