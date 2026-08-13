@@ -586,16 +586,16 @@
   @keyframes civShrink{from{transform:scaleX(1);}to{transform:scaleX(0);}}
   @media (max-width:720px){ #chatStack{bottom:6px;} #chatStack .civ{padding:11px 13px 9px;} #chatStack .civ-t{font-size:12.5px; margin-bottom:8px;} }
   /* 左下角私聊发起图标（三小人+加号）：夜晚灰、白天可点；选人态高亮+人数角标 */
-  #chatFab{position:fixed; left:84px; bottom:16px; z-index:124; width:60px; height:60px;
-    display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent;}   /* v2.50.8 去掉圆形按钮底，只留图标 */
+  #chatFab{position:fixed; left:104px; bottom:16px; z-index:124; width:66px; height:66px;
+    display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent;}   /* v2.50.14 放大10%(60→66)、右移拉开间距(84→104) */
   #chatFab img{width:100%; height:100%; object-fit:contain; display:block; filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));}
   #chatFab.cf-sel img{filter:drop-shadow(0 0 6px rgba(74,194,180,.98)) drop-shadow(0 2px 3px rgba(0,0,0,.55));}   /* 选人模式：teal 荧光（图标已变火漆卷轴，v2.50.10 原蓝改青） */
   #chatFab.cf-off{filter:grayscale(1) brightness(.8); opacity:.5; cursor:not-allowed;}
   #chatFab .cf-badge{position:absolute; top:-5px; right:-5px; min-width:20px; height:20px; padding:0 5px; border-radius:10px; box-sizing:border-box;
     background:#2fb0a2; color:#fff; font:800 12px sans-serif; display:none; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.5);}   /* 选中人数角标=teal（v2.50.10）*/
   /* 说书人魔典左下角「解散私聊」按钮（与私聊图标同位同大）：有私聊时出现，点击弹窗确认 v2.50.9 */
-  #stDisbandFab{position:fixed; left:84px; bottom:16px; z-index:124; width:60px; height:60px;
-    display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent;}   /* 纯图标，无圆底 */
+  #stDisbandFab{position:fixed; left:104px; bottom:16px; z-index:124; width:66px; height:66px;
+    display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent;}   /* 纯图标，无圆底；v2.50.14 放大10%+右移拉开间距 */
   #stDisbandFab img{width:100%; height:100%; object-fit:contain; display:block; filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));}
   #stDisbandFab.sdf-off{filter:grayscale(1) brightness(.8); opacity:.5; cursor:not-allowed;}   /* 夜晚 / 白天无私聊：灰掉不可点 */
   /* 说书人解散私聊后：全体玩家的底部通知弹窗（无倒计时，点确认收到即消失） */
@@ -607,8 +607,8 @@
   #chatDisbandPop .cdb-ok{display:block; margin:0 auto; min-width:130px; padding:9px 0; border-radius:12px; font-size:14px; font-weight:800; cursor:pointer;
     border:1.5px solid rgba(233,196,106,.7); background:linear-gradient(180deg,rgba(60,38,78,.98),rgba(34,20,44,.98)); color:#e9c46a;}
   /* 聊天室入口：私聊图标右侧的聊天泡泡（纯等比，随舞台缩放） */
-  #chatRoomFab{position:fixed; left:16px; bottom:16px; z-index:124; width:60px; height:60px;
-    display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent;}   /* v2.50.8 去掉圆形按钮底 */
+  #chatRoomFab{position:fixed; left:16px; bottom:16px; z-index:124; width:66px; height:66px;
+    display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent;}   /* v2.50.8 去掉圆形按钮底；v2.50.14 放大10% */
   #chatRoomFab img{width:100%; height:100%; object-fit:contain; display:block; filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));}
   #chatRoomFab .cr-badge{position:absolute; top:-4px; right:-4px; display:none; gap:2px; align-items:center; padding:2px 3px; border-radius:9px;
     background:rgba(10,8,16,.92); box-shadow:0 1px 4px rgba(0,0,0,.55);}   /* 新消息角标：一排彩色小点（说书人红/大厅黄/当前私聊对应色） */
@@ -1258,6 +1258,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.50.14', d:'2026-08-13', items:['①未登录（大厅）视角下不再显示左下角的两个私聊图标（之前从玩家登出后会残留）。②左下角两个图标放大约10%（60→66），并把它们之间的间距拉大，不再显得拥挤。']},
   {v:'v2.50.13', d:'2026-08-13', items:['①给左下角三个图标和座位圈的加入/退出图标加了互动反馈：鼠标悬停时放大发亮、点击（手指按下）时回弹，手感更灵动（灰色不可点状态不响应）。②点「发起私聊」进入选人模式后，在还没选任何人之前，左下角图标保持"邀请"样子（带荧光的选人提示），只有选中至少一名玩家后，才会变成"火漆卷轴（发出邀请）"图标。']},
   {v:'v2.50.12', d:'2026-08-13', items:['重做聊天室窗口尺寸：不再用 zoom 二次缩放（那会导致电脑上偏小、手机上偏宽、两端比例不一致）。改成固定 430:660 的比例、按视口自适应（高度取 90dvh 与 90vw 换算的较小值），这样电脑上恢复到接近最初的大小、并随屏幕放大，手机上也是同样的比例、大小合适；字号在各设备原生显示不再被缩小。']},
   {v:'v2.50.11', d:'2026-08-13', items:['更新了一套重新调色的聊天图标：发起私聊直接用 ic-invite、解散私聊直接用 ic-disband（＋号和✕号已经画进图标里，不再由程序额外叠加荧光符号）。']},
@@ -3501,7 +3502,8 @@ load(); render();
       try{ if(window._stSyncStop) _stSyncStop(); }catch(e){}   // 登出：停止说书人实时同步监听
       try{ if(typeof _presenceStop==='function') _presenceStop(); }catch(e){} window.__kicked=false;   // 登出：停止在线占位监听
       try{ if(typeof _stSessStop==='function') _stSessStop(); }catch(e){}   // 登出：停止说书人会话监听
-      _stateTransition(()=>{ role='anon'; document.getElementById('stBadge').classList.remove('on'); document.body.classList.remove('pl'); if(notesRef){notesRef.off();notesRef=null;} S=null; setMode('hall'); }, willAuto);
+      _stateTransition(()=>{ role='anon'; try{['chatFab','stDisbandFab','chatRoomFab'].forEach(function(id){var e=document.getElementById(id); if(e) e.style.display='none';});}catch(e){}   /* v2.50.14 登出→未登录大厅：隐藏左下角三个私聊图标（否则残留上一次登录态的 display:flex） */
+        document.getElementById('stBadge').classList.remove('on'); document.body.classList.remove('pl'); if(notesRef){notesRef.off();notesRef=null;} S=null; setMode('hall'); }, willAuto);
       if(willAuto) setTimeout(()=>{ if(!me) _fadeReveal(); }, 4000);   // 自动登录失败兜底：4s 后仍未登录则显示大厅
       if(window.__stBlockedMsg){ const m=window.__stBlockedMsg; window.__stBlockedMsg=''; setTimeout(()=>{ try{ if(typeof toast==='function') toast(m); }catch(e){} const se=document.getElementById('stErr'); if(se) se.textContent=m; }, 600); }   // 说书人已被占用：提示
       if(!_autoTried){ _autoTried=true; _autoLogin(); }   // 首次未登录时才尝试记住的自动登录
