@@ -690,6 +690,22 @@
   .ghostv{display:inline-block; font-size:.82em; color:#7a1f8f; border:1px solid rgba(122,31,143,.5); border-radius:8px; padding:0 5px; margin-left:3px;}
   .nb-role{padding:7px 9px; border-radius:8px; background:rgba(255,252,244,.6); border:1px solid rgba(74,43,107,.2); margin-bottom:6px;}
   .nb-role b{font-size:1.05em;}
+  .nb-role.nb-role-click{cursor:pointer; transition:background .12s, border-color .12s;}
+  .nb-role.nb-role-click:hover{background:rgba(255,252,244,.98); border-color:rgba(122,83,32,.5);}
+  .nb-role .nb-more{float:right; font-size:.82em; font-weight:700; color:#a8791f;}
+  /* 概览角色详情弹窗（body 级、原生尺寸，不随舞台缩放） */
+  #roleInfoMask{position:fixed; inset:0; z-index:340; display:none; align-items:center; justify-content:center; background:rgba(8,5,14,.5); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); padding:14px;}
+  #roleInfoMask.on{display:flex;}
+  #roleInfoMask .ri-box{width:auto; max-width:460px; max-height:88dvh; display:flex; flex-direction:column; overflow:hidden; border-radius:16px; box-shadow:0 18px 50px rgba(0,0,0,.6); background:linear-gradient(180deg,#f4ecd9,#e8dcc0); border:1.5px solid rgba(122,83,32,.55);}
+  #roleInfoMask .ri-head{display:flex; justify-content:space-between; align-items:center; padding:12px 15px; border-bottom:1px solid rgba(122,83,32,.3); background:rgba(255,250,238,.5);}
+  #roleInfoMask .ri-head b{font-size:17px; font-weight:800;}
+  #roleInfoMask .ri-team{display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; color:#fff; margin-left:8px; vertical-align:middle;}
+  #roleInfoMask .ri-x{color:#7a5320; font-size:18px; cursor:pointer; padding:2px 6px; line-height:1;}
+  #roleInfoMask .ri-body{flex:1 1 auto; overflow-y:auto; padding:13px 16px 20px;}
+  #roleInfoMask .ri-sec{margin-top:13px;}
+  #roleInfoMask .ri-sec:first-child{margin-top:0;}
+  #roleInfoMask .ri-sec .rt{font-size:12.5px; font-weight:800; color:#8a3f1c; margin-bottom:3px;}
+  #roleInfoMask .ri-sec .rc{font-size:13.5px; line-height:1.62; color:#2a1c0e;}
   /* 访客座位圈上的玩家标记 */
   .seat .vmark{position:absolute; z-index:4; border-radius:50%; background:rgba(20,14,30,.92); border:1px solid rgba(255,255,255,.3);
     display:flex; align-items:center; justify-content:center; pointer-events:none;}
@@ -1155,6 +1171,46 @@ const ROLES=[
  {id:"imp",name:"小恶魔",team:"dem",ab:"每夜*选1人杀；自杀则1爪牙变小恶魔。"},
 ];
 const RMAP={}; ROLES.forEach(r=>RMAP[r.id]=r);
+/* 概览页角色详尽介绍：功能/何时行动/中毒醉酒/与间谍陌客交互/推荐玩法 */
+const ROLE_DETAIL={
+ washerwoman:{fn:"首个夜晚，说书人告诉你：某两名玩家中有一个是某个特定的镇民角色。你由此拿到一条真实的好人线索。",act:"仅首夜行动一次，之后不再获得新信息。",sick:"若你中毒/醉酒（或你其实是酒鬼），这条信息可能是假的——指的人或角色都可能被说书人改错。",sri:"间谍可能被说书人「注册成镇民」展示给你（看着像好人，实为爪牙）；陌客不会作为镇民出现在你的信息里。",tip:"记住这两人里必有一个是被告知的镇民角色；结合他人信息缩小范围，公开时机要谨慎，别过早成为恶魔目标。"},
+ librarian:{fn:"首夜得知：某两名玩家中有一个是某个特定的外来者（若场上没有外来者，则告知「没有外来者」）。",act:"仅首夜一次。",sick:"中毒/醉酒时信息可能为假（可能谎报有/无外来者，或指错人、错角色）。",sri:"间谍可能被注册成某个外来者展示给你；陌客本身就是外来者，可能作为「陌客」出现在你的信息里。",tip:"「没有外来者」是很强的信息。若得知有外来者，注意可能是酒鬼——它顶替了一个镇民、让好人少一份有效能力。"},
+ investigator:{fn:"首夜得知：某两名玩家中有一个是某个特定的爪牙（若没有爪牙则告知没有）。",act:"仅首夜一次。",sick:"中毒/醉酒时信息可能为假。",sri:"陌客可能被注册成某个爪牙展示给你（好人却被指成爪牙）；间谍本是爪牙也可能作为自己出现，但常被注册成好人而对你隐身。你的爪牙情报可能其实指向一个好人陌客。",tip:"你能直接点出一个爪牙的可能位置，是强力开局信息；但要提防陌客造成的「假爪牙」，交叉验证后再公开。"},
+ chef:{fn:"首夜得知：场上「相邻而坐的邪恶玩家」共有几对（座位首尾相连成环计算）。",act:"仅首夜一次。",sick:"中毒/醉酒时数字可能为假。",sri:"陌客默认按邪恶计入相邻对数（可能虚增数字）；间谍默认按好人不计入。说书人可逐个改判他们的善恶。",tip:"0 对说明邪恶被拆开坐；≥1 对能帮助定位邪恶抱团的位置。注意陌客可能让数字偏高。"},
+ empath:{fn:"每个夜晚，得知你两侧最近的存活邻座中，邪恶玩家有几个（0 / 1 / 2）。",act:"每夜行动，数字会随邻座死亡或身份变化而改变。",sick:"中毒/醉酒时数字可能为假。",sri:"相邻的陌客默认算邪恶、间谍默认算好人（说书人可改判）。",tip:"数字随夜变化极有价值——某夜突变往往意味着邻座死亡或阵营变化，可据此定位邪恶。"},
+ fortuneteller:{fn:"每夜选 2 名玩家，得知「这两人中是否有恶魔」。开局说书人会秘密指定一名好人做你的「红鲱鱼」，他会永远被你读成恶魔。",act:"每夜行动。",sick:"中毒/醉酒时答案可能为假。",sri:"陌客可能被读成恶魔（即使是好人）；间谍不会被读成恶魔。加上红鲱鱼，「是」并不等于抓到真恶魔。",tip:"用排除法多测几组逼近真恶魔，别凭一次「是」就急着处决——很可能是红鲱鱼或陌客。"},
+ undertaker:{fn:"每个「有人被处决」的白天之后的夜晚，得知那名被处决者的真实角色。",act:"每夜*（当天有处决才行动）。",sick:"中毒/醉酒时得到的角色可能为假。",sri:"处决到间谍/陌客时，说书人可按其注册身份告知（可能显示成别的角色）；酒鬼会显示为「酒鬼」。",tip:"验证白天处决对错的利器。若结果是爪牙/恶魔，说明处决正确，可顺势继续压邪恶。"},
+ monk:{fn:"每夜*选 1 名其他玩家守护，当晚他免疫恶魔的击杀。",act:"从第二个夜晚起每夜行动（首夜不行动），不能守护自己。",sick:"中毒/醉酒时守护无效，目标仍可能被杀。",sri:"与间谍/陌客无直接交互（但会被投毒者废掉）。",tip:"优先守护你认为关键的好人；别形成固定规律以免被邪恶预判。被守护者没死也能侧面验证恶魔的行动。"},
+ ravenkeeper:{fn:"当你在夜里被恶魔杀死的那一刻，选 1 名玩家，得知其真实角色。",act:"仅「夜晚被恶魔杀死」时触发；被处决或其他方式出局不触发。",sick:"中毒/醉酒时得到的角色可能为假。",sri:"查到间谍/陌客时，说书人可按其注册身份告知；酒鬼显示为「酒鬼」。",tip:"你是恶魔的高危目标，但也因此能「死得其所」。提前想好一旦被杀要查谁，通常查最可疑者以确认恶魔/爪牙。"},
+ virgin:{fn:"你第一次被提名时，若提名你的人是镇民，该提名者立即被处决（你的能力随即用掉）。",act:"仅在你「首次被提名」时触发一次。",sick:"中毒/醉酒时能力无效——提名你不会处决对方，但能力仍视为已用掉。",sri:"是否镇民按提名者真实身份判定；间谍/陌客即使被注册成镇民也不会触发。",tip:"可用来自证、或诱使邪恶提名你而自曝。但只有一次、且中毒会失效，没把握别浪费。"},
+ slayer:{fn:"每局一次，在白天公开指认一名玩家；若他（注册上）是恶魔，则立即死亡。",act:"白天使用一次（本工具在处决结果出来前都可开枪）。",sick:"中毒/醉酒时开枪无效，命中也不会死。",sri:"陌客若被注册成恶魔会被你打死（但你没赢，真恶魔还在）；间谍不注册为恶魔，打不死。",tip:"斩杀恶魔的奇兵。可真开枪，也可「假称猎手」威慑邪恶。真开枪最好在锁定恶魔后再打。"},
+ soldier:{fn:"你不会被恶魔在夜里杀死。",act:"被动，全程生效。",sick:"中毒/醉酒时免疫失效，会被恶魔杀死。",sri:"与间谍/陌客无直接交互；但投毒者能让你失去免疫。",tip:"可以安全地站出来吸火力、当「验人机」。但要小心投毒者——中毒的你会被一击带走。"},
+ mayor:{fn:"若游戏进行到只剩 3 名存活玩家、且当天没有处决任何人，好人直接获胜。此外恶魔夜里选中你时，说书人可让另一人代替你死。",act:"3 人无处决的胜利随时判定；夜里「代死」由说书人裁定。",sick:"中毒/醉酒时上述能力都失效（既无 3 人胜利，也不会代死）。",sri:"与间谍/陌客无直接交互。",tip:"把局势拖到 3 人、当天劝好人别处决，是你的取胜路线；但要防圣徒被误处决、防自己中毒。"},
+ butler:{fn:"每夜选一名「主人」；次日白天只有当你的主人投票时，你才能投票（可跟投也可不投）。",act:"每夜选主人。",sick:"中毒/醉酒时投票不受限制，可自由投。",sri:"与间谍/陌客无直接交互。",tip:"你是外来者、本身是好人的负担；尽量选可信的好人当主人，别让邪恶利用你的投票限制卡关键处决。"},
+ drunk:{fn:"你以为自己是某个镇民角色，实际上能力完全无效、得到的信息可能全是错的。你是外来者。",act:"你「以为」的角色何时行动你就何时行动，但结果无效。",sick:"你本身等同于永久「中毒」——所有信息都可能假。",sri:"对洗衣妇/图管/调查你按「酒鬼」（外来者）被识别；对送葬者/守鸦人也显示为「酒鬼」真身。",tip:"你往往不知道自己是酒鬼。若你的信息前后矛盾、或与他人强烈冲突，要考虑自己可能是酒鬼，别把队友带偏。"},
+ recluse:{fn:"你是善良的外来者，但可能被各种能力「注册成邪恶」，甚至被当作爪牙或恶魔——由说书人决定。",act:"被动，随他人能力触发。",sick:"你自身没有主动能力，中毒/醉酒对你影响不大。",sri:"占卜师可能把你读成恶魔、调查员可能把你当爪牙、共情/厨师可能把你算成邪恶邻座、猎手可能把你当恶魔打死。",tip:"你天然容易被误判成邪恶，要主动解释、争取信任；也可反过来利用这点扰乱邪恶。小心被猎手误杀。"},
+ saint:{fn:"如果你被处决，好人立即落败。",act:"被动，被处决时触发。",sick:"中毒/醉酒时被处决不会导致好人落败（能力失效）。",sri:"与间谍/陌客无直接交互。",tip:"千万别被投出去！要让好人知道你的存在以免误处决，但暴露也会被邪恶拿来诱导好人处决你——把握公开的度。"},
+ poisoner:{fn:"每夜选 1 名玩家，使其「当晚及次日」中毒——能力失效、得到的信息可由说书人改成假的。",act:"每夜行动；毒持续到次日黄昏失效。",sick:"你是邪恶，通常不会被中毒。",sri:"你是让好人信息出错的关键，配合间谍/陌客的误导效果更强。",tip:"优先毒掉威胁最大的好人（占卜师/共情者/僧侣等）；毒僧侣可让恶魔当晚顺利击杀。"},
+ spy:{fn:"每个夜晚你可以查看说书人的「魔典」（几乎知道所有人身份）；而且你可能被各种能力「注册成好人」，甚至当作镇民或外来者。",act:"每夜可看魔典；注册效果被动触发。",sick:"你是邪恶，通常不会被中毒。",sri:"对调查员你可能作为爪牙出现、也可能被注册成好人而隐身；对洗衣妇可注册成镇民、对图管可注册成外来者、对占卜师不会显示为恶魔。",tip:"你掌握海量信息，关键是「用而不露」——伪装成某个好人角色、适度放料误导好人，别因知道太多而露馅。"},
+ scarletwoman:{fn:"当场上存活人数 ≥5、且恶魔死亡的那一刻，你立即变成新的小恶魔。",act:"恶魔死亡瞬间触发（需满足人数条件）。",sick:"中毒/醉酒时不会接任。",sri:"与间谍/陌客无直接交互。",tip:"你是恶魔的「保险」。前期藏好、别过早被处决；一旦接任，就切换到恶魔的生存与击杀思路。"},
+ baron:{fn:"你的存在改变配置：外来者比常规多 2、镇民少 2（更多外来者=更多酒鬼/圣徒等干扰）。",act:"配置生效，无夜间能力。",sick:"无主动能力。",sri:"无直接交互。",tip:"你让好人混入更多「半废」的外来者（尤其酒鬼）间接帮邪恶。自身没能力，藏好身份、混入好人讨论即可。"},
+ imp:{fn:"每夜*选 1 人杀死；若你选择杀自己（自杀），则由说书人指定一名爪牙变成新的小恶魔（星传）。",act:"从第二个夜晚起每夜击杀（首夜不杀）。",sick:"中毒/醉酒时你的击杀无效，当晚无人因你而死。",sri:"士兵杀不动、被僧侣守护的目标杀不动；镇长可能让别人代你选中的目标而死。",tip:"你是邪恶核心。先杀威胁大的好人；必要时用自杀星传把身份转移给爪牙，躲避处决/猎手。小心被占卜、守鸦人锁定。"}
+};
+window._openRoleInfo=function(id){
+  var r=RMAP[id]; if(!r) return; var d=ROLE_DETAIL[id]||null;
+  function _e(s){ return String(s==null?'':s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+  var mask=document.getElementById('roleInfoMask');
+  if(!mask){ mask=document.createElement('div'); mask.id='roleInfoMask';
+    mask.addEventListener('click',function(e){ if(e.target===mask) window._closeRoleInfo(); });
+    var box0=document.createElement('div'); box0.className='ri-box'; box0.id='roleInfoBox'; mask.appendChild(box0); document.body.appendChild(mask); }
+  var box=document.getElementById('roleInfoBox');
+  var tName=TEAMLABEL[r.team], tCol=TEAMC[r.team];
+  var html='<div class="ri-head"><div><b style="color:'+tCol+'">'+_e(r.name)+'</b><span class="ri-team" style="background:'+tCol+'">'+_e(tName)+'</span></div><span class="ri-x" onclick="window._closeRoleInfo()">✕</span></div><div class="ri-body">';
+  if(!d){ html+='<div class="ri-sec"><div class="rc">'+_e(r.ab||'')+'</div></div>'; }
+  else { [['功能',d.fn],['何时行动',d.act],['中毒 / 醉酒时',d.sick],['与间谍 / 陌客的交互',d.sri],['推荐玩法',d.tip]].forEach(function(s){ if(!s[1]) return; html+='<div class="ri-sec"><div class="rt">'+s[0]+'</div><div class="rc">'+_e(s[1])+'</div></div>'; }); }
+  html+='</div>'; box.innerHTML=html; mask.classList.add('on');
+};
+window._closeRoleInfo=function(){ var m=document.getElementById('roleInfoMask'); if(m) m.classList.remove('on'); };
 const TEAMC={tf:"#4a86c8",out:"#c08a12",min:"#d8542a",dem:"#cf4436"};
 const TEAMLABEL={tf:"镇民",out:"外来者",min:"爪牙",dem:"恶魔"};
 const ORDER=["tf","out","min","dem"];
@@ -1258,6 +1314,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.50.18', d:'2026-08-13', items:['玩家笔记「概览」页每个角色框现在可以点击，会弹出更详尽的角色介绍：包含「功能」「何时行动」「中毒/醉酒时的表现」「与间谍/陌客的交互」「推荐玩法」五个部分，涵盖全部 22 个角色。']},
   {v:'v2.50.17', d:'2026-08-13', items:['信息类角色新增「按注册身份展示」：当场上有间谍/陌客时，说书人在这些角色健康的情况下也能主动把间谍/陌客按其合法注册身份展示给玩家（结果标「真」，区别于中毒时的可假信息）。具体：①调查员可把陌客展示为某个爪牙；②洗衣妇可把间谍展示为某个镇民；③图书管理员可把间谍展示为某个外来者（即使场上没有真外来者也能这样展示）；④送葬者处决到间谍/陌客、⑤守鸦人查到间谍/陌客时，都可选按注册身份告知。默认仍显示真身，入口仅在涉及间谍/陌客时才出现，不影响其他情况。']},
   {v:'v2.50.16', d:'2026-08-13', items:['①夜晚的胜负改为「天亮后」再公布：小恶魔夜里击杀导致的胜利/失败（如只剩两人、恶魔夜死）不再在夜里立即弹给全场，而是攒到说书人点「结束本夜」天亮、与死亡一起公布，避免提前剧透夜间死亡；白天的处决/猎人射杀触发的胜负仍即时。②图书管理员现在能看到「酒鬼」（酒鬼作为外来者可被展示给图管；且酒鬼不再被错误地当成镇民展示给洗衣妇）。③守鸦人查验酒鬼时显示其真身「酒鬼」，与送葬者一致。④中毒/醉酒的厨师、共情者、送葬者、占卜师，若说书人还没设定要告知的（可假）信息就点发送，不再自动把真实信息发出去，会提示先设定。⑤说书人改判/撤销处决导致胜负被撤回时，之前误记入永久战绩的那一条会一并删除，不再残留。']},
   {v:'v2.50.15', d:'2026-08-13', items:['修复胜负判定：①中毒/醉酒的圣徒被处决后，进入下一夜「毒失效」时会凭空自动判「邪恶胜利」并广播全场——现在改为在处决当刻快照圣徒是否有效，之后不再回溯误判。②白天结算面板的圣徒提示改用同一快照，中毒/醉酒圣徒会明确显示「能力无效、好人未落败」，不再与顶部胜负横幅自相矛盾。③猎人射中「被说书人注册为恶魔的非恶魔」（如隐士）时，魔典面板不再误写「恶魔死亡→好人胜利」，改为「并非真恶魔，好人未获胜」（射杀命中本身是规则允许的，不变）。④玩家开局身份大卡加了缺图占位与兜底：某张角色图加载失败时显示占位底图，而不是浏览器破图。⑤增补健壮性：结束本夜/本日加防重入守卫；处决确认弹窗后复检门控；结算徽章/投票时钟指针/结算徽记补上缺图兜底。']},
@@ -4847,7 +4904,7 @@ load(); render();
     ORDER.forEach(t=>{ const list=ROLES.filter(r=>r.team===t); if(!list.length) return;
       h+='<div style="font-weight:800;color:'+TEAMC[t]+';margin:8px 0 3px">'+TEAMLABEL[t]+'</div>';
       list.forEach(r=>{ const off=locked.has(r.id);
-        h+='<div class="nb-role" style="'+(off?'opacity:.4;':'')+'"><b style="color:'+TEAMC[t]+'">'+r.name+(off?' · 未启用':'')+'</b><div style="color:#1c150e;margin-top:2px">'+E(r.ab||'')+'</div></div>'; }); });
+        h+='<div class="nb-role nb-role-click" style="'+(off?'opacity:.4;':'')+'" onclick="window._openRoleInfo&&_openRoleInfo(\''+r.id+'\')"><b style="color:'+TEAMC[t]+'">'+r.name+(off?' · 未启用':'')+'</b><span class="nb-more">详情›</span><div style="color:#1c150e;margin-top:2px">'+E(r.ab||'')+'</div></div>'; }); });
     return h;
   }
   /* 拖拽落点路由（玩家笔记）：由统一指针拖拽系统在放开时调用（座位=添加身份/状态；拖出=删除座位身份） */
