@@ -1258,6 +1258,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.50.16', d:'2026-08-13', items:['①夜晚的胜负改为「天亮后」再公布：小恶魔夜里击杀导致的胜利/失败（如只剩两人、恶魔夜死）不再在夜里立即弹给全场，而是攒到说书人点「结束本夜」天亮、与死亡一起公布，避免提前剧透夜间死亡；白天的处决/猎人射杀触发的胜负仍即时。②图书管理员现在能看到「酒鬼」（酒鬼作为外来者可被展示给图管；且酒鬼不再被错误地当成镇民展示给洗衣妇）。③守鸦人查验酒鬼时显示其真身「酒鬼」，与送葬者一致。④中毒/醉酒的厨师、共情者、送葬者、占卜师，若说书人还没设定要告知的（可假）信息就点发送，不再自动把真实信息发出去，会提示先设定。⑤说书人改判/撤销处决导致胜负被撤回时，之前误记入永久战绩的那一条会一并删除，不再残留。']},
   {v:'v2.50.15', d:'2026-08-13', items:['修复胜负判定：①中毒/醉酒的圣徒被处决后，进入下一夜「毒失效」时会凭空自动判「邪恶胜利」并广播全场——现在改为在处决当刻快照圣徒是否有效，之后不再回溯误判。②白天结算面板的圣徒提示改用同一快照，中毒/醉酒圣徒会明确显示「能力无效、好人未落败」，不再与顶部胜负横幅自相矛盾。③猎人射中「被说书人注册为恶魔的非恶魔」（如隐士）时，魔典面板不再误写「恶魔死亡→好人胜利」，改为「并非真恶魔，好人未获胜」（射杀命中本身是规则允许的，不变）。④玩家开局身份大卡加了缺图占位与兜底：某张角色图加载失败时显示占位底图，而不是浏览器破图。⑤增补健壮性：结束本夜/本日加防重入守卫；处决确认弹窗后复检门控；结算徽章/投票时钟指针/结算徽记补上缺图兜底。']},
   {v:'v2.50.14', d:'2026-08-13', items:['①未登录（大厅）视角下不再显示左下角的两个私聊图标（之前从玩家登出后会残留）。②左下角两个图标放大约10%（60→66），并把它们之间的间距拉大，不再显得拥挤。']},
   {v:'v2.50.13', d:'2026-08-13', items:['①给左下角三个图标和座位圈的加入/退出图标加了互动反馈：鼠标悬停时放大发亮、点击（手指按下）时回弹，手感更灵动（灰色不可点状态不响应）。②点「发起私聊」进入选人模式后，在还没选任何人之前，左下角图标保持"邀请"样子（带荧光的选人提示），只有选中至少一名玩家后，才会变成"火漆卷轴（发出邀请）"图标。']},
@@ -1565,6 +1566,10 @@ function setupIssues(){ const out=[];
   if(meta.some(m=>m&&m.role==='fortuneteller') && !(redHerring>=0)) out.push('红鲱鱼未指定');
   return out; }
 function teamSeats(team){ const r=[]; meta.forEach((m,i)=>{ if(m.role&&RMAP[m.role].team===team) r.push(i); }); return r; }
+function infoRole(i){ return meta[i]?(meta[i].isDrunk?'drunk':(meta[i].role||null)):null; }   // 信息类能力看到的"真实身份"：酒鬼真身=drunk（洗衣妇/图管/调查/守鸦/送葬统一口径）
+function infoTeamOf(i){ const r=infoRole(i); return (r&&RMAP[r])?RMAP[r].team:null; }
+function infoTeamSeats(team){ const r=[]; for(let i=0;i<N;i++){ if(infoTeamOf(i)===team) r.push(i); } return r; }
+function outsiderSeats(){ return infoTeamSeats('out'); }   // 真实外来者（含酒鬼；供图书管理员判定）
 function nameAt(i){ const t=seatToken(i); return t?esc(t.name):('座位'+(i+1)); }
 function nearestLiving(i,dir){ for(let s=1;s<N;s++){ const j=((i+dir*s)%N+N)%N; if(j===i) break; if(seatAlive(j)) return j; } return -1; }
 function computeNightInfo(id){
@@ -1648,7 +1653,7 @@ function ravenActive(){ const rk=meta.findIndex(m=>m&&m.role==='ravenkeeper'); i
   const rec=impKills[night]; return !!(rec && rec.type==='normal' && rec.death===rk); }
 function ravenPlayerResult(){ const rec=ravenPicks[night]||{}; if(rec.t==null) return '';
   const rk=meta.findIndex(m=>m&&m.role==='ravenkeeper'); const sick=rk>=0&&!healthy(rk);
-  const actual=(meta[rec.t]&&meta[rec.t].role)?meta[rec.t].role:null; const shown=(sick&&rec.role)?rec.role:actual;
+  const actual=infoRole(rec.t); const shown=(sick&&rec.role)?rec.role:actual;   // #3 酒鬼真身=酒鬼（与送葬者一致）
   const rn=(shown&&RMAP[shown])?RMAP[shown].name:'（未知）';
   return '【守鸦人】你得知 '+nameAt(rec.t)+' 的真实角色是：'+rn+'。'; }
 function _resultDefaultText(id){ return id==='ravenkeeper'?ravenPlayerResult():ftResultText(); }   // 结果类步骤的默认文本（占卜/守鸦人）
@@ -1662,13 +1667,16 @@ function nightAutoText(id){
   if(id==='ravenkeeper') return '【守鸦人】你今夜死亡——请选择一名玩家，你将得知其真实角色。';
   if(id==='fortuneteller') return '【占卜师】请选择今晚要占卜的两名玩家。';
   if(id==='chef'){ const s=meta.findIndex(m=>m&&m.role==='chef'); const sick=s>=0&&!healthy(s); const sv=sickAns[night+':chef'];   // 中毒/醉酒且已设假值→用假值，否则真值
+    if(sick&&(sv==null||sv==='')) return '';   // #4 中毒未设答案 → 不自动发真值，逼说书人先设（发送被 info 门控拦住并提示）
     const c=(sick&&sv!=null&&sv!=='')?sv:chefPairs(); return '【厨师】相邻而坐的邪恶玩家共有 '+c+' 对。'; }
   if(id==='empath'){ const s=meta.findIndex(m=>m&&m.role==='empath'); const sick=s>=0&&!healthy(s); const sv=sickAns[night+':empath'];
+    if(sick&&(sv==null||sv==='')) return '';   // #4 同上
     const c=(sick&&sv!=null&&sv!=='')?sv:(s>=0?empathNum(s):0); return '【共情者】你两侧存活的邻座中，邪恶玩家有 '+c+' 名。'; }
   if(id==='undertaker'){ const ex=executions[night-1];
     if(ex===undefined||ex<0) return '【送葬者】昨日没有人被处决，你今晚没有得到信息。';
     const ut=meta.findIndex(m=>m&&m.role==='undertaker'); const sick=ut>=0&&!healthy(ut);
-    const trueRole=meta[ex]?(meta[ex].isDrunk?'drunk':meta[ex].role):null;
+    if(sick&&!undertakerPicks[night]) return '';   // #4 中毒未设假身份 → 不自动发真值
+    const trueRole=infoRole(ex);
     const shown=(sick&&undertakerPicks[night])?undertakerPicks[night]:trueRole;
     const rn=(shown&&RMAP[shown])?RMAP[shown].name:'（未知）';
     return '【送葬者】昨日被处决的 '+nameAt(ex)+' 的真实角色是：'+rn+'。'; }
@@ -1679,7 +1687,7 @@ function nightAutoText(id){
 function ftResultText(){ const cur=ftPicks[night]; if(!cur||cur[0]==null||cur[1]==null) return '【占卜结果】（尚未选定两名玩家）';
   let has=readsDemon(cur[0])||readsDemon(cur[1]);   // 真值
   const ft=meta.findIndex(m=>m&&m.role==='fortuneteller');
-  if(ft>=0 && !healthy(ft)){ const c=sickAns[night+':fortuneteller']; if(c==='yes') has=true; else if(c==='no') has=false; }   // 中毒/醉酒：用说书人设定的（可假）答案
+  if(ft>=0 && !healthy(ft)){ const c=sickAns[night+':fortuneteller']; if(c==='yes') has=true; else if(c==='no') has=false; else return '【占卜结果】（说书人尚未设定中毒占卜的答案，请先设定）'; }   // 中毒/醉酒：用说书人设定的（可假）答案；#4 未设则不泄露真值
   return '【占卜结果】你所占卜的 '+nameAt(cur[0])+'、'+nameAt(cur[1])+' 之中'+(has?'有':'没有')+'恶魔。'; }
 /* 说书人操作：发送 / 编辑文本 / 审核通过 / 退回重选 / 代确认跳过 / 重发 */
 function nightSend(id){ const kind=stepKind(id); if(!kind) return; const f=nfGet(id);
@@ -2029,7 +2037,7 @@ function undertakerUI(){
 function ravenResult(){
   const rk=meta.findIndex(m=>m&&m.role==="ravenkeeper"); if(rk<0) return null;
   const rec=ravenPicks[night]||{}; if(rec.t==null) return null;
-  const actual = (meta[rec.t]&&meta[rec.t].role)?meta[rec.t].role:null;
+  const actual = infoRole(rec.t);   // #3 酒鬼真身=酒鬼
   if(healthy(rk)){ if(!actual) return null; return {text:'得知 '+nameAt(rec.t)+' ＝ '+RMAP[actual].name+' · 真', truth:true}; }
   if(!rec.role) return null; const truth=actual===rec.role;
   return {text:'得知 '+nameAt(rec.t)+' ＝ '+RMAP[rec.role].name+' · '+(truth?'真':'假'), truth};
@@ -2152,15 +2160,15 @@ function pingResult(roleId){
   const seat=meta.findIndex(m=>m&&m.role===roleId); if(seat<0) return null;
   const team=pingTeam(roleId), rec=pingPicks[roleId]||{}, sick=!healthy(seat);
   const mk=(text,truth)=>({text:text+' · '+(truth?'真':'假'),truth});
-  if(!sick){                                        // 健康：第一个是真身，系统用其身份
-    if(roleId==="librarian" && teamSeats("out").length===0) return mk('没有外来者',true);
+  if(!sick){                                        // 健康：第一个是真身，系统用其身份（infoRole：酒鬼算外来者「酒鬼」，且不会把酒鬼当镇民给洗衣妇 #2）
+    if(roleId==="librarian" && outsiderSeats().length===0) return mk('没有外来者',true);
     if(rec.a==null||rec.b==null||rec.b===rec.a) return null;
-    const rm=meta[rec.a]; if(!rm||!rm.role||RMAP[rm.role].team!==team) return null;
-    return mk(nameAt(rec.a)+'、'+nameAt(rec.b)+' 中有一个是 '+RMAP[rm.role].name, true);
-  } else {                                          // 中毒/醉酒：手选，系统对照真伪
-    if(rec.role==="__none") return mk('没有外来者', teamSeats("out").length===0);
+    const ra=infoRole(rec.a); if(!ra||RMAP[ra].team!==team) return null;
+    return mk(nameAt(rec.a)+'、'+nameAt(rec.b)+' 中有一个是 '+RMAP[ra].name, true);
+  } else {                                          // 中毒/醉酒：手选，系统对照真伪（infoRole 让酒鬼真身对照正确）
+    if(rec.role==="__none") return mk('没有外来者', outsiderSeats().length===0);
     if(rec.a==null||rec.b==null||!rec.role) return null;
-    const real=(meta[rec.a]&&meta[rec.a].role===rec.role)||(meta[rec.b]&&meta[rec.b].role===rec.role);
+    const real=(infoRole(rec.a)===rec.role)||(infoRole(rec.b)===rec.role);
     return mk(nameAt(rec.a)+'、'+nameAt(rec.b)+' 中有一个是 '+RMAP[rec.role].name, real);
   }
 }
@@ -2176,7 +2184,7 @@ function pingUI(roleId){
   const seat=meta.findIndex(m=>m&&m.role===roleId); if(seat<0) return "";
   if(isDeadSeat(seat)) return '<div class="impkill done" style="color:#8a6a2a">已出局，未行动</div>';
   const team=pingTeam(roleId), rec=pingPicks[roleId]||{}, sick=!healthy(seat), teamName=TEAMLABEL[team];
-  if(!sick && roleId==="librarian" && teamSeats("out").length===0)
+  if(!sick && roleId==="librarian" && outsiderSeats().length===0)
     return '<div class="impkill done">答案：没有外来者 · 真</div>';
   let h="";
   if(sick){                                         // 中毒：自由选 2 人 + 自定角色
@@ -2189,7 +2197,7 @@ function pingUI(roleId){
     h+='<div class="impkill warn">中毒·自定信息：<select onchange="pingSet(\''+roleId+'\',\'role\',this.value)">'+rOpt+'</select></div>';
   } else {                                          // 健康：第一个只列该阵营，第二个列其余任意人
     let o1='<option value="">'+teamName+'</option>';
-    teamSeats(team).forEach(i=>{ o1+='<option value="'+i+'"'+(rec.a===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+'</option>'; });
+    infoTeamSeats(team).forEach(i=>{ o1+='<option value="'+i+'"'+(rec.a===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+'</option>'; });   // #2 infoRole 口径：图管可选酒鬼、洗衣妇不再把酒鬼当镇民
     let o2='<option value="">另一人</option>';
     for(let i=0;i<N;i++){ if(i===rec.a) continue; o2+='<option value="'+i+'"'+(rec.b===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+'</option>'; }
     h+='<div class="impkill">'+teamName+'：<select onchange="pingSet(\''+roleId+'\',\'a\',this.value)">'+o1+'</select>'
@@ -2252,7 +2260,8 @@ function checkWin(){
 }
 function renderWin(){
   const wi=document.getElementById("winIcon"); const win=checkWin();
-  if(window._autoResult) window._autoResult(win);   // 满足胜负自动公布，无需按钮
+  const _df=dayFlow[night]; const _isDay=!!(_df&&_df.dawn&&!_df.dusk);   // #1 夜晚(未天亮)先不公布：夜杀死亡保密到天亮；天亮(stEndNight 置 dawn 后 render)本函数重跑再广播
+  if(window._autoResult) window._autoResult((win&&!_isDay)?null:win);   // 满足胜负自动公布（夜里的胜负攒到天亮和死亡一起公布）
   if(wi){ wi.style.display='none'; wi.dataset.w=''; }   // 魔典不再在座位中央显示结算图标（改为日志页顶部横幅）
 }
 /* ---------- 结算特效 ---------- */
@@ -3993,7 +4002,7 @@ load(); render();
     if(sig===_lastResultSig) return; _lastResultSig=sig;
     const ref=db.ref('games/'+curGid+'/public/result');
     if(win){ ref.set({w:win.w, r:win.r, ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); try{ _recordHistory(win); }catch(e){} }
-    else ref.set(null).catch(()=>{}); };
+    else { ref.set(null).catch(()=>{}); try{ if(_histKey){ db.ref('history/'+_histKey).remove().catch(()=>{}); _histKey=null; _histSig=null; } }catch(e){} } };   // #5 结果被撤销(改判/复活) → 删掉刚写的那条战绩，避免误判残留
   /* 分出胜负时把本局存入永久记录（每局一条唯一记录，避免同一 gid 复盘覆盖） */
   let _histSig=null, _histKey=null;
   window._histNewRound=function(){ _histSig=null; _histKey=null; };   // 新一局/重新发牌：下一次胜负记为新的一条
