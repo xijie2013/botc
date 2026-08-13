@@ -593,15 +593,11 @@
   #chatFab.cf-off{filter:grayscale(1) brightness(.8); opacity:.5; cursor:not-allowed;}
   #chatFab .cf-badge{position:absolute; top:-5px; right:-5px; min-width:20px; height:20px; padding:0 5px; border-radius:10px; box-sizing:border-box;
     background:#4aa8ff; color:#fff; font:800 12px sans-serif; display:none; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.5);}
-  /* 说书人魔典左下角「解散私聊」按钮（与私聊图标同位同大）：有私聊时出现，两连点确认 */
-  #stDisbandFab{position:fixed; left:84px; bottom:16px; z-index:124; width:60px; height:60px; border-radius:50%;
-    display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent; color:#fff;}   /* v2.50.8 去掉圆形底；仅「确认解散」态显示红圈 */
+  /* 说书人魔典左下角「解散私聊」按钮（与私聊图标同位同大）：有私聊时出现，点击弹窗确认 v2.50.9 */
+  #stDisbandFab{position:fixed; left:84px; bottom:16px; z-index:124; width:60px; height:60px;
+    display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent;}   /* 纯图标，无圆底 */
   #stDisbandFab img{width:100%; height:100%; object-fit:contain; display:block; filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));}
-  #stDisbandFab .sdf-confirm{display:none; font:800 15px/1.05 sans-serif; text-align:center; letter-spacing:1px;}
   #stDisbandFab.sdf-off{filter:grayscale(1) brightness(.8); opacity:.5; cursor:not-allowed;}   /* 夜晚 / 白天无私聊：灰掉不可点 */
-  #stDisbandFab.sdf-armed{background:linear-gradient(180deg,#c0392b,#7d1f16); border:2px solid #ffd7d7; box-shadow:0 0 16px rgba(231,76,60,.85); color:#fff;}   /* 确认解散态：红圈+文字 */
-  #stDisbandFab.sdf-armed img{display:none;}
-  #stDisbandFab.sdf-armed .sdf-confirm{display:block;}
   /* 说书人解散私聊后：全体玩家的底部通知弹窗（无倒计时，点确认收到即消失） */
   #chatDisbandPop{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:123; display:none; pointer-events:none;}
   #chatDisbandPop .cdb{width:350px; max-width:94vw; box-sizing:border-box; pointer-events:auto; background:linear-gradient(180deg,rgba(52,32,66,.98),rgba(28,16,38,.98));
@@ -673,11 +669,9 @@
   #chatRoom .cr-input.cr-locked{opacity:.55; pointer-events:none;}
   #chatRoom .cr-lockmsg{flex:0 0 auto; text-align:center; color:#a596c8; font-size:12.5px; padding:10px 12px 12px; border-top:1px solid rgba(160,130,220,.22);}
   /* 座位圈上的私聊按钮（组内第一二成员之间）：组内=退出(红)、组外=加入(蓝) */
-  #tableZone .chatbtn{position:absolute; transform:translate(-50%,-50%); border-radius:50%; display:flex; align-items:center; justify-content:center;
-    font-weight:800; color:#fff; cursor:pointer; z-index:5; user-select:none; white-space:nowrap; -webkit-tap-highlight-color:transparent;}   /* v2.50.8 去掉圆形底，只留图标 */
-  #tableZone .chatbtn.cb-confirm{background:linear-gradient(180deg,#e0a83a,#b8860b); border:2px solid #ffe9b8; color:#1a1226; box-shadow:0 2px 8px rgba(0,0,0,.5);}   /* 待确认态：金色圆（有文字，需要底）*/
-  #tableZone .chatbtn img{width:100%; height:100%; object-fit:contain; display:block; pointer-events:none; filter:drop-shadow(0 1px 2px rgba(0,0,0,.7));}   /* 加入/退出图标（v2.50.8 无圆底、加深投影）*/
-  #tableZone .chatbtn.cb-confirm img{display:none;}   /* 确认态显示文字 */
+  #tableZone .chatbtn{position:absolute; transform:translate(-50%,-50%); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; z-index:5; user-select:none; -webkit-tap-highlight-color:transparent;}   /* v2.50.8 纯图标无圆底；v2.50.9 点击弹窗确认 */
+  #tableZone .chatbtn img{width:100%; height:100%; object-fit:contain; display:block; pointer-events:none; filter:drop-shadow(0 1px 2px rgba(0,0,0,.7));}   /* 加入/退出图标 */
   .nb-note{padding:4px 2px; border-bottom:1px solid rgba(122,83,32,.14); line-height:1.35;}
   .nb-nom{border:1px solid rgba(74,43,107,.22); border-radius:8px; padding:6px 8px; margin:6px 0; background:rgba(255,252,244,.6);}
   .nb-nomhead{font-weight:700; color:#6b4a1e;}
@@ -1051,7 +1045,7 @@
     <div id="chatFab" onclick="_chatFabTap()" title="发起/邀请私聊" style="display:none">
       <img src="assets/ic-invite.png" alt="" draggable="false"><span class="cf-badge"></span></div>
     <div id="stDisbandFab" onclick="_stDisbandTap()" title="解散所有私聊，玩家回到原座位" style="display:none">
-      <img src="assets/ic-disband.png" alt="" draggable="false"><span class="sdf-confirm">确认<br>解散</span></div>
+      <img src="assets/ic-disband.png" alt="" draggable="false"></div>
     <div id="chatRoomFab" onclick="_openChatRoom()" title="聊天室" style="display:none">
       <img src="assets/ic-chat.png" alt="" draggable="false"><span class="cr-badge"></span></div>
     <div id="winIcon"></div>
@@ -1258,6 +1252,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.50.9', d:'2026-08-13', items:['「解散私聊」「加入私聊」「退出私聊」三个操作改为弹窗确认（原来是点一下变「确认解散/确认」圆圈再点第二下）。现在图标点一下就弹出确认框，点「解散/加入/离开」执行、点「取消」放弃——图标彻底干净、不再有确认态的圆圈和文字。']},
   {v:'v2.50.8', d:'2026-08-13', items:['①夜晚大厅底部「夜晚大厅已关闭，白天再来」文字改成大厅金色主题色（原紫色）。②夜晚大厅中间的空态提示由「夜晚大厅已关闭」改为「大厅静悄悄的～」，不再和下方那句重复。③左下角三个图标和座位圈的加入/退出图标去掉了圆形按钮底，只保留图标本身（说书人「确认解散」和加入/退出的「确认」态仍保留有底的圆，便于看清文字）。']},
   {v:'v2.50.7', d:'2026-08-13', items:['①毛玻璃磨砂程度调低（整屏 blur 12→6、聊天框 3→1.5），不再太糊。②聊天室 tab 下方分割线改成和标题下方一样的细线。③玩家视角聊天室 tab 下方不再有分割线（仅说书人视角保留）。④换了一套手绘图标：聊天室=聊天泡、邀请私聊=兜帽小人、发出邀请=火漆卷轴、加入=双泡+箭头、退出=传送门、解散群聊=泡+✕。']},
   {v:'v2.50.6', d:'2026-08-13', items:['整个聊天室加毛玻璃：打开聊天室后，背后的游戏画面会被磨砂虚化（遮罩调淡+`backdrop-filter` 模糊），聊天框本身也叠了一层毛玻璃，三个 tab（说书人/大厅/当前私聊）统一享有该效果。']},
@@ -4241,13 +4236,13 @@ load(); render();
     const bd=Math.max(18, seatR*1.0), rOut=R+seatR*1.11;   // 按钮直径≈座位半径；圆心落在外侧弧线上(=色带外弧半径)，避免遮挡座位标记
     chats.forEach(c=>{ const ks=c.members.map(m=>posOf[m]).filter(k=>k!=null).sort((a,b)=>a-b); if(ks.length<2) return;
       const midK=(ks[0]+ks[1])/2, ang=-Math.PI/2+midK*2*Math.PI/N, bx=cx+rOut*Math.cos(ang), by=cy+rOut*Math.sin(ang);
-      const inChat=!!(myc && myc.id===c.id), base=inChat?'退出':'加入', iconHTML='<img src="assets/'+(inChat?'ic-leave':'ic-join')+'.png" alt="'+base+'" draggable="false">';
+      const inChat=!!(myc && myc.id===c.id), base=inChat?'退出':'加入';
       const b=document.createElement('div'); b.className='chatbtn '+(inChat?'cb-exit':'cb-join');
-      b.style.cssText='left:'+bx+'px;top:'+by+'px;width:'+bd+'px;height:'+bd+'px;font-size:'+(bd*0.3)+'px;';
-      b.innerHTML=iconHTML;
-      b.addEventListener('click',function(e){ e.stopPropagation();   // 两段确认，避免误触
-        if(!b._cf){ b._cf=true; b.classList.add('cb-confirm'); b.textContent='确认'; clearTimeout(b._t); b._t=setTimeout(function(){ b._cf=false; b.classList.remove('cb-confirm'); b.innerHTML=iconHTML; },3000); return; }
-        clearTimeout(b._t); if(inChat) window._chatLeave(); else window._chatJoinReq(c.id); });
+      b.style.cssText='left:'+bx+'px;top:'+by+'px;width:'+bd+'px;height:'+bd+'px;';
+      b.innerHTML='<img src="assets/'+(inChat?'ic-leave':'ic-join')+'.png" alt="'+base+'" draggable="false">';
+      b.addEventListener('click',function(e){ e.stopPropagation();   // v2.50.9 弹窗确认（原两连点圆圈）
+        Promise.resolve(uiConfirm(inChat?'确认离开该私聊吗？':'确认加入该私聊吗？',{title:inChat?'离开私聊':'加入私聊',ok:inChat?'离开':'加入',cancel:'取消'})).then(function(ok){
+          if(!ok) return; if(inChat) window._chatLeave(); else window._chatJoinReq(c.id); }); });
       zone.appendChild(b); }); };
 
   /* ---- 玩家端：白天判定 + 左下角图标(FAB) + 邀请/回应/退出/加入/取消/确定 ---- */
@@ -4295,22 +4290,21 @@ load(); render();
   function _stHasChats(){ return !!((pub&&pub.chats&&Object.keys(pub.chats).length)||(pub&&pub.chatInv&&Object.keys(pub.chatInv).length)); }
   function _sdfActive(){ return isChatDay() && !window.__nomStarted; }   // 可点=白天且本轮尚未点过「解散私聊」（即便当前没有私聊也可点，用来结束私聊环节、开启提名）
   window.updateStChatDisband=function(){ const el=document.getElementById('stDisbandFab'); if(!el) return;
-    if(!(role==='st'&&mode==='st')){ el.style.display='none'; window.__sdfArmed=false; clearTimeout(window.__sdfT); return; }
+    if(!(role==='st'&&mode==='st')){ el.style.display='none'; return; }
     el.style.display='flex';   // 说书人魔典常驻；夜晚 或 本轮已解散→灰
-    const active=_sdfActive(); if(!active){ window.__sdfArmed=false; clearTimeout(window.__sdfT); }
-    el.classList.toggle('sdf-off', !active); el.classList.toggle('sdf-armed', active&&!!window.__sdfArmed); };
+    el.classList.toggle('sdf-off', !_sdfActive()); };
   window._stDisbandTap=function(){ if(!(role==='st'&&mode==='st')) return;
     if(!_sdfActive()){ try{ toast(isChatDay()?'本轮已解散私聊、提名已开启':'夜晚无需解散私聊'); }catch(e){} return; }   // 灰态：给个提示，不动作
-    if(!window.__sdfArmed){ window.__sdfArmed=true; window.updateStChatDisband();   // 第一次点：进入「确认解散」态，3s 未再点自动取消
-      clearTimeout(window.__sdfT); window.__sdfT=setTimeout(function(){ window.__sdfArmed=false; window.updateStChatDisband(); },3000); return; }
-    clearTimeout(window.__sdfT); window.__sdfArmed=false;   // 第二次点：真正解散
-    try{ _chatReset(); }catch(e){}   // 清空所有私聊/邀请（各端座位圈回原序、色带消失）
-    window.__nomStarted=true;   // 乐观：立即开启提名、灰掉解散按钮、冻结玩家发起私聊
-    try{ if(curGid){ const now=Date.now(); db.ref('games/'+curGid+'/public').update({chatDisband:{id:now, ts:now}, nomStarted:true}).catch(()=>{}); } }catch(e){}   // 广播「已解散」通知(底部弹窗，无倒计时) + 开启提名阶段
-    window.updateStChatDisband();
-    try{ if(typeof render==='function') render(); }catch(e){}   // 立即刷新说书人白天面板：提名表单解锁
-    try{ if(typeof updateChatFab==='function') updateChatFab(); }catch(e){}
-    try{ toast('私聊环节已结束、提名已开启，已通知全体玩家'); }catch(e){} };
+    Promise.resolve(uiConfirm('确认解散所有私聊吗？所有玩家将回到原座位，随后可开始提名。',{title:'解散私聊',ok:'解散',cancel:'取消'})).then(function(ok){   // v2.50.9 改弹窗确认（原两连点圆圈）
+      if(!ok || !_sdfActive()) return;   // 取消 / 弹窗期间状态已变→不动作
+      try{ _chatReset(); }catch(e){}   // 清空所有私聊/邀请（各端座位圈回原序、色带消失）
+      window.__nomStarted=true;   // 乐观：立即开启提名、灰掉解散按钮、冻结玩家发起私聊
+      try{ if(curGid){ const now=Date.now(); db.ref('games/'+curGid+'/public').update({chatDisband:{id:now, ts:now}, nomStarted:true}).catch(()=>{}); } }catch(e){}   // 广播「已解散」通知 + 开启提名阶段
+      window.updateStChatDisband();
+      try{ if(typeof render==='function') render(); }catch(e){}   // 立即刷新说书人白天面板：提名表单解锁
+      try{ if(typeof updateChatFab==='function') updateChatFab(); }catch(e){}
+      try{ toast('私聊环节已结束、提名已开启，已通知全体玩家'); }catch(e){}
+    }); };
   window._chatRespond=function(iid,agree){ const from=myVoteSeat(); if(from<0||!notesRef) return;
     window.__chatMyResp[iid]=agree?1:0;   // 乐观：拒绝→弹窗立即消失、同意→立即显示「等待结果」
     try{ notesRef.child('chatResp').set({iid:iid,from:from,agree:agree?1:0,ts:Date.now()}).catch(function(){}); }catch(e){}
