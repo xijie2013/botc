@@ -637,7 +637,7 @@
   #chatRoom .cr-tabs button.crt-st.on{background:linear-gradient(180deg,#5a3f8c,#3f2a66); color:#fff; border-color:rgba(190,160,240,.75);}
   #chatRoom .cr-tabs button.crt-lobby{background:rgba(204,164,72,.18); color:#e7cf9c; border-color:rgba(212,176,92,.42);}
   #chatRoom .cr-tabs button.crt-lobby.on{background:linear-gradient(180deg,#b8860b,#8a6408); color:#fff8ea; border-color:rgba(236,202,122,.75);}
-  #chatRoom .cr-peers{flex:0 0 auto; display:flex; flex-wrap:wrap; gap:6px; padding:2px 12px 8px;}
+  #chatRoom .cr-peers{flex:0 0 auto; display:flex; flex-wrap:wrap; gap:6px; padding:2px 12px 10px; margin-bottom:3px; border-bottom:1.5px solid rgba(170,138,232,.5);}   /* 玩家名行与聊天区的分割线 */
   #chatRoom .cr-peers button{flex:0 0 auto; padding:5px 11px; border-radius:14px; font-size:12.5px; font-weight:700; cursor:pointer; border:1px solid rgba(160,130,220,.35); background:rgba(255,255,255,.04); color:#c9b9ee;}
   #chatRoom .cr-peers button.on{background:linear-gradient(180deg,#4aa8ff,#2f74c0); color:#fff; border-color:rgba(140,200,255,.8);}
   #chatRoom .cr-peers button .pd{display:inline-block; width:7px; height:7px; border-radius:50%; background:#e05a5a; margin-left:5px; vertical-align:middle; visibility:hidden;}
@@ -645,7 +645,10 @@
   #chatRoom .cr-body{flex:1 1 auto; overflow-y:auto; padding:6px 13px 10px; display:flex; flex-direction:column; gap:9px;}
   #chatRoom .cr-msg{display:flex; flex-direction:column; align-items:flex-start; max-width:82%;}
   #chatRoom .cr-msg.me{align-self:flex-end; align-items:flex-end;}
-  #chatRoom .cr-name{font-size:11px; color:#9d8cc4; margin:0 4px 2px;}
+  #chatRoom .cr-name{font-size:12.5px; font-weight:700; color:#b6a6dd; margin:0 5px 3px;}   /* 发言人名字：加粗放大 + 与其聊天泡同色系（深一点）便于分辨谁说的 */
+  #chatRoom .cr-name.crn-blue{color:#6aa6f0;}
+  #chatRoom .cr-name.crn-purple{color:#b39aef;}
+  #chatRoom .cr-name.crn-gold{color:#e0b24a;}
   #chatRoom .cr-bubble{padding:8px 12px; border-radius:13px; font-size:14px; line-height:1.45; color:#eae2fb; background:#33254a; word-break:break-word; white-space:pre-wrap;}
   /* 聊天泡按语义上色：蓝=自己(玩家)/私聊里的玩家(说书人视角)；紫=说书人；金=大厅里别的玩家；私聊色=当前私聊里别的玩家(step2 内联) */
   #chatRoom .cr-bubble.crb-blue{background:linear-gradient(180deg,#3f74c0,#2f5a99); color:#fff;}
@@ -659,6 +662,11 @@
   /* 发送按钮随 tab 主题色 */
   #chatRoom .cr-box.crbg-st .cr-input button{background:linear-gradient(180deg,#6f4fb0,#4a3082); color:#fff;}
   #chatRoom .cr-box.crbg-lobby .cr-input button{background:linear-gradient(180deg,#c99a3c,#9a7420); color:#3a2a08;}
+  /* 大厅：head/input/lockmsg 的分割线 + 输入框边框改金色（私信/说书人仍为紫，不动） */
+  #chatRoom .cr-box.crbg-lobby .cr-head{border-bottom-color:rgba(228,196,120,.34);}
+  #chatRoom .cr-box.crbg-lobby .cr-input{border-top-color:rgba(228,196,120,.34);}
+  #chatRoom .cr-box.crbg-lobby .cr-lockmsg{border-top-color:rgba(228,196,120,.34);}
+  #chatRoom .cr-box.crbg-lobby .cr-input textarea{border-color:rgba(228,196,120,.5);}
   #chatRoom .cr-input.cr-locked{opacity:.55; pointer-events:none;}
   #chatRoom .cr-lockmsg{flex:0 0 auto; text-align:center; color:#a596c8; font-size:12.5px; padding:10px 12px 12px; border-top:1px solid rgba(160,130,220,.22);}
   /* 座位圈上的私聊按钮（组内第一二成员之间）：组内=退出(红)、组外=加入(蓝) */
@@ -1260,6 +1268,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.49.3', d:'2026-08-13', items:['聊天室细节：①发言人名字加粗放大、并与其聊天泡同色系（蓝/紫/金），一眼看清是谁说的。②说书人「玩家私信」里，玩家名一行与下方聊天区之间加了明显分割线，不再糊成一片。③大厅聊天室的标题/输入区分割线和输入框边框改成金色主题（与大厅一致；说书人/私信仍是紫色不变）。④去掉每条消息下面的时间戳，更紧凑。']},
   {v:'v2.49.2', d:'2026-08-13', items:['聊天室外观调整：①各 tab 背景改浅、更透明（大厅不再是暗黄）。②tab 按钮用各自主题色——说书人/玩家私信=紫（选中深紫、未选浅紫），大厅=金（选中深金、未选浅金）。③说书人「玩家私信」的玩家名不再横向滚动，一行放不下自动换行全部显示。④左下角按钮位置对调：聊天室在左、发起/解散私聊在右。⑤聊天泡和发送按钮按语义配色：玩家视角——自己永远蓝、说书人永远紫、大厅里别的玩家金、私聊里别的玩家用该私聊色（随第二步）；说书人视角——自己永远紫、私信/私聊里的玩家蓝、大厅里的玩家金。发送按钮跟随当前 tab 主题色。']},
   {v:'v2.49.1', d:'2026-08-13', items:['聊天室修复+完善：①修复大厅消息发不出去、永远空白的 bug（大厅消息路径层级不对、被规则校验挡下，已改为 chat/lobby/main）。②说书人「玩家私信」的红点改为「有新消息才亮、看过就消失」（不再是只要有消息就常亮）。③每个 tab 的背景改成各自主题色的半透明底：说书人=紫、大厅=深金（当前私聊 tab 用该私聊的颜色，随第二步上线）。④聊天室入口图标上会显示新消息小圆点：说书人有新私信=红点、大厅有新消息=黄点（当前私聊=对应颜色，随第二步）。']},
   {v:'v2.49.0', d:'2026-08-12', items:['新增「聊天室」（第一步）：左下角私聊图标右边多了一个聊天泡泡入口，点开是聊天室页面。玩家有「说书人」「大厅」两个 tab（「当前私聊」tab 下一步再加）——「说书人」全程可与说书人私聊；「大厅」是所有玩家共享的聊天室、只在白天开放（夜晚锁定输入）。说书人端有「玩家私信」（逐个玩家回复，有消息的玩家标红点）「大厅」两个 tab。消息实时同步。⚠️ 需要先在 Firebase 部署新版数据库规则（已随本次一起给你），否则收发会失败。']},
@@ -4446,8 +4455,8 @@ load(); render();
     let h=''; for(let i=0;i<_crMsgs.length;i++){ const m=_crMsgs[i]; const mine=(m.f===me);
       const stMsg=(m.f===-1); const nm=stMsg?'说书人':pname(m.f); const bc=_crBubbleCls(m.f);
       h+='<div class="cr-msg'+(mine?' me':'')+'">';
-      if(!mine) h+='<div class="cr-name">'+_nbEsc(nm)+'</div>';
-      h+='<div class="cr-bubble '+bc+'">'+_nbEsc(String(m.t))+'</div><div class="cr-time">'+_crTime(m.ts)+'</div></div>'; }
+      if(!mine) h+='<div class="cr-name '+bc.replace('crb-','crn-')+'">'+_nbEsc(nm)+'</div>';
+      h+='<div class="cr-bubble '+bc+'">'+_nbEsc(String(m.t))+'</div></div>'; }
     body.innerHTML=h; body.scrollTop=body.scrollHeight; }
   window._crSend=function(){ const ta=document.getElementById('crText'); if(!ta) return; const txt=(ta.value||'').trim(); if(!txt) return;
     if(_crTab==='lobby' && !isChatDay()){ try{toast('夜晚大厅已关闭');}catch(e){} return; }
