@@ -51,6 +51,8 @@
   .stage.grim{background-image:url("assets/tavern-bg-dark.jpg"); background-position:center; background-size:100% 100%;}
   body.anon .stage{background-image:url("assets/tavern-bg-dim.jpg");}   /* 未登录初始界面 */
   body.st-mode .stage{background-image:url("assets/tavern-bg-dark.jpg");}   /* 说书人登录后始终用魔典暗背景（大厅/魔典一致） */
+  body.pl.ph-night .stage{background-image:url("assets/tavern-bg-dim.jpg");}   /* ⑨ 玩家端：夜晚（pub.phase!=='day'）用暗色酒馆背景，白天仍用亮背景 */
+  .stage{transition:background-image .5s ease;}
   /* 登录状态切换：全屏黑场淡入淡出 */
   #fadeLayer{position:fixed; inset:0; background:#000; opacity:0; z-index:400; pointer-events:none; transition:opacity 1.1s ease;}
   #fadeLayer.on{opacity:1;}
@@ -589,7 +591,15 @@
   #chatFab{position:fixed; left:104px; bottom:16px; z-index:124; width:66px; height:66px;
     display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent;}   /* v2.50.14 放大10%(60→66)、右移拉开间距(84→104) */
   #chatFab img{width:100%; height:100%; object-fit:contain; display:block; filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));}
-  #chatFab.cf-sel img{filter:drop-shadow(0 0 6px rgba(74,194,180,.98)) drop-shadow(0 2px 3px rgba(0,0,0,.55));}   /* 选人模式：teal 荧光（图标已变火漆卷轴，v2.50.10 原蓝改青） */
+  #chatFab.cf-sel img{filter:drop-shadow(0 0 4px rgba(120,255,240,1)) drop-shadow(0 0 10px rgba(74,194,180,1)) drop-shadow(0 0 20px rgba(74,194,180,.85)) drop-shadow(0 2px 3px rgba(0,0,0,.55)); animation:cfSelGlow 1.5s ease-in-out infinite;}   /* ⑩ 选人模式：teal 辉光加粗加亮 + 呼吸，远比原来醒目 */
+  @keyframes cfSelGlow{
+    0%,100%{filter:drop-shadow(0 0 4px rgba(120,255,240,1)) drop-shadow(0 0 10px rgba(74,194,180,1)) drop-shadow(0 0 20px rgba(74,194,180,.85)) drop-shadow(0 2px 3px rgba(0,0,0,.55));}
+    50%{filter:drop-shadow(0 0 7px rgba(150,255,245,1)) drop-shadow(0 0 16px rgba(74,194,180,1)) drop-shadow(0 0 30px rgba(74,194,180,1)) drop-shadow(0 2px 3px rgba(0,0,0,.55));}
+  }
+  #chatFab.cf-sel::before{content:''; position:absolute; inset:-9%; border-radius:50%; pointer-events:none;
+    background:radial-gradient(circle, rgba(74,194,180,.42) 0%, rgba(74,194,180,.16) 52%, rgba(74,194,180,0) 72%);
+    animation:cfSelHalo 1.5s ease-in-out infinite;}   /* ⑩ 图标外再加一层青色光晕底 */
+  @keyframes cfSelHalo{ 0%,100%{transform:scale(1); opacity:.85;} 50%{transform:scale(1.13); opacity:1;} }
   #chatFab.cf-off{filter:grayscale(1) brightness(.8); opacity:.5; cursor:not-allowed;}
   #chatFab .cf-badge{position:absolute; top:-5px; right:-5px; min-width:20px; height:20px; padding:0 5px; border-radius:10px; box-sizing:border-box;
     background:#2fb0a2; color:#fff; font:800 12px sans-serif; display:none; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.5);}   /* 选中人数角标=teal（v2.50.10）*/
@@ -1314,6 +1324,16 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.51.0', d:'2026-08-14', items:[
+    '音效 / 动画 / 背景音乐三档音量的默认值从 100% 调整为 25%（此前手动调过的设置仍然保留）。',
+    '洗衣妇 / 图书管理员 / 调查员发给玩家的两名候选人，展示顺序改为随机——真身不再永远排在第一个。',
+    '死亡方式在死亡的那一刻固定：恶魔夜里再刀一名已经出局的玩家＝空刀，不再把他的死因图标改成恶魔爪击（魔典日志会记「目标已出局，无人死亡」）。',
+    '僧侣的护盾标识在「结束本夜」天亮时消失，不再残留到白天（投毒者的毒与管家的主人仍持续到「结束本日」）。',
+    '修复胜利结算与处决/射杀动画抢播：胜利动画会等处决动画放完再播，两者各只播放一次。',
+    '玩家端酒馆背景随昼夜切换：夜晚改用暗色背景，天亮恢复。',
+    '「发起私聊」图标进入选人模式后的青色辉光大幅加强并加入呼吸效果，更容易分辨。',
+    '说书人日志按真实昼夜顺序归档：白天发生的记录（处决出局、猎人射杀等）不再混进当夜的小节，改列在「☀ 第 n 天」下。',
+  ]},
   {v:'v2.50.22', d:'2026-08-13', items:['猎手非终结击杀（打死陌客/红唇接任等）的动画截断时长调整为 3.5 秒。']},
   {v:'v2.50.21', d:'2026-08-13', items:['猎手非终结击杀（打死陌客/红唇接任等）的动画截断时长延长到 4 秒。']},
   {v:'v2.50.20', d:'2026-08-13', items:['猎手非终结击杀（打死陌客/红唇接任等）的动画截断时长从 3 秒延长到 3.5 秒。']},
@@ -1666,13 +1686,18 @@ function computeNightInfo(id){
 }
 /* 夜间信息录入：勾选夜间顺序的某一步 → 记录该角色本夜信息；取消勾选 → 删除该条 */
 /* 每晚记录按来源标签分条存储：hist[night]={evil,info,kill,death,role}，兼容旧的字符串格式 */
+function histIsDayNow(){ const f=dayFlow[night]; return !!(f&&f.dawn&&!f.dusk); }   // ⑭ 当前处在「第 night 天」白天阶段
 function histSet(seat,tag,text){
   if(seat<0||!meta[seat]) return;
   if(!meta[seat].hist) meta[seat].hist={};
   const h=meta[seat].hist;
   if(typeof h[night]==="string") h[night]={info:h[night]};   // 旧数据兼容
   if(!h[night]) h[night]={};
-  if(text==null||text==="") delete h[night][tag]; else h[night][tag]=text;
+  if(text==null||text===""){ delete h[night][tag]; if(h[night]._d) delete h[night]._d[tag]; }
+  else { h[night][tag]=text;
+    if(histIsDayNow()){ (h[night]._d||(h[night]._d={}))[tag]=1; }   // ⑭ 白天写入的条目（处决出局/猎人射杀等）打标，日志里归到「☀ 第 n 天」
+    else if(h[night]._d) delete h[night]._d[tag]; }
+  if(h[night]._d && Object.keys(h[night]._d).length===0) delete h[night]._d;
   if(Object.keys(h[night]).length===0) delete h[night];
 }
 const PICKERS=new Set(["fortuneteller","washerwoman","librarian","investigator","ravenkeeper","undertaker","chef","empath"]);
@@ -2020,7 +2045,7 @@ function poisonPick(v){
 function healthy(i){ return i>=0 && meta[i] && !meta[i].poison && !meta[i].drunk && !meta[i].isDrunk; }
 function deathCauseLabel(i){
   const h=meta[i]&&meta[i].hist; if(!h) return "";
-  let txt=""; Object.keys(h).forEach(n=>{ if(h[n]&&h[n].death) txt=h[n].death; });
+  let txt=""; Object.keys(h).map(Number).sort((a,b)=>a-b).forEach(n=>{ if(!txt && h[n] && h[n].death) txt=h[n].death; });   // ④ 取最早一条：死亡标志在死亡当刻固定，恶魔夜刀已死玩家不得改写
   if(!txt) return "";
   if(txt.indexOf('处决')>=0) return '处决';
   if(txt.indexOf('猎人')>=0) return '被射杀';
@@ -2032,6 +2057,8 @@ function deathCauseIcon(i){ const dc=deathCauseLabel(i);
   if(dc==='被射杀') return 'assets/mk-slayer.png';
   if(dc==='夜晚死亡') return 'assets/g3-demonkill.png';
   return 'assets/bg-dead.png'; }   // 手动/未知死因 → 淡化骷髅
+function _nightOver(){ const f=dayFlow[night]; return !!(f&&f.dawn); }   // ⑤ 本夜已天亮
+function shieldShown(i){ return isProtected(i) && !_nightOver(); }        // ⑤ 护盾标识只在夜里显示；天亮即消失（投毒者的毒/管家主人按 night 归档，结束本日推进夜数时自动消失）
 function isProtected(target){
   const monk=meta.findIndex(m=>m&&m.role==="monk");
   if(monk>=0 && !isDeadSeat(monk) && healthy(monk) && monkPicks[night]===target) return true;   // 僧侣守护
@@ -2040,6 +2067,7 @@ function isProtected(target){
 }
 function reResolveKill(){
   const rec=impKills[night]; if(!rec||rec.type!=="normal") return;
+  if(rec.deadTarget) return;                                           // ④ 空刀（目标本就已出局）：不随守护变化重算
   const t=rec.target, blocked=isProtected(t); if(blocked===rec.blocked) return;
   if(blocked){ if(rec.death>=0){ killSeat(rec.death,false); if(rec.death!==t) histSet(rec.death,'death',null); } rec.death=-1;
     histSet(rec.imp,'kill','击杀 '+nameAt(t)+'（被守护/免疫，未死）'); histSet(t,'death',null); histSet(t,'protected','被小恶魔选中但幸免（守护/免疫）'); }
@@ -2162,7 +2190,7 @@ function _spySeatSnap(){
     const m=meta[i]||blankMeta(); const role=m.role?RMAP[m.role]:null; const t=seatToken(i); const dead=isDeadSeat(i);
     const label = role ? (role.name+(m.isDrunk?'-酒鬼':'')) : (m.isDrunk?'酒鬼·未定':'');
     const col = role ? (m.isDrunk?TEAMC.out:TEAMC[role.team]) : (m.isDrunk?TEAMC.out:'');
-    const prot=!!isProtected(i);
+    const prot=!!shieldShown(i);
     const o={ i:i, name:(t&&t.name)?t.name:'', label:label, col:col,
       evil: role?isEvil(role.team):false, good: role?!isEvil(role.team):false, dead:dead,
       bPoison:!!m.poison, bDrunk:!!(m.drunk||m.isDrunk||m.role==='drunk'), bShield:!!(prot||m.mShield),   /* 酒鬼自带醉酒标识 */
@@ -2242,19 +2270,20 @@ function pingResult(roleId){
   const seat=meta.findIndex(m=>m&&m.role===roleId); if(seat<0) return null;
   const team=pingTeam(roleId), rec=pingPicks[roleId]||{}, sick=!healthy(seat);
   const mk=(text,truth)=>({text:text+' · '+(truth?'真':'假'),truth});
+  const pair=(x,y)=> rec.swap ? (nameAt(y)+'、'+nameAt(x)) : (nameAt(x)+'、'+nameAt(y));   // 展示顺序随机：真身不再永远排第一（rec.swap 在 pingSet 选人时掷一次，之后稳定）
   if(!sick){                                        // 健康：第一个是真身，系统用其身份（infoRole）；间谍/陌客可由 ST 指定"注册身份"真展示
     const _regC=_regCandFor(team);
     if(roleId==="librarian" && outsiderSeats().length===0 && !(rec.a!=null && _regC.indexOf(rec.a)>=0 && rec.regRole)) return mk('没有外来者',true);
     if(rec.a==null||rec.b==null||rec.b===rec.a) return null;
     if(_regC.indexOf(rec.a)>=0 && rec.regRole && RMAP[rec.regRole] && RMAP[rec.regRole].team===team)   // 按注册身份展示（合法真读数，标真）
-      return mk(nameAt(rec.a)+'、'+nameAt(rec.b)+' 中有一个是 '+RMAP[rec.regRole].name, true);
+      return mk(pair(rec.a,rec.b)+' 中有一个是 '+RMAP[rec.regRole].name, true);
     const ra=infoRole(rec.a); if(!ra||RMAP[ra].team!==team) return null;
-    return mk(nameAt(rec.a)+'、'+nameAt(rec.b)+' 中有一个是 '+RMAP[ra].name, true);
+    return mk(pair(rec.a,rec.b)+' 中有一个是 '+RMAP[ra].name, true);
   } else {                                          // 中毒/醉酒：手选，系统对照真伪（infoRole 让酒鬼真身对照正确）
     if(rec.role==="__none") return mk('没有外来者', outsiderSeats().length===0);
     if(rec.a==null||rec.b==null||!rec.role) return null;
     const real=(infoRole(rec.a)===rec.role)||(infoRole(rec.b)===rec.role);
-    return mk(nameAt(rec.a)+'、'+nameAt(rec.b)+' 中有一个是 '+RMAP[rec.role].name, real);
+    return mk(pair(rec.a,rec.b)+' 中有一个是 '+RMAP[rec.role].name, real);
   }
 }
 /* 洗衣妇/图书管理员/调查员：给玩家看的干净文本（去掉说书人端的「· 真/假」标注）；未选好则返回'' */
@@ -2264,6 +2293,7 @@ function pingPlayerText(roleId){ const r=pingResult(roleId); if(!r||!r.text) ret
   return '【'+label+'】你所知：'+core+'。'; }
 function pingSet(roleId,field,v){ if(!pingPicks[roleId]) pingPicks[roleId]={}; const rec=pingPicks[roleId];
   if(field==="role"||field==="regRole") rec[field] = v===""?null:v; else rec[field] = v===""?null:+v;   // role/regRole 是角色 id（字符串），别 +v
+  if(field==="a"||field==="b") rec.swap = Math.random()<0.5;   // 每次改选人重新掷一次展示顺序（存档持久化，渲染期间稳定）
   const seat=meta.findIndex(m=>m&&m.role===roleId); const r=pingResult(roleId); histSet(seat,'info', r?r.text:null); render(); }
 function pingUI(roleId){
   const seat=meta.findIndex(m=>m&&m.role===roleId); if(seat<0) return "";
@@ -2357,7 +2387,11 @@ function renderWin(){
   if(wi){ wi.style.display='none'; wi.dataset.w=''; }   // 魔典不再在座位中央显示结算图标（改为日志页顶部横幅）
 }
 /* ---------- 结算特效 ---------- */
-var RES={_seenTs:0, _dismissed:0};
+var RES={_seenTs:0, _dismissed:0, _wait:null, _waitRes:null};
+const RESULT_WAIT_MS=1000;   // ⑦ 胜负与处决事件是两条 firebase 路径，到达顺序不保证：胜利动画先压 1 秒，等处决视频先开播
+function _resCancelWait(){ if(RES._wait){ clearTimeout(RES._wait); RES._wait=null; } RES._waitRes=null; }
+window._resClaimWait=function(){ if(!RES._wait) return; clearTimeout(RES._wait); RES._wait=null;   // 处决/射杀视频开播 → 把等待中的胜利动画转成「视频结束后播」
+  const r=RES._waitRes; RES._waitRes=null; if(r) window.__pendingResult=r; };
 function showResult(w,reason){ const L=document.getElementById('resultLayer'); if(!L) return;
   L.className='THEME-'+w+' on';
   try{ if(window._bgDuck) _bgDuck(true); if(window._sfx) _sfx('win-'+w); }catch(e){}   // 结算音乐 + 压低背景音乐
@@ -2371,14 +2405,15 @@ function showResult(w,reason){ const L=document.getElementById('resultLayer'); i
       p.style.animationDuration=(4+Math.random()*5)+'s'; p.style.animationDelay=(Math.random()*5)+'s';
       parts.appendChild(p); } }
 }
-function hideResult(){ const L=document.getElementById('resultLayer'); if(L) L.className=''; RES._dismissed=RES._seenTs; try{ if(window._sfxStopWin) _sfxStopWin(); if(window._bgDuck) _bgDuck(false); }catch(e){} }
+function hideResult(){ const L=document.getElementById('resultLayer'); if(L) L.className=''; RES._dismissed=RES._seenTs; _resCancelWait(); window.__pendingResult=null; try{ if(window._sfxStopWin) _sfxStopWin(); if(window._bgDuck) _bgDuck(false); }catch(e){} }
 window.hideResult=hideResult; window.showResult=showResult;
 window.applyResult=function(res){
-  if(!res || !res.w){ const L=document.getElementById('resultLayer'); if(L) L.className=''; RES._seenTs=0; RES._dismissed=0; try{ if(window._sfxStopWin) _sfxStopWin(); if(!window.__execPlaying && window._bgDuck) _bgDuck(false); }catch(e){} return; }   // 处决视频播放中不要撤销压低（否则同一次 public 更新里刚 duck 又被这里立刻恢复）；视频结束由 _finalizeExec 负责恢复
+  if(!res || !res.w){ const L=document.getElementById('resultLayer'); if(L) L.className=''; RES._seenTs=0; RES._dismissed=0; _resCancelWait(); window.__pendingResult=null; try{ if(window._sfxStopWin) _sfxStopWin(); if(!window.__execPlaying && window._bgDuck) _bgDuck(false); }catch(e){} return; }   // 处决视频播放中不要撤销压低（否则同一次 public 更新里刚 duck 又被这里立刻恢复）；视频结束由 _finalizeExec 负责恢复
   if(res.ts===RES._dismissed) return;
   if(res.ts!==RES._seenTs){ RES._seenTs=res.ts;
-    if(window.__execPlaying){ window.__pendingResult={w:res.w, r:res.r}; return; }   // 处决视频播放中：等视频结束再放胜利动画
-    showResult(res.w, res.r);
+    if(window.__execPlaying){ _resCancelWait(); window.__pendingResult={w:res.w, r:res.r}; return; }   // 处决视频播放中：等视频结束再放胜利动画
+    _resCancelWait(); RES._waitRes={w:res.w, r:res.r};                                  // ⑦ 先等一小拍：若这拍内处决/射杀视频开播，_resClaimWait 会把它挪到视频之后
+    RES._wait=setTimeout(function(){ RES._wait=null; const r=RES._waitRes; RES._waitRes=null; if(r) showResult(r.w, r.r); }, RESULT_WAIT_MS);
   }
 };
 /* ---------- 处决动画（三选一随机；非恶魔只播前半段，恶魔播完整→随后胜利动画） ---------- */
@@ -2413,6 +2448,7 @@ function playExec(idx, full, srcOverride, cutOverride, cutMode){ const v=documen
   const cut = full ? Infinity : (cutOverride!=null ? cutOverride : (EXEC_CUT[idx]||7));   // cutOverride：猎人非终结击杀=3 秒
   const cmode = cutMode || 'dark';   // 截断后收尾：处决非恶魔=定格变黑；猎人非终结=淡出
   clearTimeout(v._hold); v._ending=false;
+  try{ if(window._resClaimWait) _resClaimWait(); }catch(e){}   // ⑦ 视频开播：把还在等待的胜利动画推迟到视频结束
   window.__execPlaying=true; try{ if(window._bgDuck) _bgDuck(true); }catch(e){}   // 处决期间压低背景音乐
   try{ if(window.updateNightBar) window.updateNightBar(); }catch(e){} try{ if(window.updateStSlayerBar) window.updateStSlayerBar(); }catch(e){} try{ if(window.updateStSwBar) window.updateStSwBar(); }catch(e){}   // 视频播放期间先收起底部通知弹窗，避免压在视频上（视频在最上层）
   v.style.filter=''; v.style.transition='';   // 清除上一次的“变黑”，恢复初始
@@ -2453,7 +2489,7 @@ window.toggleMute=function(){ window.__muted=!window.__muted;
 (function(){ try{ window.__muted = localStorage.getItem('botc_muted')==='1'; }catch(e){}
   const el=document.getElementById('muteBtn'); if(el) el.innerHTML=window.__muted?_MUTE_OFF:_MUTE_ON; })();
 /* ---------- 三档音量：音效 / 动画 / 背景音乐（0~100%，本地记住；左上角静音按钮临时静音全部） ---------- */
-window.__vol={sfx:1,anim:1,bgm:1};
+window.__vol={sfx:.25,anim:.25,bgm:.25};   // 默认 25%（用户调过后由 localStorage 覆盖）
 (function(){ try{ const s=JSON.parse(localStorage.getItem('botc_vol')||'{}'); if(s&&typeof s==='object'){ ['sfx','anim','bgm'].forEach(k=>{ if(typeof s[k]==='number') window.__vol[k]=Math.max(0,Math.min(1,s[k])); }); } }catch(e){} })();
 window.setVol=function(kind,val){ const f=Math.max(0,Math.min(1,(+val||0)/100));
   if(kind!=='sfx'&&kind!=='anim'&&kind!=='bgm') return; window.__vol[kind]=f;
@@ -2765,13 +2801,14 @@ function impKill(v){
       impKills[night]={type:"starpass",target:imp,newImp:sw,auto:true,newImpPrevRole:pr};
     } else impKills[night]={type:"starpass",target:imp,newImp:null,auto:false};
   } else {
-    const blocked=isProtected(target);
-    const isMayor = !!(meta[target] && meta[target].role==="mayor" && healthy(target));   // 镇长可弹刀
-    const death = blocked ? -1 : target;
+    const wasDead=isDeadSeat(target);                                   // ④ 目标已出局：空刀，不动其死亡记录/死因图标
+    const blocked=!wasDead && isProtected(target);
+    const isMayor = !wasDead && !!(meta[target] && meta[target].role==="mayor" && healthy(target));   // 镇长可弹刀
+    const death = (blocked||wasDead) ? -1 : target;
     if(death>=0){ killSeat(death,true); histSet(death,'death','被小恶魔击杀出局'); }
-    histSet(imp,'kill','击杀 '+nameAt(target)+(blocked?'（被守护/免疫，未死）':''));
+    histSet(imp,'kill','击杀 '+nameAt(target)+(wasDead?'（目标已出局，无人死亡）':(blocked?'（被守护/免疫，未死）':'')));
     if(blocked) histSet(target,'protected','被小恶魔选中但幸免（守护/免疫）');
-    impKills[night]={type:"normal",target:target,imp:imp,blocked:blocked,mayor:isMayor,death:death};
+    impKills[night]={type:"normal",target:target,imp:imp,blocked:blocked,mayor:isMayor,death:death,deadTarget:wasDead};
   }
   render();
 }
@@ -2985,18 +3022,23 @@ function renderGrim(){
         const team=m.role?RMAP[m.role].team:null;
         if(e.evil){ const k=order.findIndex(s=>s.id===(team==="dem"?"_demon":"_minion")); if(k>=0) return k; }
         return 500+i; };   /* 有夜间行动的角色按夜间顺序在前；夜杀出局等被动条目排其后（按座位号） */
-      const seatsN=[]; meta.forEach((m,i)=>{ if(!m.hist||!m.hist[n]) return; let e=m.hist[n]; if(typeof e==="string") e={info:e}; if(TAGO.some(t=>e[t])) seatsN.push({i,e}); });
+      const seatsN=[], seatsD=[];   // ⑭ 同一 night 键里，_d 标记过的条目属于「白天」，其余属于「夜晚」
+      meta.forEach((m,i)=>{ if(!m.hist||!m.hist[n]) return; let e=m.hist[n]; if(typeof e==="string") e={info:e};
+        const d=e._d||{}; const nT=TAGO.filter(t=>e[t]&&!d[t]), dT=TAGO.filter(t=>e[t]&&d[t]);
+        if(nT.length) seatsN.push({i,e,tags:nT}); if(dT.length) seatsD.push({i,e,tags:dT}); });
       seatsN.sort((A,B)=> (keyFor(A.i,A.e)-keyFor(B.i,B.e)) || (A.i-B.i));
-      seatsN.forEach(({i,e})=>{ const m=meta[i];
-        const parts=[]; TAGO.forEach(t=>{ if(e[t]) parts.push(e[t]); }); any=true;
+      seatsD.sort((A,B)=> A.i-B.i);
+      const rowFor=({i,tags})=>{ const m=meta[i];
+        const parts=tags.map(t=>{ let e2=m.hist[n]; if(typeof e2==="string") e2={info:e2}; return e2[t]; });
         const r=m.role?RMAP[m.role]:null;
         const roleHtml=r?' <b style="color:'+(m.isDrunk?TEAMC.out:TEAMC[r.team])+'">'+r.name+(m.isDrunk?'-酒鬼':'')+'</b>':'';
         const stArr=[]; if(isDeadSeat(i))stArr.push('出局'); if(m.poison)stArr.push('中毒'); if(m.drunk&&!m.isDrunk)stArr.push('醉酒');
         const stHtml=stArr.length?' <span style="color:#b0402e;font-size:.88em">['+stArr.join('/')+']</span>':'';
-        h+='<div class="rrow">'+(i+1)+' '+nameAt(i)+roleHtml+stHtml+'：'+parts.join('；')+'</div>'; });
+        return '<div class="rrow">'+(i+1)+' '+nameAt(i)+roleHtml+stHtml+'：'+parts.join('；')+'</div>'; };
+      seatsN.forEach(x=>{ any=true; h+=rowFor(x); });
       if(!any) h+='<div class="rrow" style="opacity:.45">（无记录）</div>';
       const noms=nominations[n], ex=executions[n], slDay=slayerShot&&slayerShot.day===n;
-      if((noms&&noms.length) || ex!==undefined || slDay){
+      if((noms&&noms.length) || ex!==undefined || slDay || seatsD.length){
         h+='<div class="gsec" style="color:#8a5f28">☀ 第 '+n+' 天</div>';
         if(noms) noms.forEach(nom=>{ const vs=(nom.voters||[]).slice().sort((a,b)=>a-b); const gv=nom.ghostVoters||[];
           const vlist=vs.map(s=>nameAt(s)+(gv.includes(s)?'（鬼票）':'')).join('、');
@@ -3005,6 +3047,7 @@ function renderGrim(){
             +'</div>'; });
         if(slDay){ const sl=meta.findIndex(m=>m&&m.role==="slayer"); h+='<div class="rrow">猎人 '+(sl>=0?nameAt(sl):'')+' 射向 '+nameAt(slayerShot.target)+' → '+(slayerShot.hit?'命中，恶魔死':'未命中')+'</div>'; }
         if(ex!==undefined) h+='<div class="rrow" style="color:#b0402e">'+(ex<0?'今日无人处决':'处决 '+nameAt(ex)+(meta[ex]&&meta[ex].role?'（'+RMAP[meta[ex].role].name+(meta[ex].isDrunk?'-酒鬼':'')+'）':''))+'</div>';
+        seatsD.forEach(x=>{ h+=rowFor(x); });   // ⑭ 白天产生的座位记录（处决出局/猎人射杀等）归入本日
       }
     }
     c.innerHTML=h; return;
@@ -3153,14 +3196,14 @@ function renderSeats(){
       if(dead){ s.classList.add("hascause"); const isClaw=deathCauseLabel(i)==='夜晚死亡';
         const pos=isClaw?'calc(50% + 6px) center':'center', sz=isClaw?'80%':'62%';
         s.style.background="url('"+deathCauseIcon(i)+"') "+pos+" / "+sz+" no-repeat, radial-gradient(circle at 50% 35%, rgba(48,34,58,.9), rgba(22,15,30,.95))"; }
-      else if(isProtected(i)){ const rk=impKills[night]; const hit = rk && rk.type==="normal" && rk.target===i && rk.blocked;
+      else if(shieldShown(i)){ const rk=impKills[night]; const hit = rk && rk.type==="normal" && rk.target===i && rk.blocked;
         s.style.background=(hit?"url('assets/kp-demonkill.png') calc(50% + 6px) center / 60% no-repeat, ":"")+"url('assets/bg-shield.png') calc(50% + 6px) center / 78% no-repeat, radial-gradient(circle at 50% 35%, rgba(90,60,110,.9), rgba(45,28,60,.95))"; }
       const r=seatD/2, bD=seatD*0.24*1.1, dist=r*1.3;   /* v2.42.5 去掉标记徽标下限，守护/红鲱鱼等标记纯按 seatD 等比缩放 */
       const badge=(deg,ic,t,scl,glow)=>{ const bd=bD*(scl||1); const a=deg*Math.PI/180, bx=r+dist*Math.sin(a), by=r-dist*Math.cos(a);
         const gf=glow?'filter:drop-shadow(0 0 2px '+glow+') drop-shadow(0 0 4px '+glow+');':'';
         return '<div class="shieldbadge" title="'+t+'" style="width:'+bd+'px;height:'+bd+'px;left:'+(bx-bd/2)+'px;top:'+(by-bd/2)+'px;'+gf+'"><img src="'+ic+'"></div>'; };
       const RA=[30,60,90,120,150];   // 右侧固定 5 等距槽位：骷髅/毒/酒/盾/弩
-      [[dead,'assets/mk-dead.png','出局',1,'#000'],[m.poison,'assets/mk-poison.png','中毒',1,'#3fd44f'],[(m.drunk||m.isDrunk||m.role==='drunk'),'assets/s-drunk.png','醉酒',1,'#ffe14d'],[isProtected(i)||m.mShield,'assets/mk-shield.png','守护/免疫',1,'#d8dae2'],[(m.role==="slayer"&&slayerShot)||m.mShot,'assets/mk-crossbow.png','猎人已开枪',1.2,'#4aa8ff']]   /* 酒鬼(isDrunk 或原始 drunk 牌)自带醉酒标识 */
+      [[dead,'assets/mk-dead.png','出局',1,'#000'],[m.poison,'assets/mk-poison.png','中毒',1,'#3fd44f'],[(m.drunk||m.isDrunk||m.role==='drunk'),'assets/s-drunk.png','醉酒',1,'#ffe14d'],[shieldShown(i)||m.mShield,'assets/mk-shield.png','守护/免疫',1,'#d8dae2'],[(m.role==="slayer"&&slayerShot)||m.mShot,'assets/mk-crossbow.png','猎人已开枪',1.2,'#4aa8ff']]   /* 酒鬼(isDrunk 或原始 drunk 牌)自带醉酒标识 */
         .forEach((b,k)=>{ if(b[0]) html+=badge(RA[k],b[1],b[2],b[3],b[4]); });
       if(butlerPicks[night]===i) html+=badge(0,'assets/mk-master.png','管家的主人',1.1,'#f5c542');     // 正上方：王冠·金
       if(redHerring===i) html+=badge(180,'assets/mk-herring.png','红鲱鱼',1.2,'#ff4a3a');             // 正下方：红鲱鱼·红
@@ -3186,9 +3229,10 @@ function showHover(i){
   html+='<div class="hb-ab"><span style="color:'+TEAMC[r.team]+'">【'+TEAMLABEL[r.team]+'】</span> '+r.ab+'</div>';
   const hist=m.hist||{}; const ns=Object.keys(hist).map(Number).sort((a,b)=>a-b);
   const TAGO=['evil','info','poison','poisoned','kill','protected','death','role']; const lines=[];
-  ns.forEach(n=>{ let e=hist[n]; if(typeof e==="string") e={info:e};
-    const parts=[]; TAGO.forEach(t=>{ if(e[t]) parts.push(e[t]); });
-    if(parts.length) lines.push('<div class="hb-line"><span class="hb-n">第'+n+'夜</span>'+parts.join('；')+'</div>'); });
+  ns.forEach(n=>{ let e=hist[n]; if(typeof e==="string") e={info:e}; const d=e._d||{};
+    const pN=[], pD=[]; TAGO.forEach(t=>{ if(!e[t]) return; (d[t]?pD:pN).push(e[t]); });   // ⑭ 夜里/白天分行
+    if(pN.length) lines.push('<div class="hb-line"><span class="hb-n">第'+n+'夜</span>'+pN.join('；')+'</div>');
+    if(pD.length) lines.push('<div class="hb-line"><span class="hb-n">第'+n+'天</span>'+pD.join('；')+'</div>'); });
   if(lines.length) html+='<div class="hb-sep"></div>'+lines.join('');
   box.innerHTML=html;
   const c=tableCenter||{x:p.x,y:p.y};
@@ -3356,9 +3400,9 @@ load(); render();
   </div>
   <div class="set-hint">选择你的设备类型。目前两者显示一致，后续会根据移动端表现单独优化部分画面。</div>
   <div class="set-sec">音量</div>
-  <div class="vol-row"><label>音效</label><input type="range" id="volSfx" min="0" max="100" step="1" oninput="setVol('sfx',this.value)"><span class="vol-n" id="volSfxN">100%</span></div>
-  <div class="vol-row"><label>动画</label><input type="range" id="volAnim" min="0" max="100" step="1" oninput="setVol('anim',this.value)"><span class="vol-n" id="volAnimN">100%</span></div>
-  <div class="vol-row"><label>背景音乐</label><input type="range" id="volBgm" min="0" max="100" step="1" oninput="setVol('bgm',this.value)"><span class="vol-n" id="volBgmN">100%</span></div>
+  <div class="vol-row"><label>音效</label><input type="range" id="volSfx" min="0" max="100" step="1" oninput="setVol('sfx',this.value)"><span class="vol-n" id="volSfxN">25%</span></div>
+  <div class="vol-row"><label>动画</label><input type="range" id="volAnim" min="0" max="100" step="1" oninput="setVol('anim',this.value)"><span class="vol-n" id="volAnimN">25%</span></div>
+  <div class="vol-row"><label>背景音乐</label><input type="range" id="volBgm" min="0" max="100" step="1" oninput="setVol('bgm',this.value)"><span class="vol-n" id="volBgmN">25%</span></div>
   <div class="set-hint">分别控制事件音效、处决/射杀等动画视频、背景音乐的音量。左上角静音按钮会临时静音全部声音。</div>
   <div class="set-sec">账号</div>
   <button class="rp-open" onclick="_openResetPw()">重置我的密码</button>
@@ -4076,11 +4120,13 @@ load(); render();
   db.ref('.info/serverTimeOffset').on('value', s=>{ if(window.CLK) window.CLK.offset=s.val()||0; });
   function bindPub(){ _lastResultSig=null; if(pubBound){pubBound.off();pubBound=null;} if(!curGid){ pub=null;
       window.__pubHasGame=false; window.__pubCount=0; if(window.clockApplyState) window.clockApplyState(null);
+      try{ document.body.classList.remove('ph-night'); }catch(e){}   // ⑨ 无对局：恢复亮背景
       if(window.applyResult) window.applyResult(null);
       if(mode!=='st') renderView(); return; }
     pubBound=db.ref('games/'+curGid+'/public'); pubBound.on('value',s=>{ pub=s.val(); ensureS();
       window.__nomStarted=!!(pub&&pub.nomStarted);   // 提名阶段是否已开启（说书人点了「解散私聊」按钮）：天亮=false 锁提名/私聊开放；解散后=true 开提名/私聊冻结
       window.__pubHasGame=!!(pub&&pub.count); window.__pubCount=(pub&&pub.count)||0;
+      try{ document.body.classList.toggle('ph-night', !!(pub&&pub.count) && !(pub&&pub.phase==='day')); }catch(e){}   // ⑨ 昼夜背景：开局后按 phase 切换玩家端酒馆背景
       if(pub&&pub.count&&window._prefetchExec) window._prefetchExec();   // 开局后预取处决/射杀视频，避免首次卡顿
       if(window.clockApplyState) window.clockApplyState(pub&&pub.clock);
       if(window._clockVoteState) window._clockVoteState(pub&&pub.vote);
