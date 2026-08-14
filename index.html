@@ -1314,6 +1314,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.50.22', d:'2026-08-13', items:['猎手非终结击杀（打死陌客/红唇接任等）的动画截断时长调整为 3.5 秒。']},
   {v:'v2.50.21', d:'2026-08-13', items:['猎手非终结击杀（打死陌客/红唇接任等）的动画截断时长延长到 4 秒。']},
   {v:'v2.50.20', d:'2026-08-13', items:['猎手非终结击杀（打死陌客/红唇接任等）的动画截断时长从 3 秒延长到 3.5 秒。']},
   {v:'v2.50.19', d:'2026-08-13', items:['猎手射杀动画按是否终结游戏区分：只有当这一枪杀死场上唯一的恶魔、且没有新恶魔产生（好人因此获胜）时，才播放完整的射杀→变身动画并接胜利；如果这一枪不会结束游戏（例如打死的是被注册成恶魔的陌客、或恶魔死后红唇女郎接任），则只播放到第 3 秒再淡出。']},
@@ -2382,8 +2383,8 @@ window.applyResult=function(res){
 };
 /* ---------- 处决动画（三选一随机；非恶魔只播前半段，恶魔播完整→随后胜利动画） ---------- */
 const EXEC_VIDEOS=['assets/exec1.mp4','assets/exec2.mp4','assets/exec3.mp4'];
-const SLAYER_VIDEO='assets/slayer.mp4';   // 猎人命中时播放：终结游戏(唯一恶魔死、无新恶魔)=完整播放→淡出→接胜利；不终结(打死陌客/红唇接任等)=只放到第4秒再淡出
-const SLAYER_CUT=4;   // 猎人非终结击杀的截断秒数
+const SLAYER_VIDEO='assets/slayer.mp4';   // 猎人命中时播放：终结游戏(唯一恶魔死、无新恶魔)=完整播放→淡出→接胜利；不终结(打死陌客/红唇接任等)=只放到第3.5秒再淡出
+const SLAYER_CUT=3.5;   // 猎人非终结击杀的截断秒数
 /* 举手图标：金色圆底 + 手掌，铺满座位背景 */
 /* 各视频「变身（变成恶魔）」开始的秒数：非恶魔被处决时播到此处即停。三个视频可不同，按需修改。 */
 const EXEC_CUT=[6.2, 5.5, 7];
@@ -2435,7 +2436,7 @@ window.playExec=playExec;
 window._applyExec=function(e){ if(!e||!e.ts) return; if(e.ts===EXEC._seenTs) return; EXEC._seenTs=e.ts;
   const now=Date.now()+((window.CLK&&CLK.offset)||0);
   if(now - e.ts > 15000) return;   // 陈旧事件（刷新/重连）不重播
-  if(e.kind==='slayer') playExec(0, !!e.full, SLAYER_VIDEO, SLAYER_CUT, 'fade');   // 猎人射杀：终结游戏(full)才完整播放→淡出→接胜利；否则(陌客/红唇接任)只放到第4秒再淡出
+  if(e.kind==='slayer') playExec(0, !!e.full, SLAYER_VIDEO, SLAYER_CUT, 'fade');   // 猎人射杀：终结游戏(full)才完整播放→淡出→接胜利；否则(陌客/红唇接任)只放到第3.5秒再淡出
   else playExec(e.idx||0, !!e.full);
 };
 /* ---------- 全局静音（按钮在左上角设置右侧，金色图标与其它按钮一致） ---------- */
