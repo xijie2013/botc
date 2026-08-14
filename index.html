@@ -638,8 +638,51 @@
   #seatViewFab:active, #stLogFab:active{ transform:scale(.9); }
   #seatViewFab.sv-raw svg{filter:drop-shadow(0 0 5px rgba(74,194,180,.9)) drop-shadow(0 2px 4px rgba(0,0,0,.75));}
   /* ⑧ 玩家端查看说书人分享的日志：body 级模态，原生尺寸不随舞台缩放 */
+  /* ⑪ 胜负裁决：说书人提示条（系统→说书人，沿用蓝底蓝边） */
+  #stWinBar{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); transform-origin:center bottom; z-index:122; display:none;
+    width:350px; box-sizing:border-box; text-align:center; color:#cfe6ff; animation:vbIn .35s ease both;
+    background:linear-gradient(180deg,rgba(30,44,72,.98),rgba(16,26,46,.98)); border:1.5px solid rgba(74,168,255,.7);
+    border-radius:16px; padding:14px 18px; box-shadow:0 10px 30px rgba(0,0,0,.55), 0 0 16px rgba(74,168,255,.4);}
+  #stWinBar.on{display:block;}
+  #stWinBar .wj-t{font-size:14.5px; font-weight:800; color:#ffe9b8; line-height:1.45; margin-bottom:4px;}
+  #stWinBar .wj-s{font-size:13px; color:#cfe6ff; line-height:1.45; margin-bottom:10px; opacity:.92;}
+  #stWinBar .wj-b{display:flex; gap:10px; justify-content:center;}
+  #stWinBar button{min-width:120px; padding:10px 20px; border-radius:14px; font-size:14.5px; font-weight:800; cursor:pointer;
+    border:1.5px solid rgba(74,168,255,.85); background:linear-gradient(180deg,rgba(34,74,124,.98),rgba(20,42,74,.98)); color:#9cccff; box-shadow:0 6px 20px rgba(0,0,0,.5);}
+  #stWinBar button.wj-later{opacity:.72; min-width:88px;}
+  /* ⑪ 胜负条件追踪面板（body 级模态，原生尺寸） */
+  #winJudgeFab{position:fixed; left:368px; bottom:16px; z-index:124; width:66px; height:66px;
+    display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent;}
+  #winJudgeFab svg{width:100%; height:100%; display:block; filter:drop-shadow(0 2px 4px rgba(0,0,0,.75));}
+  #winJudgeFab{transition:transform .14s cubic-bezier(.34,1.56,.64,1), filter .16s ease;}
+  #winJudgeFab:hover{transform:scale(1.14); filter:brightness(1.15);} #winJudgeFab:active{transform:scale(.9);}
+  #winJudgeFab.wj-alert svg{filter:drop-shadow(0 0 6px rgba(255,214,110,1)) drop-shadow(0 0 14px rgba(233,196,106,.8)) drop-shadow(0 2px 4px rgba(0,0,0,.75)); animation:wjPulse 1.3s ease-in-out infinite;}
+  @keyframes wjPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.09);}}
+  #winJudgeMask{position:fixed; inset:0; z-index:332; background:rgba(8,5,14,.62); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:16px;}
+  #winJudgeMask .wjm-box{width:min(520px,94vw); max-height:88dvh; display:flex; flex-direction:column; overflow:hidden;
+    background:linear-gradient(180deg,#f6ecd4,#efe0c0); border:2px solid #7a5320; border-radius:14px; box-shadow:0 18px 60px rgba(0,0,0,.6); color:#3a2a12;}
+  #winJudgeMask .wjm-hd{flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 14px;
+    background:linear-gradient(180deg,rgba(122,83,32,.22),rgba(122,83,32,.08)); border-bottom:1px solid rgba(122,83,32,.35); font-weight:800; font-size:16px; color:#43286b;}
+  #winJudgeMask .wjm-x{cursor:pointer; font-size:18px; line-height:1; color:#7a5320; padding:2px 6px; border-radius:6px;}
+  #winJudgeMask .wjm-x:hover{background:rgba(122,83,32,.18);}
+  #winJudgeMask .wjm-bd{flex:1 1 auto; min-height:0; overflow:auto; padding:10px 16px 16px; font-size:13.5px; line-height:1.5;}
+  #winJudgeMask .wjc{display:flex; gap:9px; align-items:flex-start; padding:8px 2px; border-bottom:1px solid rgba(122,83,32,.16);}
+  #winJudgeMask .wjc .ic{flex:0 0 auto; width:20px; text-align:center; font-weight:800;}
+  #winJudgeMask .wjc.met .ic{color:#2e7d43;} #winJudgeMask .wjc.no .ic{color:#b0402e; opacity:.55;}
+  #winJudgeMask .wjc b{display:block;} #winJudgeMask .wjc .dt{opacity:.75; font-size:12.5px; margin-top:2px;}
+  #winJudgeMask .wjm-act{margin-top:12px; padding-top:10px; border-top:1px solid rgba(122,83,32,.3);}
+  #winJudgeMask .wjm-btn{display:inline-block; margin:6px 8px 0 0; padding:10px 18px; border-radius:10px; font-weight:800; cursor:pointer; font-size:14px;
+    background:linear-gradient(180deg,#5b3f8f,#43286b); color:#f3e6c4; border:1.5px solid #7a5320;}
+  #winJudgeMask .wjm-btn.warn{background:linear-gradient(180deg,#8f2f22,#6b1f16);}
+  #winJudgeMask .wjm-note{margin-top:8px; padding:8px 10px; border-radius:8px; background:rgba(176,64,46,.12); border:1px solid rgba(176,64,46,.4); color:#8f2f22; font-weight:700;}
+  /* ⑬ 门控：只读遮罩 + 顶部锁条 */
+  .gatelock{pointer-events:none; opacity:.42; filter:grayscale(.55);}
+  .gatebar{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin:2px 0 8px; padding:7px 10px; border-radius:8px;
+    background:rgba(176,64,46,.13); border:1px solid rgba(176,64,46,.45); color:#8f2f22; font-weight:700; line-height:1.4; font-size:calc(.94 * var(--sw) / 100);}
+  .gatebar.unlocked{background:rgba(46,125,67,.14); border-color:rgba(46,125,67,.5); color:#256b3c;}
+  .gatebar .regbtn{flex:0 0 auto;}
   /* ⑫ 底部弹窗堆栈：由 _barStack() 统一分配 bottom，位移加过渡让上层平滑下移 */
-  #voteBar, #nightBar, #stSlayerBar, #stSwBar, #slayerResult, #chatDisbandPop, #chatStack{ transition:bottom .18s ease; }
+  #voteBar, #nightBar, #stSlayerBar, #stSwBar, #stWinBar, #slayerResult, #chatDisbandPop, #chatStack{ transition:bottom .18s ease; }
   #stLogMask{position:fixed; inset:0; z-index:330; background:rgba(8,5,14,.62); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:16px;}
   #stLogMask .slv-box{width:min(560px,94vw); max-height:88dvh; display:flex; flex-direction:column; overflow:hidden;
     background:linear-gradient(180deg,#f6ecd4,#efe0c0); border:2px solid #7a5320; border-radius:14px; box-shadow:0 18px 60px rgba(0,0,0,.6); color:#3a2a12;}
@@ -1053,9 +1096,9 @@
       <div class="gcontent" id="gcontent"></div>
       <div class="box bottom-bar">
         <div class="night-ctl">
-          <button onclick="stepNight(-1)" title="上一夜">◀</button>
+          <button onclick="stepNightManual(-1)" title="上一夜">◀</button>
           <span>第 <b id="nightVal">1</b> 夜</span>
-          <button onclick="stepNight(1)" title="下一夜">▶</button>
+          <button onclick="stepNightManual(1)" title="下一夜">▶</button>
         </div>
         <button class="btn purple" onclick="dealRoles()">随机发牌</button>
         <button class="btn lpurple" onclick="resetRoles()">重置角色</button>
@@ -1106,6 +1149,7 @@
       <img src="assets/ic-chat.png" alt="" draggable="false"><span class="cr-badge"></span></div>
     <div id="seatViewFab" onclick="_seatViewTap()" title="切换座位显示：私聊排列 ↔ 原始座次" style="display:none"></div>
     <div id="stLogFab" onclick="_openStLog()" title="说书人日志" style="display:none"></div>
+    <div id="winJudgeFab" onclick="_openWinJudge()" title="胜负条件追踪 / 裁决" style="display:none"></div>
     <div id="winIcon"></div>
     <video id="execVideo" playsinline preload="auto"></video>
   </div>
@@ -1284,7 +1328,7 @@ function blankMeta(){return {role:null,poison:false,drunk:false,dead:false,note:
 function ensureMeta(){ while(meta.length<N) meta.push(blankMeta()); meta.length=N; }
 
 function save(){ if(window.__stApplyingRemote) return;   // 正在应用远端同步时不重复写/上传，避免回声循环
-  try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,nightFlow,dayFlow,spySent,impKills,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,sickAns,redHerring,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist,ts:Date.now()})); }catch(e){}
+  try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,nightFlow,dayFlow,spySent,impKills,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,sickAns,redHerring,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist,gameOn:!!window.__gameOn,winApproved:(window.__winApproved||''),ts:Date.now()})); }catch(e){}
   try{ if(window._stCloudPush) window._stCloudPush(); }catch(e){} }   // 说书人存档实时云同步（防抖上传）
 function load(){
   try{ const d=JSON.parse(localStorage.getItem(KEY)||"{}");
@@ -1303,6 +1347,8 @@ function load(){
     Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); if(d.nightFlow&&typeof d.nightFlow==="object") Object.assign(nightFlow,d.nightFlow);
     Object.keys(dayFlow).forEach(k=>delete dayFlow[k]); if(d.dayFlow&&typeof d.dayFlow==="object") Object.assign(dayFlow,d.dayFlow);
     Object.keys(spySent).forEach(k=>delete spySent[k]); if(d.spySent&&typeof d.spySent==="object") Object.assign(spySent,d.spySent);
+    window.__gameOn = (typeof d.gameOn==='boolean') ? d.gameOn : !!(Array.isArray(d.meta)&&d.meta.some(m=>m&&m.role));   // ⑬ 老存档没有 gameOn：已发牌即视为游戏期，避免升级后夜/昼页突然清空
+    window.__winApproved = (typeof d.winApproved==='string') ? d.winApproved : '';
     if(d.impKills&&typeof d.impKills==="object") impKills=d.impKills;
     if(d.poisonPicks&&typeof d.poisonPicks==="object") poisonPicks=d.poisonPicks;
     if(d.monkPicks&&typeof d.monkPicks==="object") monkPicks=d.monkPicks;
@@ -1323,7 +1369,7 @@ function load(){
   }catch(e){}
   ensureMeta();
 }
-function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function esc(s){return String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 function seatToken(i){ return tokens.find(t=>t.seat===i); }
 
 function toggleFull(){
@@ -1350,6 +1396,12 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.53.0', d:'2026-08-14', items:[
+    '胜负改为说书人最终裁决：系统检测到胜利条件满足时，不再直接向全场公布，而是先给说书人弹一条提示。说书人可点左下角新增的第五个「裁决」图标，查看每条胜负条件当前是否满足（圣徒被处决 / 恶魔全灭 / 存活≤2 / 镇长三人无处决），核对后手动点「确认并向全场宣告」，这时才广播结果并播放一次胜利动画。宣告后可随时撤回；若局势变化（改判、复活）使条件不再成立，系统会自动撤回已宣告的结果。夜里裁决会额外提醒「现在宣告会提前暴露夜间死亡」。',
+    '明确区分配置期与游戏期：点「新的一局」后进入游戏期，座位数量、玩家位置、角色分配全部锁定（拖拽改角色、随机排座、清空座位、重新发牌、阵营数量、锁定角色、座位编辑器里的名字与角色都会被拦下）。该按钮同时变成「结束本局」，二次确认后回到配置期重新调整。',
+    '流程顺序门控：未开局时「夜晚」「白天」两页留空；本夜没点「结束本夜」之前白天页只读；点了「结束本夜」之后夜晚页转为只读；「结束本日」后当天不能再改票数；单次投票点「停止计票」后也不能再改票，要改需先「重新计票」；白天没开始或本日已结束时猎人不能开枪；游戏期内夜数只能由「结束本夜 / 结束本日」推进，◀▶ 不能手动跳夜。',
+    '所有只读锁定都带一个「临时解锁」按钮，说书人遇到需要补救的情况可以临时强行修改，刷新后自动恢复锁定。',
+  ]},
   {v:'v2.52.0', d:'2026-08-14', items:[
     '左下角新增「私聊 / 座次」切换图标：私聊排列会把同组玩家拉到一起，点一下即可切回原始座次（按座号顺序），方便分析共情者、厨师这类看邻座的信息。原始座次下私聊分组改用青色圈标出成员并标注组号，加入/退出按钮同样可用；该设置只影响你自己的画面。',
     '座位上的骷髅头图标改作「已使用鬼票」标识：出局玩家默认不再显示骷髅（死因已由座位底图体现），投过鬼票后才亮起。',
@@ -1585,19 +1637,21 @@ function addGuest(){
   inp.value=""; inp.focus(); render();
 }
 function reAdd(name){ if(tokens.some(t=>t.name===name)) return; tokens.push({id:++uid,name,seat:null,dead:false}); render(); }
-function removeToken(id){ tokens=tokens.filter(t=>t.id!==id); if(selected===id) selected=null; render(); }
+function removeToken(id){ const _t=tokens.find(t=>t.id===id); if(_t&&_t.seat!==null&&gateCfg()) return;
+  tokens=tokens.filter(t=>t.id!==id); if(selected===id) selected=null; render(); }
 function forgetGuest(name){ guests=guests.filter(g=>g!==name); tokens=tokens.filter(t=>t.name!==name); try{ if(window._stDelAccount) window._stDelAccount(name); }catch(e){} render(); }
-function setCount(d){ N=Math.max(5,Math.min(15,N+d)); customDist=null; tokens.forEach(t=>{if(t.seat!==null&&t.seat>=N)t.seat=null;}); ensureMeta(); render(); }
-async function shuffle(){ if(!await uiConfirm("确定随机排座？将打乱当前所有座位安排。")) return; const order=tokens.slice();
+function setCount(d){ if(gateCfg()) return; N=Math.max(5,Math.min(15,N+d)); customDist=null; tokens.forEach(t=>{if(t.seat!==null&&t.seat>=N)t.seat=null;}); ensureMeta(); render(); }
+async function shuffle(){ if(gateCfg()) return; if(!await uiConfirm("确定随机排座？将打乱当前所有座位安排。")) return; const order=tokens.slice();
   for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
   tokens.forEach(t=>t.seat=null); order.forEach((t,i)=>{if(i<N)t.seat=i;}); render(); }
-async function clearSeats(){ if(!await uiConfirm("确定清空所有座位？")) return; tokens.forEach(t=>t.seat=null); render(); }
-function moveToken(id,seat){ const tok=tokens.find(t=>t.id===id); if(!tok)return;
+async function clearSeats(){ if(gateCfg()) return; if(!await uiConfirm("确定清空所有座位？")) return; tokens.forEach(t=>t.seat=null); render(); }
+function moveToken(id,seat){ if(gateCfg()) return; const tok=tokens.find(t=>t.id===id); if(!tok)return;
   if(seat!==null){ const occ=tokens.find(t=>t.seat===seat); if(occ&&occ.id!==id) occ.seat=tok.seat; } tok.seat=seat; }
 function seatClick(i){ if(selected!==null){ moveToken(selected,i); selected=null; render(); return; } const t=seatToken(i); if(t){ selected=t.id; render(); } }
 
 /* ---------- grimoire ops ---------- */
 async function dealRoles(){
+  if(gateCfg()) return;
   const base=customDist||DIST[N]; if(!base) return;
   if(base.reduce((a,b)=>a+b,0)!==N){ await uiAlert('各阵营数量合计与人数（'+N+'）不符，请调整后再发牌。'); return; }
   if(!await uiConfirm("确定随机发牌？将重新分配所有身份。")) return;
@@ -1635,12 +1689,14 @@ async function dealRoles(){
     const goodSeats=[]; meta.forEach((m,i)=>{ if(m.role && !isEvil(RMAP[m.role].team) && m.role!=="fortuneteller") goodSeats.push(i); });
     if(goodSeats.length) redHerring=goodSeats[Math.floor(Math.random()*goodSeats.length)];
   }
+  window.__gameOn=false; window.__winApproved=''; window.__winPending=null; window.__winDismissed='';   // ⑬ 随机发牌属于配置期动作
   try{ if(window._stClearPlayerNotes) _stClearPlayerNotes(); }catch(e){}   // 随机发牌：清空玩家局内信息/座位备注/标记（说书人日志已随 m.hist={} 清空）
   render();
 }
-async function resetRoles(){ if(!await uiConfirm("重置所有身份、状态、备注、伪装？（保留名字与座位）")) return;
+async function resetRoles(){ if(gateCfg()) return; if(!await uiConfirm("重置所有身份、状态、备注、伪装？（保留名字与座位）")) return;
   meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
-  Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); Object.keys(dayFlow).forEach(k=>delete dayFlow[k]); Object.keys(spySent).forEach(k=>delete spySent[k]); overviewDecoys=[]; tokens.forEach(t=>t.dead=false); render();
+  Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); Object.keys(dayFlow).forEach(k=>delete dayFlow[k]); Object.keys(spySent).forEach(k=>delete spySent[k]); overviewDecoys=[]; tokens.forEach(t=>t.dead=false);
+  window.__gameOn=false; window.__winApproved=''; window.__winPending=null; window.__winDismissed=''; render();
   try{ if(window._stClearPlayerRoles) _stClearPlayerRoles(); }catch(e){} try{ if(window._stClearPlayerNotes) _stClearPlayerNotes(); }catch(e){} try{ if(window._stResetPublic) _stResetPublic(); }catch(e){} try{ if(window._histNewRound) _histNewRound(); }catch(e){} }   // 重置角色：清空玩家角色卡 + 局内信息/座位备注/标记 + 公开状态（大厅/笔记的死亡/处决/胜负等一并清零）；胜负另记一条
 function setBluff(k,v){ bluffs[k]=v; refreshOverviewDecoys(); render(); }
 
@@ -1657,7 +1713,7 @@ function setReg(i,v){ ensureMeta(); meta[i].reg=v; render(); }
 function setRedHerring(v){ redHerring = v===""? -1 : +v; render(); }
 /* 把角色分配到座位：唯一角色——同一角色只能在场一个，重复分配会清空前一个座位（酒鬼保留身份标记、仅清自以为的镇民）。酒鬼特殊：先成为「未定身份的酒鬼」，再用下拉设自以为的镇民。 */
 function _clearBluff(rid){ for(let j=0;j<bluffs.length;j++){ if(bluffs[j]===rid){ bluffs[j]=""; } } }   // 该身份若是恶魔伪装 → 撤销该伪装（被分配到场上后不能再作伪装）
-function assignRoleToSeat(i, rid){ ensureMeta();
+function assignRoleToSeat(i, rid){ if(gateCfg()) return; ensureMeta();
   if(rid==="drunk"){
     for(let k=0;k<N;k++){ if(k!==i && meta[k] && meta[k].isDrunk){ meta[k].isDrunk=false; meta[k].drunk=false; meta[k].role=null; } }   // 场上仅一个酒鬼
     meta[i].isDrunk=true; meta[i].drunk=true; meta[i].role=null; _clearBluff('drunk'); try{refreshOverviewDecoys();}catch(e){} return;
@@ -2048,6 +2104,9 @@ function syncPoisonToNight(){   // 投毒者的毒只在施放的那一夜(含�
   const cur=poisonPicks[night]; if(cur!=null && meta[cur]) meta[cur].poison=true;   // 只点亮当前夜的中毒目标
 }
 function stepNight(d){ night=Math.max(1,night+d); syncPoisonToNight(); render(); }
+window.stepNightManual=function(d){   // ⑬ 游戏期：夜数只能靠「结束本夜 / 结束本日」推进，不许手动跳
+  if(isGameOn() && !window.__gateOverride){ _gt('游戏进行中：夜数由「结束本夜 / 结束本日」推进，不能手动跳夜（需要时可在魔典页「临时解锁」）'); return; }
+  stepNight(d); };
 function stEndNight(){ const d=night; if(dayFlow[d]&&dayFlow[d].dawn) return; (dayFlow[d]||(dayFlow[d]={})).dawn=true; try{ if(window.stDawn) window.stDawn(); }catch(e){} gtab='day'; save(); render(); }   // 结束本夜：只可点一次 → 天亮 + 跳白天tab
 function stEndDay(){ const d=night; if(dayFlow[d]&&dayFlow[d].dusk) return; (dayFlow[d]||(dayFlow[d]={})).dusk=true; gtab='night'; stepNight(1); save(); try{ if(window.stDusk) window.stDusk(); }catch(e){} }   // 结束本日：只可点一次 → 推进到下一夜(顺带清投毒者中毒) + 跳夜晚tab + 入夜冻结私聊
 
@@ -2415,12 +2474,94 @@ function checkWin(){
     return {w:'good', r:'镇长：仅剩 3 人且今日无处决 → 好人胜利'};
   return null;
 }
+/* ⑪ 胜负改为「系统检测 → 提示说书人 → 说书人手动裁决 → 才广播 + 播动画」 */
+function winSig(w){ return w ? (w.w+'|'+w.r) : ''; }
+const _WJ_ICON='<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#e9c46a" stroke-width="2.2" stroke-linecap="round"><path d="M13 16 H51"/><path d="M32 16 V40"/><path d="M22 40 H42"/><path d="M13 16 V23"/><path d="M51 16 V23"/><path d="M7 25 A 6 6 0 0 0 19 25" fill="rgba(233,196,106,.16)"/><path d="M45 25 A 6 6 0 0 0 57 25" fill="rgba(233,196,106,.16)"/></g><circle cx="32" cy="13" r="2.8" fill="#e9c46a"/><text x="32" y="58" text-anchor="middle" font-family="system-ui,sans-serif" font-size="15" font-weight="700" fill="#e9c46a">裁决</text></svg>';
 function renderWin(){
-  const wi=document.getElementById("winIcon"); const win=checkWin();
-  const _df=dayFlow[night]; const _isDay=!!(_df&&_df.dawn&&!_df.dusk);   // #1 夜晚(未天亮)先不公布：夜杀死亡保密到天亮；天亮(stEndNight 置 dawn 后 render)本函数重跑再广播
-  if(window._autoResult) window._autoResult((win&&!_isDay)?null:win);   // 满足胜负自动公布（夜里的胜负攒到天亮和死亡一起公布）
+  const wi=document.getElementById("winIcon"); const win=checkWin(); const sig=winSig(win);
+  if(!win){                                    // 条件不再满足（改判/复活）→ 撤回已宣告的结果
+    window.__winPending=null;
+    if(window.__winApproved){ window.__winApproved=''; try{ save(); }catch(e){} }
+    if(window._autoResult) window._autoResult(null);
+  } else if(window.__winApproved===sig){        // 说书人已裁决过这一条 → 正常广播（去重由 _autoResult 负责）
+    window.__winPending=null;
+    if(window._autoResult) window._autoResult(win);
+  } else {                                      // 检测到新的胜负条件：先不广播，只提示说书人
+    if(window.__winApproved){ window.__winApproved=''; try{ save(); }catch(e){} if(window._autoResult) window._autoResult(null); }
+    window.__winPending=win;
+    if(window._autoResult) window._autoResult(null);
+  }
+  try{ updateStWinBar(); }catch(e){} try{ _updateWinFab(); }catch(e){}
+  try{ if(window.__wjOpen) _renderWinJudgeBody(); }catch(e){}
   if(wi){ wi.style.display='none'; wi.dataset.w=''; }   // 魔典不再在座位中央显示结算图标（改为日志页顶部横幅）
 }
+function _updateWinFab(){ const el=document.getElementById('winJudgeFab'); if(!el) return;
+  if(window.__botcRole!=='st' || !isGameOn()){ el.style.display='none'; return; }
+  el.style.display='flex'; if(!el.firstChild) el.innerHTML=_WJ_ICON;
+  el.classList.toggle('wj-alert', !!window.__winPending); }
+window._updateWinFab=_updateWinFab;
+function updateStWinBar(){ const bar=document.getElementById('stWinBar'); if(!bar) return;
+  const win=window.__winPending;
+  if(window.__botcRole!=='st' || !win || window.__execPlaying || window.__winDismissed===winSig(win)){ bar.classList.remove('on'); return; }
+  bar.innerHTML='<div class="wj-t">⚖ 检测到胜负条件已满足</div>'
+    +'<div class="wj-s">'+(win.w==='good'?'好人胜利':'邪恶胜利')+' · '+esc(win.r||'')+'<br><span style="opacity:.8">尚未公布，请核对后手动裁决</span></div>'
+    +'<div class="wj-b"><button onclick="_openWinJudge()">查看并裁决</button><button class="wj-later" onclick="_winDismiss()">稍后</button></div>';
+  bar.classList.add('on'); }
+window.updateStWinBar=updateStWinBar;
+window._winDismiss=function(){ window.__winDismissed=winSig(window.__winPending); updateStWinBar(); };
+/* 胜负条件追踪：逐条列出当前是否满足 */
+function winTrackHTML(){
+  const dealt=meta.some(m=>m&&m.role&&RMAP[m.role].team==="dem");
+  const alive=livingSeats(), aliveN=alive.length;
+  const demonAlive=meta.some((m,i)=>m&&m.role&&RMAP[m.role].team==="dem" && !isDeadSeat(i));
+  let saintSeat=-1; for(const d in executions){ const ex=executions[d]; if(ex>=0 && meta[ex] && meta[ex].role==="saint" && meta[ex]._saintLoss){ saintSeat=ex; break; } }
+  const _sp=impKills[night]; const starpass=!!(_sp && _sp.type==='starpass' && _sp.newImp==null && meta.some((m,i)=>m&&m.role&&RMAP[m.role]&&RMAP[m.role].team==='min' && !isDeadSeat(i)));
+  const my=meta.findIndex(m=>m&&m.role==="mayor");
+  const mayorOk = my>=0 && !isDeadSeat(my) && healthy(my);
+  const row=(ok,t,d)=>'<div class="wjc '+(ok?'met':'no')+'"><span class="ic">'+(ok?'✔':'✕')+'</span><span><b>'+t+'</b><span class="dt">'+d+'</span></span></div>';
+  let h='';
+  h+='<div class="rrow" style="border:none;opacity:.75">当前局面：存活 <b>'+aliveN+'</b> 人 · 恶魔'+(demonAlive?'<b style="color:#b0402e">存活</b>':'<b style="color:#2e7d43">已全灭</b>')
+    +' · 第 '+night+(dfDawned()?(dfDusked()?' 夜（本日已结束）':' 天（白天进行中）'):' 夜（夜晚进行中）')+'</div>';
+  if(!dealt) return h+'<div class="rrow" style="border:none;opacity:.7">尚未发牌，无从判定。</div>';
+  h+=row(saintSeat>=0, '圣徒被处决 → 邪恶胜利',
+      saintSeat>=0 ? ('圣徒 '+nameAt(saintSeat)+' 被处决，且处决当刻能力有效') : '无：没有处决过能力有效的圣徒（中毒/醉酒的圣徒不算）');
+  h+=row(!demonAlive && !starpass, '恶魔全部死亡 → 好人胜利',
+      demonAlive ? '否：场上仍有存活的恶魔' : (starpass ? '暂缓：恶魔自杀·星传待继任，请先指定接任爪牙' : '是：场上已无存活恶魔，且无待继任'));
+  h+=row(aliveN<=2, '存活人数 ≤ 2 → 邪恶胜利', '当前存活 '+aliveN+' 人');
+  h+=row(mayorOk && aliveN===3 && executions[night]===-1, '镇长：仅剩 3 人且今日无处决 → 好人胜利',
+      my<0 ? '无：镇长不在场' : (!mayorOk ? '否：镇长已出局或中毒/醉酒' : (aliveN!==3 ? ('否：当前存活 '+aliveN+' 人，需正好 3 人') : (executions[night]===-1?'是':'否：今日尚未确定「无人处决」'))));
+  return h;
+}
+function _renderWinJudgeBody(){ const bd=document.getElementById('wjBody'); if(!bd) return;
+  const win=checkWin(); let h=winTrackHTML();
+  h+='<div class="wjm-act">';
+  if(window.__winApproved && winSig(win)===window.__winApproved){
+    h+='<div style="font-weight:800;color:#2e7d43">✓ 已宣告：'+(win.w==='good'?'好人胜利':'邪恶胜利')+' · '+esc(win.r||'')+'</div>'
+      +'<span class="wjm-btn warn" onclick="_winRetract()">撤回宣告</span>';
+  } else if(win){
+    h+='<div style="font-weight:800;color:#8f2f22">⚖ 待裁决：'+(win.w==='good'?'好人胜利':'邪恶胜利')+' · '+esc(win.r||'')+'</div>';
+    if(!dfDawned()) h+='<div class="wjm-note">⚠ 当前仍是夜晚。现在宣告会连同夜里的死亡一起提前公开，通常应先「结束本夜」再宣告。</div>';
+    h+='<span class="wjm-btn" onclick="_winApprove()">确认并向全场宣告</span>';
+  } else {
+    h+='<div style="opacity:.7">当前没有满足的胜负条件，游戏继续。</div>';
+  }
+  h+='</div>'; bd.innerHTML=h; }
+window._closeWinJudge=function(){ const m=document.getElementById('winJudgeMask'); if(m) m.remove(); window.__wjOpen=false; };
+window._openWinJudge=function(){
+  if(window.__botcRole!=='st') return;
+  window._closeWinJudge();
+  const mask=document.createElement('div'); mask.id='winJudgeMask';
+  mask.innerHTML='<div class="wjm-box"><div class="wjm-hd"><span>⚖ 胜负条件追踪 · 说书人裁决</span><span class="wjm-x" title="关闭">✕</span></div><div class="wjm-bd" id="wjBody"></div></div>';
+  mask.addEventListener('click',function(e){ if(e.target===mask||e.target.classList.contains('wjm-x')) window._closeWinJudge(); });
+  document.body.appendChild(mask); window.__wjOpen=true; _renderWinJudgeBody();
+  window.__winDismissed=winSig(window.__winPending); try{ updateStWinBar(); }catch(e){} };
+window._winApprove=function(){ const win=checkWin();
+  if(!win){ _gt('当前没有满足的胜负条件'); _renderWinJudgeBody(); return; }
+  window.__winApproved=winSig(win); window.__winPending=null; window.__winDismissed='';
+  try{ save(); }catch(e){} window._closeWinJudge(); render();
+  _gt('已向全场宣告：'+(win.w==='good'?'好人胜利':'邪恶胜利')); };
+window._winRetract=function(){ window.__winApproved=''; window.__winDismissed=winSig(checkWin());
+  try{ save(); }catch(e){} window._closeWinJudge(); render(); _gt('已撤回胜负宣告'); };
 /* ---------- 结算特效 ---------- */
 var RES={_seenTs:0, _dismissed:0, _wait:null, _waitRes:null};
 const RESULT_WAIT_MS=1000;   // ⑦ 胜负与处决事件是两条 firebase 路径，到达顺序不保证：胜利动画先压 1 秒，等处决视频先开播
@@ -2463,7 +2604,7 @@ var EXEC={_seenTs:0};
 window.__execPlaying=false; window.__pendingResult=null;
 function _finalizeExec(){ const v=document.getElementById('execVideo'); if(v){ v.classList.remove('show'); v.style.display='none'; v.style.filter=''; v.style.transition=''; v._ending=false; clearTimeout(v._hold); try{ v.removeAttribute('src'); v.load(); }catch(e){} }
   window.__execPlaying=false; try{ if(window._bgDuck) _bgDuck(false); }catch(e){}   // 处决结束：恢复背景音乐音量
-  try{ if(window.updateNightBar) window.updateNightBar(); }catch(e){} try{ if(window.updateStSlayerBar) window.updateStSlayerBar(); }catch(e){} try{ if(window.updateStSwBar) window.updateStSwBar(); }catch(e){} try{ if(window._slayerCheckResult) window._slayerCheckResult(); }catch(e){}   // 视频结束 → 恢复被压住的底部通知弹窗
+  try{ if(window.updateNightBar) window.updateNightBar(); }catch(e){} try{ if(window.updateStSlayerBar) window.updateStSlayerBar(); }catch(e){} try{ if(window.updateStSwBar) window.updateStSwBar(); }catch(e){} try{ if(window.updateStWinBar) window.updateStWinBar(); }catch(e){} try{ if(window._slayerCheckResult) window._slayerCheckResult(); }catch(e){}   // 视频结束 → 恢复被压住的底部通知弹窗
   if(window.__pendingResult){ const pr=window.__pendingResult; window.__pendingResult=null; showResult(pr.w, pr.r); }   // 恶魔被处决：画面全黑后再放胜利
 }
 function endExec(mode){ const v=document.getElementById('execVideo'); if(!v){ window.__execPlaying=false; if(window.__pendingResult){ const pr=window.__pendingResult; window.__pendingResult=null; showResult(pr.w,pr.r); } return; }
@@ -2485,7 +2626,7 @@ function playExec(idx, full, srcOverride, cutOverride, cutMode){ const v=documen
   clearTimeout(v._hold); v._ending=false;
   try{ if(window._resClaimWait) _resClaimWait(); }catch(e){}   // ⑦ 视频开播：把还在等待的胜利动画推迟到视频结束
   window.__execPlaying=true; try{ if(window._bgDuck) _bgDuck(true); }catch(e){}   // 处决期间压低背景音乐
-  try{ if(window.updateNightBar) window.updateNightBar(); }catch(e){} try{ if(window.updateStSlayerBar) window.updateStSlayerBar(); }catch(e){} try{ if(window.updateStSwBar) window.updateStSwBar(); }catch(e){}   // 视频播放期间先收起底部通知弹窗，避免压在视频上（视频在最上层）
+  try{ if(window.updateNightBar) window.updateNightBar(); }catch(e){} try{ if(window.updateStSlayerBar) window.updateStSlayerBar(); }catch(e){} try{ if(window.updateStSwBar) window.updateStSwBar(); }catch(e){} try{ if(window.updateStWinBar) window.updateStWinBar(); }catch(e){}   // 视频播放期间先收起底部通知弹窗，避免压在视频上（视频在最上层）
   v.style.filter=''; v.style.transition='';   // 清除上一次的“变黑”，恢复初始
   v.style.display='block'; v.muted=!!window.__muted;   // 全局静音时不出声
   try{ v.volume=Math.max(0,Math.min(1,(window.__vol&&typeof window.__vol.anim==='number')?window.__vol.anim:1)); }catch(e){}   // 动画音量档位
@@ -2533,11 +2674,33 @@ window.setVol=function(kind,val){ const f=Math.max(0,Math.min(1,(+val||0)/100));
   if(kind==='anim'){ const v=document.getElementById('execVideo'); if(v&&!window.__muted){ try{ v.volume=f; }catch(e){} } }   // 立即应用到正在播放的视频
   if(kind==='bgm'){ try{ if(window._applyBgmVol) _applyBgmVol(); }catch(e){} } };   // 立即应用到背景音乐
 window._volSync=function(){ [['sfx','volSfx'],['anim','volAnim'],['bgm','volBgm']].forEach(p=>{ const f=window.__vol[p[0]]; const el=document.getElementById(p[1]); if(el) el.value=Math.round(f*100); const n=document.getElementById(p[1]+'N'); if(n) n.textContent=Math.round(f*100)+'%'; }); };
+/* ---------- ⑬ 配置期 / 游戏期 门控 ----------
+   配置期：可任意改座位数 / 玩家位置 / 角色。点「新的一局」进入游戏期 → 三者锁定，按钮变「结束本局」。
+   游戏期内还有流程顺序门控：本夜未「结束本夜」不能操作白天；本夜已结束则夜晚页只读；本日已结束则该日只读。
+   任何锁定都可由说书人「临时解锁」应急修改（不持久，刷新即恢复锁定）。 */
+window.__gameOn=false; window.__gateOverride=false; window.__winApproved=''; window.__winPending=null; window.__winDismissed='';
+function isGameOn(){ return !!window.__gameOn; }
+function _gt(m){ try{ if(window._toast) window._toast(m); }catch(e){} }
+function cfgLocked(){ return !!window.__gameOn && !window.__gateOverride; }
+function gateCfg(){ if(!cfgLocked()) return false; _gt('游戏进行中：座位 / 玩家 / 角色已锁定。要改动请先到「角色设置」页点「结束本局」，或临时解锁。'); return true; }
+function dfDawned(d){ const f=dayFlow[(d==null?night:d)]; return !!(f&&f.dawn); }
+function dfDusked(d){ const f=dayFlow[(d==null?night:d)]; return !!(f&&f.dusk); }
+function nightLocked(){ return isGameOn() && dfDawned() && !window.__gateOverride; }        // 本夜已「结束本夜」→ 夜晚页只读
+function dayLocked(){ return isGameOn() && (!dfDawned() || dfDusked()) && !window.__gateOverride; }   // 本夜未结束 / 本日已结束 → 白天页只读
+window.toggleGateOverride=function(){ window.__gateOverride=!window.__gateOverride; render(); };
+function gateBanner(txt){ return '<div class="gatebar'+(window.__gateOverride?' unlocked':'')+'">'
+  +'<span>'+(window.__gateOverride?'🔓 已临时解锁，可强行修改（刷新后恢复锁定）':'🔒 '+txt)+'</span>'
+  +'<span class="regbtn" onclick="toggleGateOverride()">'+(window.__gateOverride?'恢复锁定':'临时解锁')+'</span></div>'; }
+window.stEndGame=async function(){
+  if(!await uiConfirm('结束本局后回到配置期，可以重新调整座位数量、玩家位置与角色。本局的日志与战绩会保留。',{title:'结束本局',ok:'结束本局',cancel:'取消'})) return;
+  window.__gameOn=false; window.__gateOverride=false; window.__winPending=null; window.__winDismissed='';
+  try{ save(); }catch(e){} render(); try{ _updateWinFab(); }catch(e){} _gt('已结束本局，回到配置期');
+};
 /* ---------- ⑫ 底部弹窗堆栈：说书人/系统的各类底部信息框不再互相重叠 ----------
    规则：提名举手条 #voteBar 永远压在最底（它会一直存在到计票结束，位置不该乱跳）；
         其余按「出现先后」自下而上堆叠，下面的消失后上面的自动下移；互不阻塞，可同时操作。 */
 (function(){
-  const BAR_IDS=['voteBar','nightBar','stSlayerBar','stSwBar','slayerResult','chatDisbandPop','chatStack'];
+  const BAR_IDS=['voteBar','nightBar','stSlayerBar','stSwBar','stWinBar','slayerResult','chatDisbandPop','chatStack'];
   const GAP=10; let seq=0, pending=false, applying=false;
   function els(){ return BAR_IDS.map(function(id){ return document.getElementById(id); }).filter(Boolean); }
   function shown(el){
@@ -2745,7 +2908,9 @@ function removeNomination(day,idx){ if(nominations[day]){ const nom=nominations[
     if(nom.virginExec!=null){ killSeat(nom.virginExec,false); histSet(nom.virginExec,'death',null); if(executions[day]===nom.virginExec) delete executions[day]; try{ _clearExecFromAll(day); }catch(e){} } }
   nominations[day].splice(idx,1); if(!nominations[day].length) delete nominations[day]; }
   if(window._syncNoms) window._syncNoms(); render(); }
-function toggleVote(day,nomIdx,seat){ const nom=nominations[day][nomIdx]; const at=nom.voters.indexOf(seat);
+function toggleVote(day,nomIdx,seat){ const nom=nominations[day][nomIdx];
+  if(nom.tallied && !window.__gateOverride){ _gt('本次投票已停止计票；要改票请先点「重新计票」'); return; }   // ⑬ 停止计票后不可再随意改票
+  const at=nom.voters.indexOf(seat);
   if(at>=0){ nom.voters.splice(at,1); if(nom.ghostVoters){ const gi=nom.ghostVoters.indexOf(seat); if(gi>=0) nom.ghostVoters.splice(gi,1); } }
   else { nom.voters.push(seat); if(isDeadSeat(seat)){ nom.ghostVoters=nom.ghostVoters||[]; if(!nom.ghostVoters.includes(seat)) nom.ghostVoters.push(seat); } }   // 已出局也可自由投票；死亡=鬼票
   enforceButler(); if(window._syncNoms) window._syncNoms();
@@ -2753,7 +2918,8 @@ function toggleVote(day,nomIdx,seat){ const nom=nominations[day][nomIdx]; const 
   render(); }
 /* ---------- 猎人：每局一次，白天指认，命中恶魔则其死 ---------- */
 function registersDemon(i){ const m=meta[i]; if(!m||!m.role) return false; if(RMAP[m.role].team==="dem") return true; if(m.role==="recluse"&&effReg(i)==="evil") return true; return false; }
-function slayerFire(v){ if(v===""||slayerShot||executions[night]!==undefined) return; const t=+v; const sl=meta.findIndex(m=>m&&m.role==="slayer"); if(sl<0) return;   // 处决结果出来后不能再开枪
+function slayerFire(v){ if(v===""||slayerShot||executions[night]!==undefined) return;
+  if(!dfDawned()||dfDusked()){ _gt(dfDusked()?'本日已结束，猎人不能再开枪':'白天尚未开始（请先「结束本夜」），猎人不能开枪'); return; }   // ⑬ 只在白天进行中可开枪 const t=+v; const sl=meta.findIndex(m=>m&&m.role==="slayer"); if(sl<0) return;   // 处决结果出来后不能再开枪
   const hit = healthy(sl) && !isDeadSeat(sl) && registersDemon(t);
   slayerShot={target:t, day:night, hit};
   let _sfull=false;
@@ -2964,9 +3130,9 @@ function setView(){ view=(view==="seat"?"grim":"seat");
   else { try{ if(window._sfx) _sfx('grimoire-close'); }catch(e){} }   // 合上魔典：合书声
   render(); }
 function setGtab(t){ gtab=t; render(); }
-function toggleLock(id){ if(lockedRoles.has(id)) lockedRoles.delete(id); else lockedRoles.add(id); render(); }
+function toggleLock(id){ if(gateCfg()) return; if(lockedRoles.has(id)) lockedRoles.delete(id); else lockedRoles.add(id); render(); }
 /* ---------- 自定义阵营数量 ---------- */
-function setDistCount(idx,delta){ const cd=(customDist||DIST[N]).slice();
+function setDistCount(idx,delta){ if(gateCfg()) return; const cd=(customDist||DIST[N]).slice();
   const mx=[13,4,4,1][idx], mn=idx===3?1:0;
   cd[idx]=Math.max(mn, Math.min(mx, cd[idx]+delta)); customDist=cd; save(); render(); }
 function resetDist(){ customDist=null; save(); render(); }
@@ -3031,7 +3197,7 @@ function renderLedger(){
 }
 /* ⑧ 说书人日志正文（抽成函数，便于「分享给玩家」复用同一份 HTML） */
 function stLogHTML(){ let h="";
-    const _win=checkWin();   // 结算横幅移到日志页顶部（与玩家笔记一致），不再在座位中央出现
+    const _w0=checkWin(); const _win=(window.__winApproved && winSig(_w0)===window.__winApproved)?_w0:null;   // ⑪ 只有说书人已裁决宣告的胜负才上横幅
     if(_win) h+='<div class="resbadge '+_win.w+'" style="margin-top:2px"><img src="assets/win-'+_win.w+'.png" onerror="this.style.display=\'none\'"><div><b>'+(_win.w==='good'?'好人胜利':'邪恶胜利')+'</b><div class="rb-r">'+esc(_win.r||'')+'</div></div></div>';
     let maxN=night; meta.forEach(m=>{ if(m.hist) Object.keys(m.hist).forEach(k=>maxN=Math.max(maxN,+k)); });
     Object.keys(nominations).forEach(k=>maxN=Math.max(maxN,+k)); Object.keys(executions).forEach(k=>maxN=Math.max(maxN,+k));
@@ -3114,6 +3280,7 @@ function renderGrim(){
     const cd=(customDist||DIST[N]||[0,0,0,0]).slice();
     const total=cd[0]+cd[1]+cd[2]+cd[3];
     const _setupIssues=setupIssues(); const ready=_setupIssues.length===0;
+    if(isGameOn()) h+=gateBanner('游戏进行中：座位数量 / 玩家位置 / 角色分配已锁定，点下方「结束本局」可回到配置期');
     const _usedSet=new Set(); meta.forEach(m=>{ if(!m) return; if(m.isDrunk){ _usedSet.add('drunk'); if(m.role) _usedSet.add(m.role); } else if(m.role) _usedSet.add(m.role); });   // 酒鬼占用「酒鬼」牌+其自以为的镇民牌（都半透明）
     (bluffs||[]).forEach(b=>{ if(b) _usedSet.add(b); });   // 恶魔伪装选中的身份也占用（半透明）
     ORDER.forEach((team,idx)=>{
@@ -3157,7 +3324,9 @@ function renderGrim(){
     h+='<div class="gsec">恶魔伪装</div><div class="bluffsel">'+bluffSel(0)+bluffSel(1)+bluffSel(2)+'</div>';
     h+='<div class="gsec" style="margin-top:12px;border-top:1px solid rgba(122,83,32,.25);padding-top:8px;color:#43286b">牌局</div>';
     h+='<div style="display:flex;gap:6px;margin-top:6px;align-items:stretch">'
-      +'<button class="btn purple" style="flex:1;'+(ready?'':'opacity:.4;cursor:not-allowed;')+'" '+(ready?'onclick="stNewGame()"':'disabled title="所有座位分配角色、且设置完成后可点"')+'>新的一局</button>'
+      +(isGameOn()
+        ? '<button class="btn purple" style="flex:1;font-weight:800;background:linear-gradient(180deg,#8f2f22,#6b1f16);border-color:#b0402e" onclick="stEndGame()">结束本局</button>'
+        : '<button class="btn purple" style="flex:1;'+(ready?'':'opacity:.4;cursor:not-allowed;')+'" '+(ready?'onclick="stNewGame()"':'disabled title="所有座位分配角色、且设置完成后可点"')+'>新的一局</button>')
       +'<button class="btn purple" style="flex:0 0 auto;padding:7px 9px" onclick="stSaveConfig()">保存本局</button>'
       +'<button class="btn lpurple" style="flex:0 0 auto;padding:7px 9px" onclick="stViewConfigs()">查看存档</button>'
       +'</div>';
@@ -3169,6 +3338,9 @@ function renderGrim(){
     return;
   }
   if(gtab==="log"){ h+=_stLogShareBar()+stLogHTML(); c.innerHTML=h; return; }
+  if(!isGameOn()){   // ⑬ 未进入游戏期：夜晚 / 白天两页留空，避免在配置阶段误操作流程
+    h+='<div class="rrow" style="border:none;opacity:.75;line-height:1.75">🕯️ 本局尚未开始。<br>请先在「<b>角色设置</b>」页排好座位与角色，点 <b>新的一局</b>，夜晚与白天的流程才会开始。</div>';
+    c.innerHTML=h; return; }
   if(gtab==="day"){
     const day=night, alive=countAlive(), thr=dayThreshold();
     h+='<div class="rrow" style="border:none;font-weight:800;color:#43286b">第 '+day+' 天 · 存活 '+alive+' 人 · 处决需 ≥ '+thr+' 票</div>';
@@ -3227,6 +3399,10 @@ function renderGrim(){
     else if(_executed) h+='<button class="btn purple" style="width:100%;font-weight:800" onclick="stEndDay()">结束本日 · 进入第 '+(day+1)+' 夜</button>';
     else h+='<button class="btn purple" style="width:100%;font-weight:800;opacity:.4;cursor:not-allowed;filter:grayscale(.85)" disabled>结束本日</button>';
     h+='</div>';
+    const _dl = isGameOn() && (!dfDawned(day) || dfDusked(day));   // ⑬ 本夜未结束 / 本日已结束 → 白天页只读
+    if(_dl){ if(!window.__gateOverride) h='<div class="gatelock">'+h+'</div>';
+      h=gateBanner(dfDusked(day) ? ('第 '+day+' 天已结束（已进入第 '+(day+1)+' 夜）——本页只读')
+                                 : ('第 '+day+' 夜尚未结束——请先到「夜晚」页完成流程并点「结束本夜」'))+h; }
     c.innerHTML=h; return;
   }
   {
@@ -3267,6 +3443,9 @@ function renderGrim(){
     else h+='<button class="btn purple" style="width:100%;font-weight:800;opacity:.4;cursor:not-allowed;filter:grayscale(.85)" disabled>结束本夜</button>';
     h+='</div>';
   }
+  const _nl = isGameOn() && dfDawned();   // ⑬ 本夜已「结束本夜」→ 夜晚页只读
+  if(_nl){ if(!window.__gateOverride) h='<div class="gatelock">'+h+'</div>';
+    h=gateBanner('第 '+night+' 夜已结束（白天进行中）——本页只读，如需补救请临时解锁')+h; }
   c.innerHTML=h;
 }
 function renderSeats(){
@@ -3394,10 +3573,10 @@ function hl(i,on){ const seats=document.querySelectorAll(".seat"); const L=(i-1+
 function openEditor(i){
   sel=i; ensureMeta(); const t=seatToken(i), m=meta[i];
   document.getElementById("mTitle").textContent="座位 "+(i+1);
-  document.getElementById("mName").value=t?t.name:"";
+  const _mn=document.getElementById("mName"); _mn.value=t?t.name:""; _mn.disabled=cfgLocked();
   const selEl=document.getElementById("mRole");
   if(!selEl.dataset.built){ buildRoleSelect(selEl); selEl.dataset.built="1"; }
-  selEl.value=m.role||"";
+  selEl.value=m.role||""; selEl.disabled=cfgLocked();
   document.getElementById("mDead").checked=!!(t&&t.dead);
   document.getElementById("mPoison").checked=!!m.poison;
   document.getElementById("mDrunk").checked=!!m.drunk;
@@ -3421,8 +3600,8 @@ function updAlign(){ const id=document.getElementById("mRole").value; const box=
 function applyEditor(){
   if(sel<0) return; const i=sel; const m=meta[i]; const name=document.getElementById("mName").value.trim();
   let t=seatToken(i);
-  if(name){ if(t){ t.name=name; } else { t={id:++uid,name,seat:i,dead:false}; tokens.push(t); } if(!guests.includes(name)) guests.push(name); }
-  m.role=document.getElementById("mRole").value||null;
+  if(name && !cfgLocked()){ if(t){ t.name=name; } else { t={id:++uid,name,seat:i,dead:false}; tokens.push(t); } if(!guests.includes(name)) guests.push(name); }   // ⑬ 游戏期不改名字/入座
+  if(!cfgLocked()) m.role=document.getElementById("mRole").value||null;   // ⑬ 游戏期不改角色
   if(t) t.dead=document.getElementById("mDead").checked;
   m.poison=document.getElementById("mPoison").checked;
   m.drunk=document.getElementById("mDrunk").checked;
@@ -3435,7 +3614,7 @@ function applyEditor(){
   m.note=document.getElementById("mNote").value;
 }
 function closeEditor(){ applyEditor(); document.getElementById("mask").classList.remove("on"); sel=-1; render(); }
-function clearSeatMeta(){ if(sel<0)return; meta[sel]=blankMeta(); const t=seatToken(sel); if(t)t.dead=false;
+function clearSeatMeta(){ if(sel<0)return; if(gateCfg()) return; meta[sel]=blankMeta(); const t=seatToken(sel); if(t)t.dead=false;
   document.getElementById("mask").classList.remove("on"); sel=-1; render(); }
 document.getElementById("mRole").addEventListener("change",updAlign);
 document.getElementById("mask").addEventListener("click",e=>{ if(e.target.id==="mask") closeEditor(); });
@@ -3495,6 +3674,7 @@ load(); render();
 <div id="nightBar"></div>
 <div id="stSlayerBar"></div>
 <div id="stSwBar"></div>
+<div id="stWinBar"></div>
 <div id="rotateGate"><div class="phone"></div><div class="rg-t">请把手机横过来</div><div class="rg-s">血染钟楼在横屏下体验更好 🔄</div></div>
 <div id="cfgModal"><div class="cbox"><h3><span>本局存档 · 角色配置</span><span class="cX" onclick="_cfgClose()">✕</span></h3><div id="cfgList"></div></div></div>
 <div id="chatRoom" onclick="if(event.target.id==='chatRoom')_closeChatRoom()">
@@ -3777,7 +3957,7 @@ load(); render();
       try{ if(window._stSyncStop) _stSyncStop(); }catch(e){}   // 登出：停止说书人实时同步监听
       try{ if(typeof _presenceStop==='function') _presenceStop(); }catch(e){} window.__kicked=false;   // 登出：停止在线占位监听
       try{ if(typeof _stSessStop==='function') _stSessStop(); }catch(e){}   // 登出：停止说书人会话监听
-      _stateTransition(()=>{ role='anon'; window.__botcRole='anon'; try{['chatFab','stDisbandFab','chatRoomFab','seatViewFab','stLogFab'].forEach(function(id){var e=document.getElementById(id); if(e) e.style.display='none';});}catch(e){}   /* v2.50.14 登出→未登录大厅：隐藏左下角三个私聊图标（否则残留上一次登录态的 display:flex） */
+      _stateTransition(()=>{ role='anon'; window.__botcRole='anon'; try{['chatFab','stDisbandFab','chatRoomFab','seatViewFab','stLogFab','winJudgeFab'].forEach(function(id){var e=document.getElementById(id); if(e) e.style.display='none';});}catch(e){}   /* v2.50.14 登出→未登录大厅：隐藏左下角三个私聊图标（否则残留上一次登录态的 display:flex） */
         document.getElementById('stBadge').classList.remove('on'); document.body.classList.remove('pl'); if(notesRef){notesRef.off();notesRef=null;} S=null; setMode('hall'); }, willAuto);
       if(willAuto) setTimeout(()=>{ if(!me) _fadeReveal(); }, 4000);   // 自动登录失败兜底：4s 后仍未登录则显示大厅
       if(window.__stBlockedMsg){ const m=window.__stBlockedMsg; window.__stBlockedMsg=''; setTimeout(()=>{ try{ if(typeof toast==='function') toast(m); }catch(e){} const se=document.getElementById('stErr'); if(se) se.textContent=m; }, 600); }   // 说书人已被占用：提示
@@ -4240,7 +4420,7 @@ load(); render();
   function bindPub(){ _lastResultSig=null; if(pubBound){pubBound.off();pubBound=null;} if(!curGid){ pub=null;
       window.__pubHasGame=false; window.__pubCount=0; if(window.clockApplyState) window.clockApplyState(null);
       try{ document.body.classList.remove('ph-night'); }catch(e){}   // ⑨ 无对局：恢复亮背景
-      window.__stLogShared=false; try{ window._updateSeatViewFab(); window._updateStLogFab(); }catch(e){}
+      window.__stLogShared=false; try{ window._updateSeatViewFab(); window._updateStLogFab(); if(window._updateWinFab) window._updateWinFab(); }catch(e){}
       if(window.applyResult) window.applyResult(null);
       if(mode!=='st') renderView(); return; }
     pubBound=db.ref('games/'+curGid+'/public'); pubBound.on('value',s=>{ pub=s.val(); ensureS();
@@ -4248,7 +4428,7 @@ load(); render();
       window.__pubHasGame=!!(pub&&pub.count); window.__pubCount=(pub&&pub.count)||0;
       try{ document.body.classList.toggle('ph-night', !!(pub&&pub.count) && !(pub&&pub.phase==='day')); }catch(e){}   // ⑨ 昼夜背景：开局后按 phase 切换玩家端酒馆背景
       window.__stLogShared=!!(pub&&pub.stLog&&pub.stLog.h);   // ⑧ 说书人是否已分享日志
-      try{ window._updateSeatViewFab(); window._updateStLogFab(); }catch(e){}
+      try{ window._updateSeatViewFab(); window._updateStLogFab(); if(window._updateWinFab) window._updateWinFab(); }catch(e){}
       try{ if(window.__stLogOpen && !window.__stLogShared && window._closeStLog) window._closeStLog(); }catch(e){}   // 说书人撤回分享 → 关闭正在看的日志
       if(pub&&pub.count&&window._prefetchExec) window._prefetchExec();   // 开局后预取处决/射杀视频，避免首次卡顿
       if(window.clockApplyState) window.clockApplyState(pub&&pub.clock);
@@ -5209,6 +5389,8 @@ load(); render();
         for(let i=0;i<N;i++){ const t=seatToken(i); const nm=(t&&t.name)?t.name:''; if(!nm) continue; const rid=(meta[i]&&meta[i].role)||''; if(!rid) continue; const acc=accs[rkey(nm)]; if(acc&&acc.uid) ru['games/'+gid+'/players/'+acc.uid+'/role']=rid; }
         if(Object.keys(ru).length) await db.ref().update(ru);
       }catch(e){}
+      window.__gameOn=true; window.__gateOverride=false; window.__winApproved=''; window.__winPending=null; window.__winDismissed='';   // ⑬ 进入游戏期：座位/玩家/角色锁定
+      try{ save(); }catch(e){} try{ if(typeof render==='function') render(); }catch(e){}
       await db.ref('currentGame').set(gid); toast('已开始新的一局');
       /* 清理：删掉除当前局外的所有旧牌局（含旧笔记），云端只留当前一局，避免累积 */
       try{ const snap=await db.ref('games').once('value'); const all=snap.val()||{};
