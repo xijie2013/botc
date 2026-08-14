@@ -678,7 +678,7 @@
   /* ⑬ 门控：只读遮罩 + 顶部锁条 */
   .gatelock{pointer-events:none; opacity:.42; filter:grayscale(.55);}
   .gatebar{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin:2px 0 8px; padding:7px 10px; border-radius:8px;
-    background:rgba(176,64,46,.13); border:1px solid rgba(176,64,46,.45); color:#8f2f22; font-weight:700; line-height:1.4; font-size:calc(.94 * var(--sw) / 100);}
+    background:rgba(67,40,107,.12); border:1px solid rgba(67,40,107,.42); color:#43286b; font-weight:700; line-height:1.4; font-size:calc(.94 * var(--sw) / 100);}
   .gatebar.unlocked{background:rgba(46,125,67,.14); border-color:rgba(46,125,67,.5); color:#256b3c;}
   .gatebar .regbtn{flex:0 0 auto;}
   /* ⑫ 底部弹窗堆栈：由 _barStack() 统一分配 bottom，位移加过渡让上层平滑下移 */
@@ -1396,6 +1396,16 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.53.1', d:'2026-08-14', items:[
+    '说书人日志改为「一个行动一条」：同一角色在同一夜里的多次行动（例如投毒者的爪牙互认与之后的下毒）不再挤在同一行，各自单独成条（座位悬浮气泡同理）。',
+    '小恶魔重新可以选择已出局的玩家作为击杀目标（用来制造空刀假象）；这一刀会记进日志，但不会改写该玩家原本的死亡方式图标。',
+    '人少时座位不再越放越大：5 人、6 人局的座位尺寸与 7 人局一致，避免座位过大把私聊圈挤得显示不全（8 人及以上尺寸不变）。',
+    '切换到「座次」视图后，座位圈里不再显示任何私聊相关内容（分组高亮、组号、加入/退出按钮），只单纯呈现座位顺序。',
+    '统一「已使用鬼票」骷髅标记的辉光颜色：说书人魔典与玩家笔记一致，都用黑色（此前魔典里误用了青色）。',
+    '游戏进行中除角色分配外，角色设置（陌客/间谍善恶误判、恶魔伪装、红鲱鱼、酒鬼自以为的身份、阵营数量、角色锁定）也一并锁定，仍可「临时解锁」应急修改。',
+    '说书人端的锁定提示条由红色改为深紫色，并去掉开头的锁图标。',
+    '在白天面板删除某条提名时增加二次确认弹窗。',
+  ]},
   {v:'v2.53.0', d:'2026-08-14', items:[
     '胜负改为说书人最终裁决：系统检测到胜利条件满足时，不再直接向全场公布，而是先给说书人弹一条提示。说书人可点左下角新增的第五个「裁决」图标，查看每条胜负条件当前是否满足（圣徒被处决 / 恶魔全灭 / 存活≤2 / 镇长三人无处决），核对后手动点「确认并向全场宣告」，这时才广播结果并播放一次胜利动画。宣告后可随时撤回；若局势变化（改判、复活）使条件不再成立，系统会自动撤回已宣告的结果。夜里裁决会额外提醒「现在宣告会提前暴露夜间死亡」。',
     '明确区分配置期与游戏期：点「新的一局」后进入游戏期，座位数量、玩家位置、角色分配全部锁定（拖拽改角色、随机排座、清空座位、重新发牌、阵营数量、锁定角色、座位编辑器里的名字与角色都会被拦下）。该按钮同时变成「结束本局」，二次确认后回到配置期重新调整。',
@@ -1698,7 +1708,7 @@ async function resetRoles(){ if(gateCfg()) return; if(!await uiConfirm("重置�
   Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); Object.keys(dayFlow).forEach(k=>delete dayFlow[k]); Object.keys(spySent).forEach(k=>delete spySent[k]); overviewDecoys=[]; tokens.forEach(t=>t.dead=false);
   window.__gameOn=false; window.__winApproved=''; window.__winPending=null; window.__winDismissed=''; render();
   try{ if(window._stClearPlayerRoles) _stClearPlayerRoles(); }catch(e){} try{ if(window._stClearPlayerNotes) _stClearPlayerNotes(); }catch(e){} try{ if(window._stResetPublic) _stResetPublic(); }catch(e){} try{ if(window._histNewRound) _histNewRound(); }catch(e){} }   // 重置角色：清空玩家角色卡 + 局内信息/座位备注/标记 + 公开状态（大厅/笔记的死亡/处决/胜负等一并清零）；胜负另记一条
-function setBluff(k,v){ bluffs[k]=v; refreshOverviewDecoys(); render(); }
+function setBluff(k,v){ if(gateCfg()) return; bluffs[k]=v; refreshOverviewDecoys(); render(); }
 
 /* ---------- 夜晚信息自动计算 ---------- */
 function seatAlive(i){ const t=seatToken(i), m=meta[i]||{}; return !(t?t.dead:m.dead); }
@@ -1709,8 +1719,8 @@ function effReg(i){ const m=meta[i]; if(!m||!m.role) return 'good';
   if(m.role==='recluse') return 'evil';    // 陌客默认判邪恶
   return isEvil(RMAP[m.role].team)?'evil':'good'; }
 function regEvil(i){ return effReg(i)==='evil'; }
-function setReg(i,v){ ensureMeta(); meta[i].reg=v; render(); }
-function setRedHerring(v){ redHerring = v===""? -1 : +v; render(); }
+function setReg(i,v){ if(gateCfg()) return; ensureMeta(); meta[i].reg=v; render(); }
+function setRedHerring(v){ if(gateCfg()) return; redHerring = v===""? -1 : +v; render(); }
 /* 把角色分配到座位：唯一角色——同一角色只能在场一个，重复分配会清空前一个座位（酒鬼保留身份标记、仅清自以为的镇民）。酒鬼特殊：先成为「未定身份的酒鬼」，再用下拉设自以为的镇民。 */
 function _clearBluff(rid){ for(let j=0;j<bluffs.length;j++){ if(bluffs[j]===rid){ bluffs[j]=""; } } }   // 该身份若是恶魔伪装 → 撤销该伪装（被分配到场上后不能再作伪装）
 function assignRoleToSeat(i, rid){ if(gateCfg()) return; ensureMeta();
@@ -1723,7 +1733,7 @@ function assignRoleToSeat(i, rid){ if(gateCfg()) return; ensureMeta();
   _clearBluff(rid); try{refreshOverviewDecoys();}catch(e){}
 }
 /* 设置酒鬼「自以为的镇民角色」（同样唯一：占用则清掉别处的同角色，并撤销同名伪装） */
-function setDrunkRole(v){ const d=meta.findIndex(m=>m&&m.isDrunk); if(d<0) return;
+function setDrunkRole(v){ if(gateCfg()) return; const d=meta.findIndex(m=>m&&m.isDrunk); if(d<0) return;
   if(v===""){ meta[d].role=null; }
   else { for(let k=0;k<N;k++){ if(k!==d && meta[k] && meta[k].role===v){ meta[k].role=null; } } meta[d].role=v; _clearBluff(v); try{refreshOverviewDecoys();}catch(e){} }
   render(); }
@@ -2689,7 +2699,7 @@ function nightLocked(){ return isGameOn() && dfDawned() && !window.__gateOverrid
 function dayLocked(){ return isGameOn() && (!dfDawned() || dfDusked()) && !window.__gateOverride; }   // 本夜未结束 / 本日已结束 → 白天页只读
 window.toggleGateOverride=function(){ window.__gateOverride=!window.__gateOverride; render(); };
 function gateBanner(txt){ return '<div class="gatebar'+(window.__gateOverride?' unlocked':'')+'">'
-  +'<span>'+(window.__gateOverride?'🔓 已临时解锁，可强行修改（刷新后恢复锁定）':'🔒 '+txt)+'</span>'
+  +'<span>'+(window.__gateOverride?'已临时解锁，可强行修改（刷新后恢复锁定）':txt)+'</span>'
   +'<span class="regbtn" onclick="toggleGateOverride()">'+(window.__gateOverride?'恢复锁定':'临时解锁')+'</span></div>'; }
 window.stEndGame=async function(){
   if(!await uiConfirm('结束本局后回到配置期，可以重新调整座位数量、玩家位置与角色。本局的日志与战绩会保留。',{title:'结束本局',ok:'结束本局',cancel:'取消'})) return;
@@ -2903,7 +2913,11 @@ function addNomination(nr,ne){ if(nr===""||ne==="") return; const day=night;
   if(window._voteOpen) window._voteOpen(day,nr,ne);   // 开启一轮公开举手（玩家端出现举手选项）
   if(window._syncNoms) window._syncNoms();            // 实时把提名推给所有端
   render(); }
-function removeNomination(day,idx){ if(nominations[day]){ const nom=nominations[day][idx];
+async function removeNomination(day,idx){
+  const _n=(nominations[day]||[])[idx];
+  if(!_n) return;
+  if(!await uiConfirm(nameAt(_n.nominator)+' 提名 '+nameAt(_n.nominee)+'（'+((_n.voters||[]).length)+' 票）将被删除，确定吗？',{title:'删除提名',ok:'删除',cancel:'取消'})) return;   // ⑧ 删提名需二次确认
+  if(nominations[day]){ const nom=nominations[day][idx];
   if(nom && nom.virginConsumed){ virginUsed=false; histSet(nom.nominee,'info',null);   // 撤销贞洁者能力消耗
     if(nom.virginExec!=null){ killSeat(nom.virginExec,false); histSet(nom.virginExec,'death',null); if(executions[day]===nom.virginExec) delete executions[day]; try{ _clearExecFromAll(day); }catch(e){} } }
   nominations[day].splice(idx,1); if(!nominations[day].length) delete nominations[day]; }
@@ -3097,12 +3111,12 @@ function impKillUI(){
   const imp=impSeat(); if(imp<0 && rec.type!=="starpass") return "";
   if(imp>=0 && isDeadSeat(imp) && rec.type!=="starpass") return '<div class="impkill done" style="color:#8a6a2a">小恶魔已出局，未行动</div>';
   const selfSeat=(rec.type==="starpass")?rec.target:imp;             // 用于「自己·自杀」标注
-  const cand=new Set(livingSeats());
-  if(rec.target!=null) cand.add(rec.target);                          // 已被击杀的目标也要留在选项里
+  const cand=new Set(allSeats());                                     // ② 已出局的玩家也可被刀（空刀，用来做假象）；死亡标志不会被改写
+  if(rec.target!=null) cand.add(rec.target);
   if(selfSeat>=0) cand.add(selfSeat);
   const list=[...cand].sort((a,b)=>a-b);
   let opts='<option value="">—</option>';
-  list.forEach(i=>{ const self=i===selfSeat?'（自己·自杀）':''; const out=(isDeadSeat(i)&&rec.target===i)?'（已出局）':'';
+  list.forEach(i=>{ const self=i===selfSeat?'（自己·自杀）':''; const out=isDeadSeat(i)?'（已出局）':'';
     opts+='<option value="'+i+'"'+(rec.target===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+self+out+'</option>'; });
   let h='<div class="impkill">击杀目标：<select onchange="impKill(this.value)">'+opts+'</select></div>';
   if(rec.type==="starpass"){
@@ -3217,12 +3231,12 @@ function stLogHTML(){ let h="";
       seatsN.sort((A,B)=> (keyFor(A.i,A.e)-keyFor(B.i,B.e)) || (A.i-B.i));
       seatsD.sort((A,B)=> A.i-B.i);
       const rowFor=({i,tags})=>{ const m=meta[i];
-        const parts=tags.map(t=>{ let e2=m.hist[n]; if(typeof e2==="string") e2={info:e2}; return e2[t]; });
+        let e2=m.hist[n]; if(typeof e2==="string") e2={info:e2};
         const r=m.role?RMAP[m.role]:null;
         const roleHtml=r?' <b style="color:'+(m.isDrunk?TEAMC.out:TEAMC[r.team])+'">'+r.name+(m.isDrunk?'-酒鬼':'')+'</b>':'';
         const stArr=[]; if(isDeadSeat(i))stArr.push('出局'); if(m.poison)stArr.push('中毒'); if(m.drunk&&!m.isDrunk)stArr.push('醉酒');
         const stHtml=stArr.length?' <span style="color:#b0402e;font-size:.88em">['+stArr.join('/')+']</span>':'';
-        return '<div class="rrow">'+(i+1)+' '+nameAt(i)+roleHtml+stHtml+'：'+parts.join('；')+'</div>'; };
+        return tags.map(t=>'<div class="rrow">'+(i+1)+' '+nameAt(i)+roleHtml+stHtml+'：'+e2[t]+'</div>').join(''); };   // ① 一个行动一行：同一角色一夜内多次行动（如爪牙互认 + 下毒）分开记录
       seatsN.forEach(x=>{ any=true; h+=rowFor(x); });
       if(!any) h+='<div class="rrow" style="opacity:.45">（无记录）</div>';
       const noms=nominations[n], ex=executions[n], slDay=slayerShot&&slayerShot.day===n;
@@ -3280,7 +3294,8 @@ function renderGrim(){
     const cd=(customDist||DIST[N]||[0,0,0,0]).slice();
     const total=cd[0]+cd[1]+cd[2]+cd[3];
     const _setupIssues=setupIssues(); const ready=_setupIssues.length===0;
-    if(isGameOn()) h+=gateBanner('游戏进行中：座位数量 / 玩家位置 / 角色分配已锁定，点下方「结束本局」可回到配置期');
+    if(isGameOn()) h+=gateBanner('游戏进行中：座位数量 / 玩家位置 / 角色分配与角色设置已锁定，点下方「结束本局」可回到配置期');
+    const _cl=cfgLocked(); if(_cl) h+='<div class="gatelock">';   // ⑥ 角色/阵营/误判/红鲱鱼/伪装 一并只读；下方「牌局」区在遮罩之外仍可点
     const _usedSet=new Set(); meta.forEach(m=>{ if(!m) return; if(m.isDrunk){ _usedSet.add('drunk'); if(m.role) _usedSet.add(m.role); } else if(m.role) _usedSet.add(m.role); });   // 酒鬼占用「酒鬼」牌+其自以为的镇民牌（都半透明）
     (bluffs||[]).forEach(b=>{ if(b) _usedSet.add(b); });   // 恶魔伪装选中的身份也占用（半透明）
     ORDER.forEach((team,idx)=>{
@@ -3322,6 +3337,7 @@ function renderGrim(){
         o+='<option value="'+r.id+'"'+(meta[dSel].role===r.id?' selected':'')+'>'+r.name+'</option>'; });
       h+='<div class="gsec" style="display:flex;align-items:center;gap:8px">酒鬼（'+(dSel+1)+'号）自以为是<select onchange="setDrunkRole(this.value)" style="flex:1;min-width:0;font-weight:400;font-size:clamp(9px,.9vw,12px);padding:3px;border:1px solid rgba(122,83,32,.5);border-radius:5px;background:rgba(255,252,244,.85);color:#3a2a12;font-family:inherit">'+o+'</select></div>'; }
     h+='<div class="gsec">恶魔伪装</div><div class="bluffsel">'+bluffSel(0)+bluffSel(1)+bluffSel(2)+'</div>';
+    if(_cl) h+='</div>';   // ⑥ 只读遮罩到此结束
     h+='<div class="gsec" style="margin-top:12px;border-top:1px solid rgba(122,83,32,.25);padding-top:8px;color:#43286b">牌局</div>';
     h+='<div style="display:flex;gap:6px;margin-top:6px;align-items:stretch">'
       +(isGameOn()
@@ -3461,7 +3477,7 @@ function renderSeats(){
   const zoneLeft=0.40*SW, zoneTop=0.08*SH;
   const cx=SW*0.71-zoneLeft, cy=SH*0.525-zoneTop, R=SH*0.34;
   tableCenter={x:SW*0.71, y:SH*0.525};
-  const seatD=Math.max(R*0.26, Math.min(R*0.78, R*3.8/N));
+  const seatD=Math.max(R*0.26, R*3.8/Math.max(7,N));   // ③ 上限=7人时的尺寸：5/6 人不再继续放大，避免座位过大挤掉私聊圈
   const numD=seatD*0.368, numF=numD*0.6, nmF=seatD*0.24, rF=seatD*0.17;   /* v2.42.5 去掉字号下限，座位名字/身份字号纯按 seatD 等比（人数变→座位缩放，文字同比缩放，放大后与少人座一致） */   /* 座号徽标直径较原 0.46 缩小 20%（字号 numF 随 numD 联动同缩），圆心不动、少挡名字 */
   for(let i=0;i<N;i++){
     const _k=(_chPosOf[i]!=null?_chPosOf[i]:i), ang=-Math.PI/2+_k*2*Math.PI/N;   // 有私聊分组时按显示位 k 排布
@@ -3499,7 +3515,7 @@ function renderSeats(){
         const gf=glow?'filter:drop-shadow(0 0 2px '+glow+') drop-shadow(0 0 4px '+glow+');':'';
         return '<div class="shieldbadge" title="'+t+'" style="width:'+bd+'px;height:'+bd+'px;left:'+(bx-bd/2)+'px;top:'+(by-bd/2)+'px;'+gf+'"><img src="'+ic+'"></div>'; };
       const RA=[30,60,90,120,150];   // 右侧固定 5 等距槽位：骷髅/毒/酒/盾/弩
-      [[ghostVoteUsed(i),'assets/mk-dead.png','已使用鬼票',1,'#7ce8c4'],[m.poison,'assets/mk-poison.png','中毒',1,'#3fd44f'],[(m.drunk||m.isDrunk||m.role==='drunk'),'assets/s-drunk.png','醉酒',1,'#ffe14d'],[shieldShown(i)||m.mShield,'assets/mk-shield.png','守护/免疫',1,'#d8dae2'],[(m.role==="slayer"&&slayerShot)||m.mShot,'assets/mk-crossbow.png','猎人已开枪',1.2,'#4aa8ff']]   /* 酒鬼(isDrunk 或原始 drunk 牌)自带醉酒标识 */
+      [[ghostVoteUsed(i),'assets/mk-dead.png','已使用鬼票',1,'#000'],[m.poison,'assets/mk-poison.png','中毒',1,'#3fd44f'],[(m.drunk||m.isDrunk||m.role==='drunk'),'assets/s-drunk.png','醉酒',1,'#ffe14d'],[shieldShown(i)||m.mShield,'assets/mk-shield.png','守护/免疫',1,'#d8dae2'],[(m.role==="slayer"&&slayerShot)||m.mShot,'assets/mk-crossbow.png','猎人已开枪',1.2,'#4aa8ff']]   /* 酒鬼(isDrunk 或原始 drunk 牌)自带醉酒标识 */
         .forEach((b,k)=>{ if(b[0]) html+=badge(RA[k],b[1],b[2],b[3],b[4]); });
       if(butlerPicks[night]===i) html+=badge(0,'assets/mk-master.png','管家的主人',1.1,'#f5c542');     // 正上方：王冠·金
       if(redHerring===i) html+=badge(180,'assets/mk-herring.png','红鲱鱼',1.2,'#ff4a3a');             // 正下方：红鲱鱼·红
@@ -3526,9 +3542,9 @@ function showHover(i){
   const hist=m.hist||{}; const ns=Object.keys(hist).map(Number).sort((a,b)=>a-b);
   const TAGO=['evil','info','poison','poisoned','kill','protected','death','role']; const lines=[];
   ns.forEach(n=>{ let e=hist[n]; if(typeof e==="string") e={info:e}; const d=e._d||{};
-    const pN=[], pD=[]; TAGO.forEach(t=>{ if(!e[t]) return; (d[t]?pD:pN).push(e[t]); });   // ⑭ 夜里/白天分行
-    if(pN.length) lines.push('<div class="hb-line"><span class="hb-n">第'+n+'夜</span>'+pN.join('；')+'</div>');
-    if(pD.length) lines.push('<div class="hb-line"><span class="hb-n">第'+n+'天</span>'+pD.join('；')+'</div>'); });
+    const pN=[], pD=[]; TAGO.forEach(t=>{ if(!e[t]) return; (d[t]?pD:pN).push(e[t]); });   // ⑭ 夜里/白天分行；① 每个行动各占一行
+    pN.forEach((x,k)=>lines.push('<div class="hb-line"><span class="hb-n">'+(k?'　':'第'+n+'夜')+'</span>'+x+'</div>'));
+    pD.forEach((x,k)=>lines.push('<div class="hb-line"><span class="hb-n">'+(k?'　':'第'+n+'天')+'</span>'+x+'</div>')); });
   if(lines.length) html+='<div class="hb-sep"></div>'+lines.join('');
   box.innerHTML=html;
   const c=tableCenter||{x:p.x,y:p.y};
@@ -4169,7 +4185,7 @@ load(); render();
     const seats=(snap.seats||[]); const NN=seats.length; if(!NN) return;
     const zoneLeft=0.40*SW, zoneTop=0.08*SH;
     const cx=SW*0.71-zoneLeft, cy=SH*0.525-zoneTop, R=SH*0.34;
-    const seatD=Math.max(R*0.26, Math.min(R*0.78, R*3.8/NN));
+    const seatD=Math.max(R*0.26, R*3.8/Math.max(7,NN));   // ③ 同上
     const numD=seatD*0.368, numF=numD*0.6, nmF=seatD*0.24, rF=seatD*0.17;   /* v2.42.5 去掉字号下限，座位名字/身份字号纯按 seatD 等比（人数变→座位缩放，文字同比缩放，放大后与少人座一致） */   /* 座号徽标直径较原 0.46 缩小 20%（字号 numF 随 numD 联动同缩），圆心不动、少挡名字 */
     seats.forEach(function(o,i){
       const ang=-Math.PI/2+i*2*Math.PI/NN; const x=cx+R*Math.cos(ang), y=cy+R*Math.sin(ang);
@@ -4187,7 +4203,7 @@ load(); render();
         const gf=glow?'filter:drop-shadow(0 0 2px '+glow+') drop-shadow(0 0 4px '+glow+');':'';
         return '<div class="shieldbadge" title="'+t+'" style="width:'+bd+'px;height:'+bd+'px;left:'+(bx-bd/2)+'px;top:'+(by-bd/2)+'px;'+gf+'"><img src="'+ic+'"></div>'; };
       const RA=[30,60,90,120,150];
-      [[o.bGhost,'assets/mk-dead.png','已使用鬼票',1,'#7ce8c4'],[o.bPoison,'assets/mk-poison.png','中毒',1,'#3fd44f'],[o.bDrunk,'assets/s-drunk.png','醉酒',1,'#ffe14d'],[o.bShield,'assets/mk-shield.png','守护/免疫',1,'#d8dae2'],[o.bShot,'assets/mk-crossbow.png','猎人已开枪',1.2,'#4aa8ff']]
+      [[o.bGhost,'assets/mk-dead.png','已使用鬼票',1,'#000'],[o.bPoison,'assets/mk-poison.png','中毒',1,'#3fd44f'],[o.bDrunk,'assets/s-drunk.png','醉酒',1,'#ffe14d'],[o.bShield,'assets/mk-shield.png','守护/免疫',1,'#d8dae2'],[o.bShot,'assets/mk-crossbow.png','猎人已开枪',1.2,'#4aa8ff']]
         .forEach(function(b,k){ if(b[0]) html+=badge(RA[k],b[1],b[2],b[3],b[4]); });
       if(o.master) html+=badge(0,'assets/mk-master.png','管家的主人',1.1,'#f5c542');
       if(o.herring) html+=badge(180,'assets/mk-herring.png','红鲱鱼',1.2,'#ff4a3a');
@@ -4229,7 +4245,7 @@ load(); render();
     const sr=stage.getBoundingClientRect(); const SW=stage.clientWidth, SH=stage.clientHeight; if(!SW||!SH) return -1;
     const sc=(sr.width/SW)||1;   // 舞台 transform 缩放比（把舞台布局坐标换到真实视口像素）
     const zoneLeft=0.40*SW, zoneTop=0.08*SH, cx0=SW*0.71-zoneLeft, cy0=SH*0.525-zoneTop, R=SH*0.34;
-    const NN=pub.count, seatD=Math.max(R*0.26, Math.min(R*0.78, R*3.8/NN)); const hitR=seatD*0.62*sc;
+    const NN=pub.count, seatD=Math.max(R*0.26, R*3.8/Math.max(7,NN)); const hitR=seatD*0.62*sc;   // ③ 与渲染同口径
     let _ord=null; try{ _ord=window.chatOrderView(NN, pubChats()); }catch(e){}   // 私聊重排：显示位 k → 实际座位号（否则会打到该位置原本的玩家）；③ 原始座次视图下为恒等
     for(let k=0;k<NN;k++){ const ang=-Math.PI/2+k*2*Math.PI/NN; const x=cx0+R*Math.cos(ang), y=cy0+R*Math.sin(ang);
       const vx=sr.left+(zoneLeft+x)*sc, vy=sr.top+(zoneTop+y)*sc;
@@ -4713,16 +4729,7 @@ load(); render();
     return 'M '+o0[0]+','+o0[1]+' A '+rO+','+rO+' 0 '+lg+',1 '+o1[0]+','+o1[1]+' A '+rc+','+rc+' 0 0,1 '+i1[0]+','+i1[1]+' A '+rI+','+rI+' 0 '+lg+',0 '+i0[0]+','+i0[1]+' A '+rc+','+rc+' 0 0,1 '+o0[0]+','+o0[1]+' Z'; }
   // 座位圈里追加分组色带（供 drawSeats 调用）；posOf: seat->显示位k
   window._chatDrawBands=function(zone,cx,cy,R,seatR,N,posOf){ const chats=pubChats(); if(!chats.length) return;
-    if(window.__chatRawView){    // ③ 原始座次视图：座位不重排，环形色带会横跨非成员 → 改成给每个成员画一圈高亮 + 组号
-      let sv2='<svg class="chat-band-svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:visible">';
-      const multi=chats.length>1;
-      chats.forEach(function(c,gi){ c.members.forEach(function(m){ const k=posOf[m]; if(k==null) return;
-        const a=-Math.PI/2+k*2*Math.PI/N, x=cx+R*Math.cos(a), y=cy+R*Math.sin(a);
-        sv2+='<circle cx="'+x+'" cy="'+y+'" r="'+(seatR*1.14)+'" fill="'+chatCol(c.color,0.10)+'" stroke="'+chatCol(c.color,0.95)+'" stroke-width="2.5"/>';
-        if(multi){ const rL=R+seatR*1.5, lx=cx+rL*Math.cos(a), ly=cy+rL*Math.sin(a);
-          sv2+='<circle cx="'+lx+'" cy="'+ly+'" r="'+(seatR*0.30)+'" fill="rgba(12,9,20,.88)" stroke="'+chatCol(c.color,0.95)+'" stroke-width="1.6"/>'
-             +'<text x="'+lx+'" y="'+(ly+seatR*0.11)+'" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="'+(seatR*0.36)+'" fill="'+chatCol(c.color,1)+'">'+(gi+1)+'</text>'; } }); });
-      sv2+='</svg>'; zone.insertAdjacentHTML('afterbegin',sv2); return; }
+    if(window.__chatRawView) return;   // ④ 原始座次视图：只看座次，不显示任何私聊分组信息
     const pad=Math.PI/N*0.05, rI=Math.max(seatR*1.05,R-seatR*1.11), rO=R+seatR*1.11;   // 紧贴座位：径向只留 ≈座径*0.11(~10px) 的缝、两端角度 pad 极小，将将裹住端座
     let svg='<svg class="chat-band-svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:visible">';
     chats.forEach(c=>{ const ks=c.members.map(m=>posOf[m]).filter(k=>k!=null).sort((a,b)=>a-b); if(!ks.length) return;
@@ -4730,12 +4737,13 @@ load(); render();
       svg+='<path d="'+d+'" fill="'+chatCol(c.color,0.13)+'" stroke="'+chatCol(c.color,0.95)+'" stroke-width="2.5" stroke-linejoin="round"/>'; });
     svg+='</svg>'; zone.insertAdjacentHTML('afterbegin',svg); };
   /* 座位圈上每个私聊一个按钮：放在该组「第一、二个成员座位之间」的空档（非整圈中心）。组内成员看到「退出」，组外玩家看到「加入」。夜晚冻结不显示。 */
-  window._chatDrawButtons=function(zone,cx,cy,R,seatR,N,posOf){ if(!isChatDay()) return; if(role!=='player') return;
+  window._chatDrawButtons=function(zone,cx,cy,R,seatR,N,posOf){ if(window.__chatRawView) return;   // ④ 原始座次视图不显示私聊按钮
+    if(!isChatDay()) return; if(role!=='player') return;
     const mySeat=myVoteSeat(); if(mySeat<0) return; const chats=pubChats(); if(!chats.length) return;
     const myc=chats.find(c=>c.members.indexOf(mySeat)>=0)||null;
     const bd=Math.max(18, seatR*1.0), rOut=R+seatR*1.11;   // 按钮直径≈座位半径；圆心落在外侧弧线上(=色带外弧半径)，避免遮挡座位标记
     chats.forEach(c=>{ const ks=c.members.map(m=>posOf[m]).filter(k=>k!=null).sort((a,b)=>a-b); if(ks.length<2) return;
-      const midK=window.__chatRawView?(ks[0]-0.5):((ks[0]+ks[1])/2);   // ③ 原始座次视图：成员不相邻，改放在该组首位座的逆时针半格空档
+      const midK=(ks[0]+ks[1])/2;
       const ang=-Math.PI/2+midK*2*Math.PI/N, bx=cx+rOut*Math.cos(ang), by=cy+rOut*Math.sin(ang);
       const inChat=!!(myc && myc.id===c.id), base=inChat?'退出':'加入';
       const b=document.createElement('div'); b.className='chatbtn '+(inChat?'cb-exit':'cb-join');
@@ -5179,7 +5187,7 @@ load(); render();
     if(!pub||!pub.count) return;
     const stage=document.getElementById('stage'); const SW=stage.clientWidth, SH=stage.clientHeight;
     const zoneLeft=0.40*SW, zoneTop=0.08*SH, cx=SW*0.71-zoneLeft, cy=SH*0.525-zoneTop, R=SH*0.34;
-    const N=pub.count, seats=pub.seats||[]; const seatD=Math.max(R*0.26, Math.min(R*0.78, R*3.8/N));
+    const N=pub.count, seats=pub.seats||[]; const seatD=Math.max(R*0.26, R*3.8/Math.max(7,N));   // ③ 同上
     const numD=seatD*0.368, numF=numD*0.6, nmF=seatD*0.24, rF=seatD*0.17;   /* v2.42.5 去掉字号下限，座位名字/身份字号纯按 seatD 等比（人数变→座位缩放，文字同比缩放，放大后与少人座一致） */   /* 座号徽标直径较原 0.46 缩小 20%（字号 numF 随 numD 联动同缩），圆心不动、少挡名字 */
     /* 私聊分组：把成员拉到发起人身边聚拢，非成员保持环序；posOf: 座位号 -> 显示位 k */
     const _chOrder=window.chatOrderView(N, pubChats()); const posOf={}; _chOrder.forEach((o,k)=>{ posOf[o.seat]=k; });   // ③ 视图开关
