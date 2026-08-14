@@ -1314,6 +1314,7 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.50.19', d:'2026-08-13', items:['猎手射杀动画按是否终结游戏区分：只有当这一枪杀死场上唯一的恶魔、且没有新恶魔产生（好人因此获胜）时，才播放完整的射杀→变身动画并接胜利；如果这一枪不会结束游戏（例如打死的是被注册成恶魔的陌客、或恶魔死后红唇女郎接任），则只播放到第 3 秒再淡出。']},
   {v:'v2.50.18', d:'2026-08-13', items:['玩家笔记「概览」页每个角色框现在可以点击，会弹出更详尽的角色介绍：包含「功能」「何时行动」「中毒/醉酒时的表现」「与间谍/陌客的交互」「推荐玩法」五个部分，涵盖全部 22 个角色。']},
   {v:'v2.50.17', d:'2026-08-13', items:['信息类角色新增「按注册身份展示」：当场上有间谍/陌客时，说书人在这些角色健康的情况下也能主动把间谍/陌客按其合法注册身份展示给玩家（结果标「真」，区别于中毒时的可假信息）。具体：①调查员可把陌客展示为某个爪牙；②洗衣妇可把间谍展示为某个镇民；③图书管理员可把间谍展示为某个外来者（即使场上没有真外来者也能这样展示）；④送葬者处决到间谍/陌客、⑤守鸦人查到间谍/陌客时，都可选按注册身份告知。默认仍显示真身，入口仅在涉及间谍/陌客时才出现，不影响其他情况。']},
   {v:'v2.50.16', d:'2026-08-13', items:['①夜晚的胜负改为「天亮后」再公布：小恶魔夜里击杀导致的胜利/失败（如只剩两人、恶魔夜死）不再在夜里立即弹给全场，而是攒到说书人点「结束本夜」天亮、与死亡一起公布，避免提前剧透夜间死亡；白天的处决/猎人射杀触发的胜负仍即时。②图书管理员现在能看到「酒鬼」（酒鬼作为外来者可被展示给图管；且酒鬼不再被错误地当成镇民展示给洗衣妇）。③守鸦人查验酒鬼时显示其真身「酒鬼」，与送葬者一致。④中毒/醉酒的厨师、共情者、送葬者、占卜师，若说书人还没设定要告知的（可假）信息就点发送，不再自动把真实信息发出去，会提示先设定。⑤说书人改判/撤销处决导致胜负被撤回时，之前误记入永久战绩的那一条会一并删除，不再残留。']},
@@ -2379,7 +2380,8 @@ window.applyResult=function(res){
 };
 /* ---------- 处决动画（三选一随机；非恶魔只播前半段，恶魔播完整→随后胜利动画） ---------- */
 const EXEC_VIDEOS=['assets/exec1.mp4','assets/exec2.mp4','assets/exec3.mp4'];
-const SLAYER_VIDEO='assets/slayer.mp4';   // 猎人成功射杀恶魔时播放（完整播放→淡出→若胜利则接胜利动画）
+const SLAYER_VIDEO='assets/slayer.mp4';   // 猎人命中时播放：终结游戏(唯一恶魔死、无新恶魔)=完整播放→淡出→接胜利；不终结(打死陌客/红唇接任等)=只放到第3秒再淡出
+const SLAYER_CUT=3;   // 猎人非终结击杀的截断秒数
 /* 举手图标：金色圆底 + 手掌，铺满座位背景 */
 /* 各视频「变身（变成恶魔）」开始的秒数：非恶魔被处决时播到此处即停。三个视频可不同，按需修改。 */
 const EXEC_CUT=[6.2, 5.5, 7];
@@ -2402,10 +2404,11 @@ function endExec(mode){ const v=document.getElementById('execVideo'); if(!v){ wi
   else _finalizeExec();
 }
 window.__endExec=endExec;
-function playExec(idx, full, srcOverride){ const v=document.getElementById('execVideo'); if(!v){ return; }
+function playExec(idx, full, srcOverride, cutOverride, cutMode){ const v=document.getElementById('execVideo'); if(!v){ return; }
   idx=(idx|0); if(idx<0||idx>=EXEC_VIDEOS.length) idx=0;
   const src = srcOverride || EXEC_VIDEOS[idx];
-  const cut = full ? Infinity : (EXEC_CUT[idx]||7);
+  const cut = full ? Infinity : (cutOverride!=null ? cutOverride : (EXEC_CUT[idx]||7));   // cutOverride：猎人非终结击杀=3 秒
+  const cmode = cutMode || 'dark';   // 截断后收尾：处决非恶魔=定格变黑；猎人非终结=淡出
   clearTimeout(v._hold); v._ending=false;
   window.__execPlaying=true; try{ if(window._bgDuck) _bgDuck(true); }catch(e){}   // 处决期间压低背景音乐
   try{ if(window.updateNightBar) window.updateNightBar(); }catch(e){} try{ if(window.updateStSlayerBar) window.updateStSlayerBar(); }catch(e){} try{ if(window.updateStSwBar) window.updateStSwBar(); }catch(e){}   // 视频播放期间先收起底部通知弹窗，避免压在视频上（视频在最上层）
@@ -2413,7 +2416,7 @@ function playExec(idx, full, srcOverride){ const v=document.getElementById('exec
   v.style.display='block'; v.muted=!!window.__muted;   // 全局静音时不出声
   try{ v.volume=Math.max(0,Math.min(1,(window.__vol&&typeof window.__vol.anim==='number')?window.__vol.anim:1)); }catch(e){}   // 动画音量档位
   void v.offsetWidth; v.classList.add('show');   // 触发淡入（透明度）
-  v.ontimeupdate=function(){ if(cut!==Infinity && v.currentTime>=cut) endExec('dark'); };   // 非恶魔：截断→定格并逐渐变黑
+  v.ontimeupdate=function(){ if(cut!==Infinity && v.currentTime>=cut) endExec(cmode); };   // 截断→按 cmode 收尾（处决非恶魔=定格变黑；猎人非终结=淡出）
   v.onended=function(){ endExec('fade'); };                                                 // 恶魔：播完→仅淡出→接胜利
   const tok=(v._playTok=(v._playTok||0)+1);   // 播放令牌：只让最新一次播放生效，忽略被打断的旧 promise
   const kick=function(){ if(v._playTok!==tok) return; try{ v.currentTime=0; }catch(e){}
@@ -2430,7 +2433,7 @@ window.playExec=playExec;
 window._applyExec=function(e){ if(!e||!e.ts) return; if(e.ts===EXEC._seenTs) return; EXEC._seenTs=e.ts;
   const now=Date.now()+((window.CLK&&CLK.offset)||0);
   if(now - e.ts > 15000) return;   // 陈旧事件（刷新/重连）不重播
-  if(e.kind==='slayer') playExec(0, true, SLAYER_VIDEO);   // 猎人射杀恶魔：完整播放（结尾淡出）
+  if(e.kind==='slayer') playExec(0, !!e.full, SLAYER_VIDEO, SLAYER_CUT, 'fade');   // 猎人射杀：终结游戏(full)才完整播放→淡出→接胜利；否则(陌客/红唇接任)只放到第3秒再淡出
   else playExec(e.idx||0, !!e.full);
 };
 /* ---------- 全局静音（按钮在左上角设置右侧，金色图标与其它按钮一致） ---------- */
@@ -2613,12 +2616,16 @@ function registersDemon(i){ const m=meta[i]; if(!m||!m.role) return false; if(RM
 function slayerFire(v){ if(v===""||slayerShot||executions[night]!==undefined) return; const t=+v; const sl=meta.findIndex(m=>m&&m.role==="slayer"); if(sl<0) return;   // 处决结果出来后不能再开枪
   const hit = healthy(sl) && !isDeadSeat(sl) && registersDemon(t);
   slayerShot={target:t, day:night, hit};
+  let _sfull=false;
   if(hit){ killSeat(t,true); histSet(t,'death','被猎人射杀出局'); demonDied(t);
     const _sw=(meta[t]&&meta[t]._swSeat!=null)?meta[t]._swSeat:null;
     if(_sw!=null) try{ _notifySwTakeover(_sw, night); }catch(e){}   // 猎人击杀触发红唇继任 → 同处决一样通知(需确认)+记日志
+    const _isDem=!!(meta[t]&&meta[t].role&&RMAP[meta[t].role]&&RMAP[meta[t].role].team==='dem');
+    const _demonAlive=meta.some((m,i)=>m&&m.role&&RMAP[m.role]&&RMAP[m.role].team==='dem' && !isDeadSeat(i));
+    _sfull = _isDem && !_demonAlive && _sw==null;   // 该击杀是否终结游戏：唯一真恶魔被杀、无新恶魔(无红唇接任) → 完整动画；否则(打死陌客/红唇接任/尚有其他恶魔)只放到第3秒
   }
   if(window._syncNoms) window._syncNoms(); if(window._syncSeats) window._syncSeats();
-  if(hit && window._pubSlayer) window._pubSlayer();   // 猎人成功射杀恶魔→播放动画（红唇继任也播）
+  if(hit && window._pubSlayer) window._pubSlayer(_sfull);   // 猎人命中→播放动画（_sfull=是否终结游戏，决定完整/截到3秒）
   render(); }
 /* 说书人开枪结算（猎手请求 或 说书人代开枪都走这里）：射击 + 把结果回给猎手玩家 + 记局内信息 */
 function _stFireSlayer(target){ if(target==null||target==='') return;
@@ -4318,8 +4325,8 @@ load(); render();
   window._pubExec=function(idx,full){ if(role!=='st'||!curGid) return;
     db.ref('games/'+curGid+'/public/exec').set({idx:idx|0, full:!!full, ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); };
   /* 说书人：发布“猎人射杀恶魔”动画事件（成功命中时，即便红唇女郎继任也播放） */
-  window._pubSlayer=function(){ if(role!=='st'||!curGid) return;
-    db.ref('games/'+curGid+'/public/exec').set({kind:'slayer', full:true, ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); };
+  window._pubSlayer=function(full){ if(role!=='st'||!curGid) return;
+    db.ref('games/'+curGid+'/public/exec').set({kind:'slayer', full:!!full, ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); };   // full=击杀是否终结游戏
   /* ===================== 私聊分组系统（v2.42.0）=====================
      仅分组(无文字)、全场公开。玩家写自己节点 chatReq/chatResp/chatLeave；说书人跑状态机、发布 public/chats,chatInv,chatNote；所有人渲染。*/
   const CHAT_RGB=['74,194,180','74,194,180','74,194,180','74,194,180','74,194,180'];   // 私聊统一用一种青色（方案A，亮度157<160→白字），色带/房间共用
