@@ -603,15 +603,13 @@
     display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent;}   /* v2.50.14 放大10%(60→66)、右移拉开间距(84→104) */
   #chatFab .fab-ic, #stDisbandFab .fab-ic, #chatRoomFab .fab-ic{position:absolute; inset:0; display:block;}   /* v2.59.0 图标改内联 SVG，外面套一层定位容器，角标仍是兄弟节点 */
   #chatFab .fab-ic svg{width:100%; height:100%; display:block; filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));}
-  #chatFab.cf-sel .fab-ic svg{filter:drop-shadow(0 0 4px rgba(120,255,240,1)) drop-shadow(0 0 10px rgba(74,194,180,1)) drop-shadow(0 0 20px rgba(74,194,180,.85)) drop-shadow(0 2px 3px rgba(0,0,0,.55)); animation:cfSelGlow 1.5s ease-in-out infinite;}   /* ⑩ 选人模式：teal 辉光加粗加亮 + 呼吸，远比原来醒目 */
+  /* 选人模式：与「座次」按钮（#seatViewFab.sv-raw）同款——贴着线条的一圈青色描边光，不再是外面糊一团光晕。
+     v2.59.1：删掉了原来的 ::before 径向光晕底和 20~30px 的大范围投影，只留贴边的 5~8px + 一层很淡的外扩，配轻微呼吸。 */
+  #chatFab.cf-sel .fab-ic svg{filter:drop-shadow(0 0 5px rgba(74,194,180,.95)) drop-shadow(0 0 10px rgba(74,194,180,.5)) drop-shadow(0 2px 4px rgba(0,0,0,.75)); animation:cfSelGlow 1.6s ease-in-out infinite;}
   @keyframes cfSelGlow{
-    0%,100%{filter:drop-shadow(0 0 4px rgba(120,255,240,1)) drop-shadow(0 0 10px rgba(74,194,180,1)) drop-shadow(0 0 20px rgba(74,194,180,.85)) drop-shadow(0 2px 3px rgba(0,0,0,.55));}
-    50%{filter:drop-shadow(0 0 7px rgba(150,255,245,1)) drop-shadow(0 0 16px rgba(74,194,180,1)) drop-shadow(0 0 30px rgba(74,194,180,1)) drop-shadow(0 2px 3px rgba(0,0,0,.55));}
+    0%,100%{filter:drop-shadow(0 0 5px rgba(74,194,180,.95)) drop-shadow(0 0 10px rgba(74,194,180,.5)) drop-shadow(0 2px 4px rgba(0,0,0,.75));}
+    50%{filter:drop-shadow(0 0 8px rgba(130,255,242,1)) drop-shadow(0 0 15px rgba(74,194,180,.7)) drop-shadow(0 2px 4px rgba(0,0,0,.75));}
   }
-  #chatFab.cf-sel::before{content:''; position:absolute; inset:-9%; border-radius:50%; pointer-events:none;
-    background:radial-gradient(circle, rgba(74,194,180,.42) 0%, rgba(74,194,180,.16) 52%, rgba(74,194,180,0) 72%);
-    animation:cfSelHalo 1.5s ease-in-out infinite;}   /* ⑩ 图标外再加一层青色光晕底 */
-  @keyframes cfSelHalo{ 0%,100%{transform:scale(1); opacity:.85;} 50%{transform:scale(1.13); opacity:1;} }
   #chatFab.cf-off{filter:grayscale(1) brightness(.8); opacity:.5; cursor:not-allowed;}
   #chatFab .cf-badge{position:absolute; top:-5px; right:-5px; min-width:20px; height:20px; padding:0 5px; border-radius:10px; box-sizing:border-box;
     background:#2fb0a2; color:#fff; font:800 12px sans-serif; display:none; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.5);}   /* 选中人数角标=teal（v2.50.10）*/
@@ -1418,6 +1416,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.59.1', d:'2026-08-15', items:[
+    '「发起私聊」进入选人模式时的青色高亮，改成和「座次」按钮一样贴着线条的一圈描边光——去掉了原来图标外面那团径向光晕和大范围投影，看起来干净多了，仍保留很轻的呼吸感。',
+  ]},
   {v:'v2.59.0', d:'2026-08-15', items:[
     '聊天室、发起私聊、发出邀请、解散私聊、加入私聊、退出私聊这六个图标，全部重画成和「私聊/座次」「日志」「裁决」同一套风格的线稿图标：统一的金色描边、半透明填充，底部按钮带两字标签。',
     '聊天室=两个对话气泡；发起私聊=两个小人 + 绿色＋；已选人时变成青色纸飞机「发送」；解散私聊=两个小人分开 + 红色✕；座位圈上的加入/退出=一个房间轮廓配绿色进箭头 / 红色出箭头（尺寸太小放不下文字，靠颜色和方向区分）。',
