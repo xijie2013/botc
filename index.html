@@ -603,13 +603,8 @@
     display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent;}   /* v2.50.14 放大10%(60→66)、右移拉开间距(84→104) */
   #chatFab .fab-ic, #stDisbandFab .fab-ic, #chatRoomFab .fab-ic{position:absolute; inset:0; display:block;}   /* v2.59.0 图标改内联 SVG，外面套一层定位容器，角标仍是兄弟节点 */
   #chatFab .fab-ic svg{width:100%; height:100%; display:block; filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));}
-  /* 选人模式：与「座次」按钮（#seatViewFab.sv-raw）同款——贴着线条的一圈青色描边光，不再是外面糊一团光晕。
-     v2.59.1：删掉了原来的 ::before 径向光晕底和 20~30px 的大范围投影，只留贴边的 5~8px + 一层很淡的外扩，配轻微呼吸。 */
-  #chatFab.cf-sel .fab-ic svg{filter:drop-shadow(0 0 5px rgba(74,194,180,.95)) drop-shadow(0 0 10px rgba(74,194,180,.5)) drop-shadow(0 2px 4px rgba(0,0,0,.75)); animation:cfSelGlow 1.6s ease-in-out infinite;}
-  @keyframes cfSelGlow{
-    0%,100%{filter:drop-shadow(0 0 5px rgba(74,194,180,.95)) drop-shadow(0 0 10px rgba(74,194,180,.5)) drop-shadow(0 2px 4px rgba(0,0,0,.75));}
-    50%{filter:drop-shadow(0 0 8px rgba(130,255,242,1)) drop-shadow(0 0 15px rgba(74,194,180,.7)) drop-shadow(0 2px 4px rgba(0,0,0,.75));}
-  }
+  /* 选人模式不再加任何辉光（v2.59.2）：改成和「座次」按钮同一种做法——直接换一整个青色版本的图标
+     （_CF_ICON_INVITE_SEL），选中人后再换成本来就是青色的「发送」。`.cf-sel` 这个 class 保留作状态钩子，不带样式。 */
   #chatFab.cf-off{filter:grayscale(1) brightness(.8); opacity:.5; cursor:not-allowed;}
   #chatFab .cf-badge{position:absolute; top:-5px; right:-5px; min-width:20px; height:20px; padding:0 5px; border-radius:10px; box-sizing:border-box;
     background:#2fb0a2; color:#fff; font:800 12px sans-serif; display:none; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.5);}   /* 选中人数角标=teal（v2.50.10）*/
@@ -1416,6 +1411,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.59.2', d:'2026-08-15', items:[
+    '「发起私聊」按钮不再有任何辉光。改成和「座次」按钮一样的做法：点进选人模式后，图标本身直接变成青色；选中人之后换成本来就是青色的「发送」纸飞机。',
+  ]},
   {v:'v2.59.1', d:'2026-08-15', items:[
     '「发起私聊」进入选人模式时的青色高亮，改成和「座次」按钮一样贴着线条的一圈描边光——去掉了原来图标外面那团径向光晕和大范围投影，看起来干净多了，仍保留很轻的呼吸感。',
   ]},
@@ -2984,6 +2982,7 @@ const _SV_ICON_RAW='<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
    底部按钮带两字标签（y=58），座位圈上的加入/退出因为只有座位半径大小，不带文字。 */
 const _CR_ICON='<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><path d="M32 6 H51 a5 5 0 0 1 5 5 V19 a5 5 0 0 1 -5 5 H45" fill="rgba(233,196,106,.09)" stroke="#e9c46a" stroke-width="1.8" stroke-opacity=".5" stroke-linejoin="round" stroke-linecap="round"/><path d="M13 12 H37 a5 5 0 0 1 5 5 V29 a5 5 0 0 1 -5 5 H24 l-7 7 v-7 h-4 a5 5 0 0 1 -5 -5 V17 a5 5 0 0 1 5 -5 z" fill="rgba(233,196,106,.15)" stroke="#e9c46a" stroke-width="2.2" stroke-linejoin="round"/><circle cx="17" cy="23" r="2.3" fill="#e9c46a"/><circle cx="25" cy="23" r="2.3" fill="#e9c46a"/><circle cx="33" cy="23" r="2.3" fill="#e9c46a"/><text x="32" y="58" text-anchor="middle" font-family="system-ui,sans-serif" font-size="15" font-weight="700" fill="#e9c46a">聊天</text></svg>';
 const _CF_ICON_INVITE='<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><g opacity=".5"><circle cx="38" cy="21.9" r="4.2" fill="rgba(233,196,106,.16)" stroke="#e9c46a" stroke-width="2.1"/><path d="M30.2 36.3 a 7.8 7.8 0 0 1 15.6 0" fill="rgba(233,196,106,.16)" stroke="#e9c46a" stroke-width="2.1" stroke-linecap="round"/></g><g opacity="1"><circle cx="22" cy="19.1" r="5.2" fill="rgba(233,196,106,.16)" stroke="#e9c46a" stroke-width="2.1"/><path d="M12.4 36.7 a 9.6 9.6 0 0 1 19.2 0" fill="rgba(233,196,106,.16)" stroke="#e9c46a" stroke-width="2.1" stroke-linecap="round"/></g><circle cx="51" cy="11" r="7" fill="rgba(110,194,122,.24)" stroke="#6ec27a" stroke-width="2"/><path d="M51 7.5 V14.5 M47.5 11 H54.5" stroke="#6ec27a" stroke-width="2.4" stroke-linecap="round"/><text x="32" y="58" text-anchor="middle" font-family="system-ui,sans-serif" font-size="15" font-weight="700" fill="#e9c46a">邀请</text></svg>';
+const _CF_ICON_INVITE_SEL='<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><g opacity=".5"><circle cx="38" cy="21.9" r="4.2" fill="rgba(74,194,180,.16)" stroke="#4ac2b4" stroke-width="2.1"/><path d="M30.2 36.3 a 7.8 7.8 0 0 1 15.6 0" fill="rgba(74,194,180,.16)" stroke="#4ac2b4" stroke-width="2.1" stroke-linecap="round"/></g><g opacity="1"><circle cx="22" cy="19.1" r="5.2" fill="rgba(74,194,180,.16)" stroke="#4ac2b4" stroke-width="2.1"/><path d="M12.4 36.7 a 9.6 9.6 0 0 1 19.2 0" fill="rgba(74,194,180,.16)" stroke="#4ac2b4" stroke-width="2.1" stroke-linecap="round"/></g><circle cx="51" cy="11" r="7" fill="rgba(110,194,122,.24)" stroke="#6ec27a" stroke-width="2"/><path d="M51 7.5 V14.5 M47.5 11 H54.5" stroke="#6ec27a" stroke-width="2.4" stroke-linecap="round"/><text x="32" y="58" text-anchor="middle" font-family="system-ui,sans-serif" font-size="15" font-weight="700" fill="#4ac2b4">邀请</text></svg>';
 const _CF_ICON_SEND='<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><path d="M6 27 L56 9 L42 43 L33 33 Z" fill="rgba(74,194,180,.16)" stroke="#4ac2b4" stroke-width="2.2" stroke-linejoin="round"/><path d="M6 27 L33 33 L56 9" fill="none" stroke="#4ac2b4" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><text x="32" y="58" text-anchor="middle" font-family="system-ui,sans-serif" font-size="15" font-weight="700" fill="#4ac2b4">发送</text></svg>';
 const _SDF_ICON='<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><g transform="rotate(-20 16 30)"><circle cx="16" cy="21.3" r="4.6" fill="rgba(233,196,106,.16)" stroke="#e9c46a" stroke-width="2.1"/><path d="M7.5 36.8 a 8.5 8.5 0 0 1 17 0" fill="rgba(233,196,106,.16)" stroke="#e9c46a" stroke-width="2.1" stroke-linecap="round"/></g><g transform="rotate(20 43 30)"><circle cx="43" cy="21.3" r="4.6" fill="rgba(233,196,106,.16)" stroke="#e9c46a" stroke-width="2.1"/><path d="M34.5 36.8 a 8.5 8.5 0 0 1 17 0" fill="rgba(233,196,106,.16)" stroke="#e9c46a" stroke-width="2.1" stroke-linecap="round"/></g><circle cx="54" cy="10" r="6.8" fill="rgba(224,106,90,.24)" stroke="#e06a5a" stroke-width="2"/><path d="M51.1 7.1 L56.9 12.9 M56.9 7.1 L51.1 12.9" stroke="#e06a5a" stroke-width="2.4" stroke-linecap="round"/><text x="32" y="58" text-anchor="middle" font-family="system-ui,sans-serif" font-size="15" font-weight="700" fill="#e9c46a">解散</text></svg>';
 const _CB_ICON_JOIN='<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><path d="M33 9 H50 a7 7 0 0 1 7 7 V48 a7 7 0 0 1 -7 7 H33" fill="rgba(233,196,106,.14)" stroke="#e9c46a" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M5 32 H31" stroke="#6ec27a" stroke-width="4.4" stroke-linecap="round"/><path d="M21 22 L31 32 L21 42" fill="none" stroke="#6ec27a" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -5157,8 +5156,9 @@ load(); render();
     fab.classList.toggle('cf-sel', !!_chatSelMode);
     const badge=fab.querySelector('.cf-badge'); const n=(_chatSelMode&&_chatSel)?_chatSel.size:0;
     if(badge){ badge.textContent=n||''; badge.style.display=n?'flex':'none'; }
-    const ic=fab.querySelector('.fab-ic'); const want=(_chatSelMode&&n>0)?'send':'invite';
-    if(ic && ic.dataset.ic!==want){ ic.dataset.ic=want; ic.innerHTML=(want==='send')?_CF_ICON_SEND:_CF_ICON_INVITE; } }   /* 选人模式且已选≥1人=发出邀请(纸飞机·青)；未选人时是邀请图标(两小人+绿＋) v2.59.0 */
+    const ic=fab.querySelector('.fab-ic'); const want=(_chatSelMode&&n>0)?'send':(_chatSelMode?'invitesel':'invite');
+    if(ic && ic.dataset.ic!==want){ ic.dataset.ic=want;
+      ic.innerHTML=(want==='send')?_CF_ICON_SEND:(want==='invitesel'?_CF_ICON_INVITE_SEL:_CF_ICON_INVITE); } }   /* 三态：平时金色邀请 → 进入选人模式变青色 → 已选≥1人变青色纸飞机「发送」 v2.59.2 */
   window.updateChatFab=updateChatFab;
   /* 说书人魔典：左下角「解散私聊」按钮（两连点确认 → 清空所有私聊，玩家回到原座位，随后可开始提名） */
   window.__sdfArmed=false; window.__sdfT=null;
