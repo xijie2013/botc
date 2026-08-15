@@ -637,8 +637,10 @@
   #seatViewFab:hover, #stLogFab:hover{ transform:scale(1.14); filter:brightness(1.15); }
   #seatViewFab:active, #stLogFab:active{ transform:scale(.9); }
   #seatViewFab.sv-raw svg{filter:drop-shadow(0 0 5px rgba(74,194,180,.9)) drop-shadow(0 2px 4px rgba(0,0,0,.75));}
-  #seatViewFab.fab-off, #stLogFab.fab-off{filter:grayscale(1) brightness(.8); opacity:.5; cursor:not-allowed;}   /* 灰态：与「发起私聊」按钮同款 */
-  #seatViewFab.fab-off:hover, #stLogFab.fab-off:hover, #seatViewFab.fab-off:active, #stLogFab.fab-off:active{transform:none; filter:grayscale(1) brightness(.8);}
+  #seatViewFab.fab-off, #stLogFab.fab-off, #winJudgeFab.fab-off{filter:grayscale(1) brightness(.8); opacity:.5; cursor:not-allowed;}   /* 灰态：与「发起私聊」按钮同款 */
+  #seatViewFab.fab-off:hover, #stLogFab.fab-off:hover, #winJudgeFab.fab-off:hover,
+  #seatViewFab.fab-off:active, #stLogFab.fab-off:active, #winJudgeFab.fab-off:active{transform:none; filter:grayscale(1) brightness(.8);}
+  #winJudgeFab.fab-off svg{filter:none;}   /* 盖掉 svg 自己的投影，灰态更干净 */
   /* ⑧ 玩家端查看说书人分享的日志：body 级模态，原生尺寸不随舞台缩放 */
   /* ⑪ 胜负裁决：说书人提示条（系统→说书人，沿用蓝底蓝边） */
   #stWinBar{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); transform-origin:center bottom; z-index:122; display:none;
@@ -1399,6 +1401,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.54.1', d:'2026-08-14', items:[
+    '说书人左下角的「裁决」图标改为全程可见：还没开局时是灰色、点不动（点了会提示先开新的一局），开局后自动亮起；检测到胜负条件时照常呼吸高亮。',
+  ]},
   {v:'v2.54.0', d:'2026-08-14', items:[
     '座位身份支持拖动转移与互换：把座位上的身份拖到另一个空座位＝把身份搬过去（原座位清空）；拖到已有身份的座位＝两个座位的身份互换；拖到空白处或客人名册＝移除该身份。',
     '说书人魔典里这套操作**只在配置阶段可用**（点「新的一局」进入游戏期后座位身份即锁定，与其它配置项一致）；玩家笔记里全程可用。',
@@ -2595,9 +2600,12 @@ function renderWin(){
   if(wi){ wi.style.display='none'; wi.dataset.w=''; }   // 魔典不再在座位中央显示结算图标（改为日志页顶部横幅）
 }
 function _updateWinFab(){ const el=document.getElementById('winJudgeFab'); if(!el) return;
-  if(window.__botcRole!=='st' || !isGameOn()){ el.style.display='none'; return; }
+  if(window.__botcRole!=='st'){ el.style.display='none'; return; }   // 仅说书人可见；未开局时一直在，只是灰态不可点
   el.style.display='flex'; if(!el.firstChild) el.innerHTML=_WJ_ICON;
-  el.classList.toggle('wj-alert', !!window.__winPending); }
+  const on=isGameOn();
+  el.classList.toggle('fab-off', !on);
+  el.classList.toggle('wj-alert', on && !!window.__winPending);
+  el.title = on ? '胜负条件追踪 / 裁决' : '本局尚未开始'; }
 window._updateWinFab=_updateWinFab;
 function updateStWinBar(){ const bar=document.getElementById('stWinBar'); if(!bar) return;
   const win=window.__winPending;
@@ -2648,6 +2656,7 @@ function _renderWinJudgeBody(){ const bd=document.getElementById('wjBody'); if(!
 window._closeWinJudge=function(){ const m=document.getElementById('winJudgeMask'); if(m) m.remove(); window.__wjOpen=false; };
 window._openWinJudge=function(){
   if(window.__botcRole!=='st') return;
+  if(!isGameOn()){ try{ if(window._toast) window._toast('本局尚未开始——请先在「角色设置」页点「新的一局」'); }catch(e){} return; }
   window._closeWinJudge();
   const mask=document.createElement('div'); mask.id='winJudgeMask';
   mask.innerHTML='<div class="wjm-box"><div class="wjm-hd"><span>⚖ 胜负条件追踪 · 说书人裁决</span><span class="wjm-x" title="关闭">✕</span></div><div class="wjm-bd" id="wjBody"></div></div>';
