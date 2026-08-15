@@ -1397,6 +1397,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.53.6', d:'2026-08-14', items:[
+    '说书人日志里每条记录末尾的 [出局 / 中毒] 状态改为「该行动发生当刻」的状态，不再显示当前状态。此前小恶魔第一天被处决后，它第一夜的击杀记录也会被标上「出局」。中毒同理：按当夜投毒者的目标判定，不会因为之后的夜晚换了下毒对象而错标。',
+  ]},
   {v:'v2.53.5', d:'2026-08-14', items:[
     '僧侣的守护目标与管家选择的主人现在会记入说书人日志（此前这两步完全没有留下记录）。管家中毒/醉酒时日志会额外标注「其投票不再受主人限制」。',
     '修正中毒/醉酒管家的投票：按规则其能力失效、可以自由投票，此前玩家端的举手锁没有检查中毒状态仍然拦着他。现在锁的外观照旧（不主动提示他中毒了），但按钮实际可点、可以举手。',
@@ -3265,22 +3268,34 @@ function stLogHTML(){ let h="";
         else if(tag==='kill') k=_oi('imp');                        // 恶魔夜杀
         else if(tag==='info') k=_oi(m.role);                       // 该角色自己的信息步
         if(k>=0) return k;
-        if(tag==='poisoned'){ const q=_oi('poisoner'); if(q>=0) return q+0.5; }                                  // 被下毒：紧跟「下毒」之后
-        if(tag==='protected'||tag==='death'||tag==='role'){ const q=_oi('imp'); if(q>=0) return q+0.5; }          // 被守护 / 夜杀出局 / 红唇接任：紧跟夜杀之后
+        if(tag==='kill') return order.length;                                                                    // 该夜的顺序表里没有恶魔击杀步（首夜）→ 排到本夜最后
+        if(tag==='poisoned'){ const q=_oi('poisoner'); return (q>=0?q:order.length)+0.5; }                        // 被下毒：紧跟「下毒」之后
+        if(tag==='protected'||tag==='death'||tag==='role'){ const q=_oi('imp'); return (q>=0?q:order.length)+0.5; } // 被守护 / 夜杀出局 / 红唇接任：紧跟夜杀之后
         const r=_oi(m.role); if(r>=0) return r;
         return 500+i; };
       const rowsN=[], seatsD=[];   // ⑭ 同一 night 键里，_d 标记过的条目属于「白天」，其余属于「夜晚」；① 一条记录=一行
       meta.forEach((m,i)=>{ if(!m.hist||!m.hist[n]) return; let e=m.hist[n]; if(typeof e==="string") e={info:e};
         const d=e._d||{};
         TAGO.forEach((t,ti)=>{ if(!e[t]) return;
-          if(d[t]) seatsD.push({i:i, tag:t, o:ti}); else rowsN.push({i:i, tag:t, o:ti, k:stepKeyOf(i,t)}); }); });
+          if(d[t]) seatsD.push({i:i, tag:t, o:ti, day:true}); else rowsN.push({i:i, tag:t, o:ti, day:false, k:stepKeyOf(i,t)}); }); });
       rowsN.sort((A,B)=> (A.k-B.k) || (A.i-B.i) || (A.o-B.o));
       seatsD.sort((A,B)=> (A.i-B.i) || (A.o-B.o));
-      const rowFor=({i,tag})=>{ const m=meta[i];
+      /* 每行末尾的 [出局/中毒/醉酒] 应该是「这个行动发生的那一刻」的状态，不是现在的状态。
+         用 (夜数, 昼/夜) 拼一个时间序号 key=n*2+(白天?1:0) 来比较：
+         出局 = 该座位最早一条 death 记录的 key 严格早于本行的 key（同一时刻不算，那条记录自己会写明出局）。
+         中毒 = 该夜投毒者的目标就是他（毒按夜归档，持续到当天结束）；当前这一夜额外认 meta.poison，兼容说书人手动打的毒标。 */
+      const _tk=(nn,isDay)=>nn*2+(isDay?1:0);
+      const _deathKey=(i)=>{ const hh=meta[i]&&meta[i].hist; if(!hh) return Infinity;
+        const ks=Object.keys(hh).map(Number).sort((a,b)=>a-b);
+        for(let z=0;z<ks.length;z++){ const e=hh[ks[z]]; if(e&&e.death) return _tk(ks[z], !!(e._d&&e._d.death)); }
+        return Infinity; };
+      const rowFor=({i,tag,day})=>{ const m=meta[i];
         let e2=m.hist[n]; if(typeof e2==="string") e2={info:e2};
         const r=m.role?RMAP[m.role]:null;
         const roleHtml=r?' <b style="color:'+(m.isDrunk?TEAMC.out:TEAMC[r.team])+'">'+r.name+(m.isDrunk?'-酒鬼':'')+'</b>':'';
-        const stArr=[]; if(isDeadSeat(i))stArr.push('出局'); if(m.poison)stArr.push('中毒'); if(m.drunk&&!m.isDrunk)stArr.push('醉酒');
+        const _wasDead=_deathKey(i) < _tk(n,!!day);
+        const _wasPoison=(poisonPicks[n]===i) || (n===night && !!m.poison);
+        const stArr=[]; if(_wasDead)stArr.push('出局'); if(_wasPoison)stArr.push('中毒'); if(m.drunk&&!m.isDrunk)stArr.push('醉酒');
         const stHtml=stArr.length?' <span style="color:#b0402e;font-size:.88em">['+stArr.join('/')+']</span>':'';
         return '<div class="rrow">'+(i+1)+' '+nameAt(i)+roleHtml+stHtml+'：'+e2[tag]+'</div>'; };
       rowsN.forEach(x=>{ any=true; h+=rowFor(x); });
