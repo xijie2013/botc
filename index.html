@@ -637,6 +637,8 @@
   #seatViewFab:hover, #stLogFab:hover{ transform:scale(1.14); filter:brightness(1.15); }
   #seatViewFab:active, #stLogFab:active{ transform:scale(.9); }
   #seatViewFab.sv-raw svg{filter:drop-shadow(0 0 5px rgba(74,194,180,.9)) drop-shadow(0 2px 4px rgba(0,0,0,.75));}
+  #seatViewFab.fab-off, #stLogFab.fab-off{filter:grayscale(1) brightness(.8); opacity:.5; cursor:not-allowed;}   /* 灰态：与「发起私聊」按钮同款 */
+  #seatViewFab.fab-off:hover, #stLogFab.fab-off:hover, #seatViewFab.fab-off:active, #stLogFab.fab-off:active{transform:none; filter:grayscale(1) brightness(.8);}
   /* ⑧ 玩家端查看说书人分享的日志：body 级模态，原生尺寸不随舞台缩放 */
   /* ⑪ 胜负裁决：说书人提示条（系统→说书人，沿用蓝底蓝边） */
   #stWinBar{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); transform-origin:center bottom; z-index:122; display:none;
@@ -1397,6 +1399,10 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.53.7', d:'2026-08-14', items:[
+    '左下角「日志」图标改为一直可见：说书人还没分享时是灰色、点不动（点了会提示还没分享），分享后才亮起可点。',
+    '「私聊 / 座次」切换图标现在与「发起私聊」按钮同一个有效期——只在白天、且本轮还没解散私聊开启提名时可点；其余时间灰掉（那时座位本就按座次排列，不需要切换）。',
+  ]},
   {v:'v2.53.6', d:'2026-08-14', items:[
     '说书人日志里每条记录末尾的 [出局 / 中毒] 状态改为「该行动发生当刻」的状态，不再显示当前状态。此前小恶魔第一天被处决后，它第一夜的击杀记录也会被标上「出局」。中毒同理：按当夜投毒者的目标判定，不会因为之后的夜晚换了下毒对象而错标。',
   ]},
@@ -2795,21 +2801,30 @@ window.chatOrderView=function(N,chats){ if(window.__chatRawView) return _identit
 const _SV_ICON_GROUP='<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="25" r="16" fill="none" stroke="#e9c46a" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="2.4 3.2"/><circle cx="26.0" cy="10.2" r="2.7" fill="#e9c46a"/><circle cx="32.0" cy="9.0" r="2.7" fill="#e9c46a"/><circle cx="38.0" cy="10.2" r="2.7" fill="#e9c46a"/><circle cx="47.2" cy="20.1" r="2.7" fill="#e9c46a"/><circle cx="45.6" cy="33.5" r="2.7" fill="#e9c46a"/><circle cx="32.0" cy="41.0" r="2.7" fill="#e9c46a"/><circle cx="18.4" cy="33.5" r="2.7" fill="#e9c46a"/><circle cx="16.8" cy="20.1" r="2.7" fill="#e9c46a"/><path d="M22.5 14 A 13.5 13.5 0 0 1 41.5 14" fill="none" stroke="#e9c46a" stroke-width="2.4" stroke-linecap="round" stroke-opacity=".95"/><text x="32" y="58" text-anchor="middle" font-family="system-ui,sans-serif" font-size="15" font-weight="700" fill="#e9c46a">私聊</text></svg>';
 const _SV_ICON_RAW='<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="25" r="16" fill="none" stroke="#4ac2b4" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="2.4 3.2"/><circle cx="32.0" cy="9.0" r="2.7" fill="#4ac2b4"/><circle cx="43.3" cy="13.7" r="2.7" fill="#4ac2b4"/><circle cx="48.0" cy="25.0" r="2.7" fill="#4ac2b4"/><circle cx="43.3" cy="36.3" r="2.7" fill="#4ac2b4"/><circle cx="32.0" cy="41.0" r="2.7" fill="#4ac2b4"/><circle cx="20.7" cy="36.3" r="2.7" fill="#4ac2b4"/><circle cx="16.0" cy="25.0" r="2.7" fill="#4ac2b4"/><circle cx="20.7" cy="13.7" r="2.7" fill="#4ac2b4"/><text x="32" y="58" text-anchor="middle" font-family="system-ui,sans-serif" font-size="15" font-weight="700" fill="#4ac2b4">座次</text></svg>';
 const _STLOG_ICON='<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="7" width="34" height="34" rx="5" fill="rgba(233,196,106,.13)" stroke="#e9c46a" stroke-width="2"/><path d="M22 16 h20 M22 24 h20 M22 32 h13" stroke="#e9c46a" stroke-width="2.2" stroke-linecap="round" fill="none"/><text x="32" y="58" text-anchor="middle" font-family="system-ui,sans-serif" font-size="15" font-weight="700" fill="#e9c46a">日志</text></svg>';
+function _seatViewActive(){   // 与「发起私聊」按钮同一个有效期：白天、且本轮还没解散私聊开提名
+  try{ return !!(window.isChatDay && window.isChatDay()) && !window.__nomStarted; }catch(e){ return false; } }
 window._updateSeatViewFab=function(){ const el=document.getElementById('seatViewFab'); if(!el) return;
   const r=window.__botcRole||'', has=!!window.__pubHasGame;
   if((r!=='player'&&r!=='st') || !has){ el.style.display='none'; return; }
   el.style.display='flex'; el.classList.toggle('sv-raw', !!window.__chatRawView);
+  el.classList.toggle('fab-off', !_seatViewActive());
+  el.title = _seatViewActive() ? '切换座位显示：私聊排列 ↔ 原始座次' : '私聊环节之外无需切换（座位本就按座次排列）';
   el.innerHTML = window.__chatRawView ? _SV_ICON_RAW : _SV_ICON_GROUP; };
-window._seatViewTap=function(){ window.__chatRawView=!window.__chatRawView;
+window._seatViewTap=function(){
+  if(!_seatViewActive()){ try{ if(window._toast) window._toast('私聊环节之外座位本就按座次排列，无需切换'); }catch(e){} return; }
+  window.__chatRawView=!window.__chatRawView;
   try{ localStorage.setItem('botc_seatview', window.__chatRawView?'raw':''); }catch(e){}
   window._updateSeatViewFab();
   try{ if(window.__botcRole==='st'){ if(typeof render==='function') render(); } }catch(e){}
   try{ if(window._redrawSeats) window._redrawSeats(); }catch(e){}
   try{ if(window._toast) window._toast(window.__chatRawView?'已切到【原始座次】：按座号顺序排列，方便分析邻座':'已切回【私聊排列】'); }catch(e){} };
 window._updateStLogFab=function(){ const el=document.getElementById('stLogFab'); if(!el) return;
-  const r=window.__botcRole||'';
-  if((r!=='player'&&r!=='st') || !window.__stLogShared){ el.style.display='none'; return; }
-  el.style.display='flex'; if(!el.firstChild) el.innerHTML=_STLOG_ICON; };
+  const r=window.__botcRole||'', has=!!window.__pubHasGame;
+  if((r!=='player'&&r!=='st') || !has){ el.style.display='none'; return; }   // 一直可见；说书人还没分享时灰态不可点
+  el.style.display='flex'; if(!el.firstChild) el.innerHTML=_STLOG_ICON;
+  const on=!!window.__stLogShared;
+  el.classList.toggle('fab-off', !on);
+  el.title = on ? '查看说书人分享的本局日志' : '说书人还没有分享日志'; };
 /* ---------- 中央时钟 ---------- */
 var CLK={dayStart:null, nom:null, offset:0, _tick:null, _loadTs:Date.now(), _realBusy:false, _nomSeenTs:0, _outTimer:null, _busyTimer:null, _nomLock:false};
 var _clkEls=null;
