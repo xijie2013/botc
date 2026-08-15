@@ -1399,6 +1399,11 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.54.0', d:'2026-08-14', items:[
+    '座位身份支持拖动转移与互换：把座位上的身份拖到另一个空座位＝把身份搬过去（原座位清空）；拖到已有身份的座位＝两个座位的身份互换；拖到空白处或客人名册＝移除该身份。',
+    '说书人魔典里这套操作**只在配置阶段可用**（点「新的一局」进入游戏期后座位身份即锁定，与其它配置项一致）；玩家笔记里全程可用。',
+    '酒鬼作为「酒鬼＋自以为的镇民」整体搬动；间谍 / 陌客的善恶误判设置跟着身份走，座位备注留在原座位。',
+  ]},
   {v:'v2.53.8', d:'2026-08-14', items:[
     '给间谍下发魔典现在也会记入说书人日志。这一步没有任何「选择」动作，此前完全不会留下记录；被「跳过」的夜晚仍然不记。至此夜晚顺序表里的每一个步骤都会进日志。',
   ]},
@@ -1758,6 +1763,34 @@ function assignRoleToSeat(i, rid){ if(gateCfg()) return; ensureMeta();
   meta[i].role=rid; meta[i].isDrunk=false; meta[i].drunk=false;
   _clearBluff(rid); try{refreshOverviewDecoys();}catch(e){}
 }
+/* 座位身份拖拽：移除（to<0）/ 转移（目标为空）/ 交换（目标已有身份）。仅配置期可用。
+   酒鬼是「isDrunk + 自以为的镇民」一整套，必须整体搬动；间谍/陌客的善恶误判 reg 跟着身份走，座位备注留在原座位。 */
+window.stSeatRoleDrop=function(from,to){
+  if(gateCfg()) return;
+  if(from==null||from<0||from>=N) return;
+  ensureMeta();
+  const mf=meta[from]; if(!mf) return;
+  if(!mf.role && !mf.isDrunk) return;                  // 空座位没什么可拖
+  if(to===from) return;
+  const pick=m=>({role:m.role||null, isDrunk:!!m.isDrunk, reg:m.reg});
+  const put=(m,v)=>{ m.role=v.role; m.isDrunk=v.isDrunk; m.drunk=v.isDrunk; if(v.reg===undefined) delete m.reg; else m.reg=v.reg; };
+  const A=pick(mf);
+  if(to==null||to<0){                                   // 拖到空白/名册 = 移除该身份
+    put(mf,{role:null,isDrunk:false,reg:undefined});
+    if(redHerring===from) redHerring=-1;
+    try{ refreshOverviewDecoys(); }catch(e){} save(); render();
+    try{ if(window._toast) window._toast('已移除 '+(from+1)+' 号座位的身份'); }catch(e){}
+    return; }
+  if(to>=N) return;
+  const mt=meta[to]; if(!mt) return;
+  const B=pick(mt);
+  put(mt,A); put(mf,B);                                 // B 为空 → 转移；B 有身份 → 交换
+  const nameOf=v=>v.isDrunk ? (v.role&&RMAP[v.role] ? RMAP[v.role].name+'-酒鬼' : '酒鬼') : (v.role&&RMAP[v.role] ? RMAP[v.role].name : '');
+  try{ refreshOverviewDecoys(); }catch(e){} save(); render();
+  try{ if(window._toast) window._toast(B.role||B.isDrunk
+    ? (from+1)+' 号 ↔ '+(to+1)+' 号 身份已互换（'+nameOf(A)+' ↔ '+nameOf(B)+'）'
+    : nameOf(A)+' 已从 '+(from+1)+' 号转移到 '+(to+1)+' 号'); }catch(e){}
+};
 /* 设置酒鬼「自以为的镇民角色」（同样唯一：占用则清掉别处的同角色，并撤销同名伪装） */
 function setDrunkRole(v){ if(gateCfg()) return; const d=meta.findIndex(m=>m&&m.isDrunk); if(d<0) return;
   if(v===""){ meta[d].role=null; }
@@ -3608,6 +3641,8 @@ function renderSeats(){
       if(butlerPicks[night]===i) html+=badge(0,'assets/mk-master.png','管家的主人',1.1,'#f5c542');     // 正上方：王冠·金
       if(redHerring===i) html+=badge(180,'assets/mk-herring.png','红鲱鱼',1.2,'#ff4a3a');             // 正下方：红鲱鱼·红
       s.innerHTML=html;
+      /* 配置期：座位身份可拖 —— 拖到空白/名册=移除；拖到别的座位=转移（对方有身份则互换） */
+      if(!cfgLocked() && (m.role||m.isDrunk)) s.setAttribute('data-drag','stseat:'+i); else s.removeAttribute('data-drag');
       s.addEventListener("click",e=>{
         if(s._ct){ clearTimeout(s._ct); s._ct=null; openEditor(i); }
         else { s._ct=setTimeout(()=>{ s._ct=null; toggleBubble(i); }, 230); } });
@@ -3730,8 +3765,8 @@ document.getElementById("mask").addEventListener("click",e=>{ if(e.target.id==="
 (function(){
   let _dg=null, _suppressClick=false; const TH=6;
   function _mkGhost(el,payload){ let g;
-    if(payload && payload.indexOf('seatrole:')===0){   // 从座位拖出身份：虚影只含该身份标记，不是整个座位+玩家
-      const vr=el.querySelector('.vrole'); g=document.createElement('div'); g.className='drag-ghost seatrole-ghost';
+    if(payload && (payload.indexOf('seatrole:')===0 || payload.indexOf('stseat:')===0)){   // 从座位拖出身份：虚影只含该身份标记，不是整个座位+玩家
+      const vr=el.querySelector('.vrole')||el.querySelector('.role'); g=document.createElement('div'); g.className='drag-ghost seatrole-ghost';
       if(vr){ g.textContent=vr.textContent; g.style.color=(vr.style.color||'#fff'); g.style.fontSize=(vr.style.fontSize||'13px'); } else g.textContent='身份';
     } else { g=el.cloneNode(true); g.className=(g.className||'')+' drag-ghost'; }
     g.style.position='fixed'; g.style.zIndex='99999'; g.style.pointerEvents='none'; g.style.opacity='.9'; g.style.margin='0'; g.style.left='-9999px'; g.style.top='-9999px';
@@ -3743,12 +3778,15 @@ document.getElementById("mask").addEventListener("click",e=>{ if(e.target.id==="
   function _drop(x,y,payload){ const seat=_seatUnder(x,y);
     if(seat){ const idx=+seat.dataset.seat;
       if(payload.indexOf('role:')===0){ try{ assignRoleToSeat(idx, payload.slice(5)); render(); }catch(e){} }
+      else if(payload.indexOf('stseat:')===0){ try{ if(window.stSeatRoleDrop) window.stSeatRoleDrop(+payload.slice(7), idx); }catch(e){} }   // 说书人魔典：座位身份转移/交换
       else if(payload.indexOf('prole:')===0||payload.indexOf('pstat:')===0||payload.indexOf('seatrole:')===0){ try{ if(window._plTouchDrop) window._plTouchDrop(idx, payload); }catch(e){} }
       else if(/^\d+$/.test(payload)){ try{ moveToken(+payload, idx); selected=null; render(); }catch(e){} }
       return; }
     if(_poolUnder(x,y)){ if(/^\d+$/.test(payload)){ try{ moveToken(+payload, null); selected=null; render(); }catch(e){} }
-      else if(payload.indexOf('seatrole:')===0){ try{ if(window._plTouchDrop) window._plTouchDrop(-1, payload); }catch(e){} } return; }
+      else if(payload.indexOf('seatrole:')===0){ try{ if(window._plTouchDrop) window._plTouchDrop(-1, payload); }catch(e){} }
+      else if(payload.indexOf('stseat:')===0){ try{ if(window.stSeatRoleDrop) window.stSeatRoleDrop(+payload.slice(7), -1); }catch(e){} } return; }
     if(payload.indexOf('seatrole:')===0){ try{ if(window._plTouchDrop) window._plTouchDrop(-1, payload); }catch(e){} }   // 拖到空白处=删除座位身份
+    else if(payload.indexOf('stseat:')===0){ try{ if(window.stSeatRoleDrop) window.stSeatRoleDrop(+payload.slice(7), -1); }catch(e){} }
   }
   document.addEventListener('pointerdown', function(e){ if(_dg) return; if(e.button>0) return; _suppressClick=false;
     const el=e.target.closest&&e.target.closest('[data-drag]'); if(!el) return;
@@ -5401,8 +5439,14 @@ load(); render();
   }
   /* 拖拽落点路由（玩家笔记）：由统一指针拖拽系统在放开时调用（座位=添加身份/状态；拖出=删除座位身份） */
   window._plTouchDrop=function(idx, payload){ if(role!=='player'&&mode!=='notes'){} ensureS();
-    if(payload.indexOf('seatrole:')===0){ const from=+payload.slice(9);   // 座位身份拖出（落在别的座位/名册/空白）=删除
-      if(idx!==from && S.seats[from] && S.seats[from].role){ S.seats[from].role=''; saveNotes(); drawSeats(); } return; }
+    if(payload.indexOf('seatrole:')===0){ const from=+payload.slice(9);
+      const sf=S.seats[from]; if(!sf||!sf.role) return;
+      if(idx===from) return;                                   // 拖回原座位 = 不动
+      if(idx<0){ sf.role=''; saveNotes(); drawSeats(); return; }   // 拖到名册/空白 = 移除
+      const stt=S.seats[idx]; if(!stt) return;
+      const a=sf.role, b=stt.role||'';
+      stt.role=a; sf.role=b;                                   // b 为空 → 转移；b 有身份 → 交换
+      saveNotes(); drawSeats(); return; }
     if(idx<0) return; const st=S.seats[idx]; if(!st) return;
     if(payload.indexOf('prole:')===0){ st.role=payload.slice(6); saveNotes(); drawSeats(); }
     else if(payload.indexOf('pstat:')===0){ const k=payload.slice(6); if(!st.status) st.status=[]; if(st.status.indexOf(k)<0){ st.status.push(k); saveNotes(); drawSeats(); } } };
