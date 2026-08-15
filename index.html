@@ -1333,7 +1333,7 @@ function blankMeta(){return {role:null,poison:false,drunk:false,dead:false,note:
 function ensureMeta(){ while(meta.length<N) meta.push(blankMeta()); meta.length=N; }
 
 function save(){ if(window.__stApplyingRemote) return;   // 正在应用远端同步时不重复写/上传，避免回声循环
-  try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,nightFlow,dayFlow,spySent,impKills,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,sickAns,redHerring,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist,gameOn:!!window.__gameOn,winApproved:(window.__winApproved||''),ts:Date.now()})); }catch(e){}
+  try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,nightFlow,dayFlow,spySent,impKills,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,sickAns,redHerring,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist,gameOn:!!window.__gameOn,winApproved:(window.__winApproved||''),setupSnap:(window.__setupSnap||null),ts:Date.now()})); }catch(e){}
   try{ if(window._stCloudPush) window._stCloudPush(); }catch(e){} }   // 说书人存档实时云同步（防抖上传）
 function load(){
   try{ const d=JSON.parse(localStorage.getItem(KEY)||"{}");
@@ -1354,6 +1354,7 @@ function load(){
     Object.keys(spySent).forEach(k=>delete spySent[k]); if(d.spySent&&typeof d.spySent==="object") Object.assign(spySent,d.spySent);
     window.__gameOn = (typeof d.gameOn==='boolean') ? d.gameOn : !!(Array.isArray(d.meta)&&d.meta.some(m=>m&&m.role));   // ⑬ 老存档没有 gameOn：已发牌即视为游戏期，避免升级后夜/昼页突然清空
     window.__winApproved = (typeof d.winApproved==='string') ? d.winApproved : '';
+    window.__setupSnap = (d.setupSnap&&typeof d.setupSnap==='object') ? d.setupSnap : null;
     if(d.impKills&&typeof d.impKills==="object") impKills=d.impKills;
     if(d.poisonPicks&&typeof d.poisonPicks==="object") poisonPicks=d.poisonPicks;
     if(d.monkPicks&&typeof d.monkPicks==="object") monkPicks=d.monkPicks;
@@ -1401,6 +1402,10 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.55.0', d:'2026-08-14', items:[
+    '说书人日志顶部新增「🎴 开局」小节：点「新的一局」的那一刻把本局板子定格下来——每个座位的玩家与角色（酒鬼会写明自以为的身份）、间谍/陌客的善恶误判、红鲱鱼、三张恶魔伪装、以及阵营配置人数。分享日志给玩家后，他们看这一段就知道本局是什么板子。',
+    '这一段是开局当刻的快照而非实时读取，所以红唇女郎接任、酒鬼改判等局中变化不会污染开局记录；重新发牌或重置角色会作废旧板子。',
+  ]},
   {v:'v2.54.1', d:'2026-08-14', items:[
     '说书人左下角的「裁决」图标改为全程可见：还没开局时是灰色、点不动（点了会提示先开新的一局），开局后自动亮起；检测到胜负条件时照常呼吸高亮。',
   ]},
@@ -1735,14 +1740,14 @@ async function dealRoles(){
     const goodSeats=[]; meta.forEach((m,i)=>{ if(m.role && !isEvil(RMAP[m.role].team) && m.role!=="fortuneteller") goodSeats.push(i); });
     if(goodSeats.length) redHerring=goodSeats[Math.floor(Math.random()*goodSeats.length)];
   }
-  window.__gameOn=false; window.__winApproved=''; window.__winPending=null; window.__winDismissed='';   // ⑬ 随机发牌属于配置期动作
+  window.__gameOn=false; window.__winApproved=''; window.__winPending=null; window.__winDismissed=''; window.__setupSnap=null;   // ⑬ 随机发牌属于配置期动作
   try{ if(window._stClearPlayerNotes) _stClearPlayerNotes(); }catch(e){}   // 随机发牌：清空玩家局内信息/座位备注/标记（说书人日志已随 m.hist={} 清空）
   render();
 }
 async function resetRoles(){ if(gateCfg()) return; if(!await uiConfirm("重置所有身份、状态、备注、伪装？（保留名字与座位）")) return;
   meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
   Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); Object.keys(dayFlow).forEach(k=>delete dayFlow[k]); Object.keys(spySent).forEach(k=>delete spySent[k]); overviewDecoys=[]; tokens.forEach(t=>t.dead=false);
-  window.__gameOn=false; window.__winApproved=''; window.__winPending=null; window.__winDismissed=''; render();
+  window.__gameOn=false; window.__winApproved=''; window.__winPending=null; window.__winDismissed=''; window.__setupSnap=null; render();
   try{ if(window._stClearPlayerRoles) _stClearPlayerRoles(); }catch(e){} try{ if(window._stClearPlayerNotes) _stClearPlayerNotes(); }catch(e){} try{ if(window._stResetPublic) _stResetPublic(); }catch(e){} try{ if(window._histNewRound) _histNewRound(); }catch(e){} }   // 重置角色：清空玩家角色卡 + 局内信息/座位备注/标记 + 公开状态（大厅/笔记的死亡/处决/胜负等一并清零）；胜负另记一条
 function setBluff(k,v){ if(gateCfg()) return; bluffs[k]=v; refreshOverviewDecoys(); render(); }
 
@@ -3316,6 +3321,40 @@ function renderLedger(){
     past.appendChild(el);
   });
 }
+/* 开局板子快照：必须在「新的一局」那一刻定格，不能实时读 meta ——
+   红唇女郎接任会改写 meta[i].role，实时读会把接任后的身份当成开局身份。 */
+window.__setupSnap=null;
+function stMakeSetupSnap(){
+  const seats=[];
+  for(let i=0;i<N;i++){ const t=seatToken(i), m=meta[i]||{};
+    seats.push({ n:(t&&t.name)?t.name:'', role:m.role||null, drunk:!!m.isDrunk,
+                 reg:((m.role==='spy'||m.role==='recluse')?effReg(i):null), herring:(redHerring===i) }); }
+  window.__setupSnap={ count:N, seats:seats, bluffs:(bluffs||[]).slice(),
+                       dist:(customDist||DIST[N]||[0,0,0,0]).slice() };
+}
+window.stMakeSetupSnap=stMakeSetupSnap;
+/* 开局板子 → 日志顶部的「🎴 开局」小节（分享给玩家时，玩家看这一段就知道本局板子） */
+function setupSnapHTML(){
+  const sn=window.__setupSnap; if(!sn||!sn.seats||!sn.seats.length) return '';
+  let h='<div class="gsec" style="color:#43286b">🎴 开局</div>';
+  sn.seats.forEach(function(o,i){
+    let roleHtml='<span style="opacity:.5">（未分配）</span>';
+    if(o.drunk){ const rn=(o.role&&RMAP[o.role])?RMAP[o.role].name:'未定';
+      roleHtml='<b style="color:'+TEAMC.out+'">酒鬼</b> <span style="opacity:.8">（自以为 '+rn+'）</span>'; }
+    else if(o.role&&RMAP[o.role]){ const r=RMAP[o.role]; roleHtml='<b style="color:'+TEAMC[r.team]+'">'+r.name+'</b>'; }
+    const tags=[];
+    if(o.reg==='good') tags.push('判定为善良');
+    if(o.reg==='evil') tags.push('判定为邪恶');
+    if(o.herring) tags.push('红鲱鱼');
+    const tagHtml=tags.length?' <span style="color:#b0402e;font-size:.88em">['+tags.join('/')+']</span>':'';
+    h+='<div class="rrow">'+(i+1)+' '+(o.n||'（空座）')+'：'+roleHtml+tagHtml+'</div>';
+  });
+  const bl=(sn.bluffs||[]).filter(Boolean).map(function(x){ return RMAP[x]?RMAP[x].name:x; });
+  h+='<div class="rrow">恶魔伪装：'+(bl.join('、')||'（未设）')+'</div>';
+  const d=sn.dist||[0,0,0,0];
+  h+='<div class="rrow">阵营配置：镇民 '+d[0]+' · 外来者 '+d[1]+' · 爪牙 '+d[2]+' · 恶魔 '+d[3]+'　（共 '+sn.count+' 人）</div>';
+  return h;
+}
 /* ⑧ 说书人日志正文（抽成函数，便于「分享给玩家」复用同一份 HTML） */
 function stLogHTML(){ let h="";
     const _w0=checkWin(); const _win=(window.__winApproved && winSig(_w0)===window.__winApproved)?_w0:null;   // ⑪ 只有说书人已裁决宣告的胜负才上横幅
@@ -3324,6 +3363,7 @@ function stLogHTML(){ let h="";
     Object.keys(nominations).forEach(k=>maxN=Math.max(maxN,+k)); Object.keys(executions).forEach(k=>maxN=Math.max(maxN,+k));
     const TAGO=['evil','info','poison','poisoned','kill','protected','death','role'];
     h+='<div class="rrow" style="border:none;opacity:.6">按昼夜顺序汇总本局记录</div>';
+    h+=setupSnapHTML();   // 🎴 开局：本局板子（角色 + 误判设置 + 红鲱鱼 + 恶魔伪装 + 阵营配置）
     for(let n=1;n<=maxN;n++){
       h+='<div class="gsec" style="color:#43286b">🌙 第 '+n+' 夜</div>'; let any=false;
       const order=NIGHT[n===1?"first":"other"];
@@ -5547,6 +5587,7 @@ load(); render();
         if(Object.keys(ru).length) await db.ref().update(ru);
       }catch(e){}
       window.__gameOn=true; window.__gateOverride=false; window.__winApproved=''; window.__winPending=null; window.__winDismissed='';   // ⑬ 进入游戏期：座位/玩家/角色锁定
+      try{ if(window.stMakeSetupSnap) window.stMakeSetupSnap(); }catch(e){}   // 🎴 开局板子定格（此刻的角色分配即本局板子）
       try{ save(); }catch(e){} try{ if(typeof render==='function') render(); }catch(e){}
       await db.ref('currentGame').set(gid); toast('已开始新的一局');
       /* 清理：删掉除当前局外的所有旧牌局（含旧笔记），云端只留当前一局，避免累积 */
