@@ -1412,6 +1412,12 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.63.0', d:'2026-08-15', items:[
+    '「保存本局」现在会把整套角色设置一起存下来：恶魔的三张伪装、红鲱鱼是谁、间谍/陌客的善恶误判、酒鬼自以为的身份、锁定的角色、阵营人数配置。载入时全部一并恢复。',
+    '存档列表里会多显示一行 ⚙ 摘要（伪装 / 红鲱鱼 / 误判 / 锁定），载入前就能看清这套配置带了什么。',
+    '载入前加了确认弹窗（会覆盖当前全部角色设置），并且游戏进行中不再允许载入存档——要换配置请先「结束本局」。',
+    '顺带修了个错位隐患：以前存档只记有角色的座位，中间空一个座位就会让后面的角色整体前移；现在按座位号密集保存，红鲱鱼这类按座位号记的设置也不会错位。',
+  ]},
   {v:'v2.62.1', d:'2026-08-15', items:[
     '修复：在日志弹窗里点「分享给玩家」时，确认框被日志挡在下面，得先关掉日志才能回答。现在通用确认框永远盖在最上层。',
     '私聊房间的青色底调淡了一半（半透明由 30~40% 降到 15~22%），酒馆背景透得出来，看着更清透。',
@@ -5943,34 +5949,62 @@ load(); render();
   function _cfgLoadAll(){ try{ return JSON.parse(localStorage.getItem('botc_configs')||'[]'); }catch(e){ return []; } }
   function _cfgSaveAll(a){ try{ localStorage.setItem('botc_configs', JSON.stringify(a)); }catch(e){} }
   window.stSaveConfig=async function(){ if(role!=='st'){ toast('请先登录说书人'); return; }
-    const roles=[]; for(let i=0;i<N;i++){ const m=meta[i]; if(m&&m.role) roles.push({r:m.role, d:!!m.isDrunk}); }
-    if(!roles.length){ toast('还没有分配角色，先发牌或拖入角色'); return; }
+    /* v2.63.0：按座位号密集保存（空座也占位），这样红鲱鱼这类「按座位号」的设置载入后不会错位。
+       每个座位存 r=角色（酒鬼存的就是他自以为的镇民）、d=是否酒鬼、g=间谍/陌客的善恶误判。 */
+    const roles=[]; let filled=0;
+    for(let i=0;i<N;i++){ const m=meta[i]||{}; if(m.role) filled++;
+      roles.push({ r:m.role||null, d:!!m.isDrunk, g:(m.reg==='good'||m.reg==='evil')?m.reg:null }); }
+    if(!filled){ toast('还没有分配角色，先发牌或拖入角色'); return; }
     const dft='配置'+(new Date().getMonth()+1)+'-'+new Date().getDate();
     let nm=dft; try{ nm=await uiPrompt('给这套角色配置起个名字：',dft,{title:'保存本局'}); if(nm===null) return; }catch(e){}
-    const cfg={ name:nm||dft, roles:roles, dist:(customDist||DIST[N]||[0,0,0,0]).slice(), ts:Date.now() };
-    const a=_cfgLoadAll(); a.unshift(cfg); _cfgSaveAll(a); toast('已保存：'+cfg.name);
+    const cfg={ name:nm||dft, n:N, roles:roles, dist:(customDist||DIST[N]||[0,0,0,0]).slice(),
+      bluffs:(typeof bluffs!=='undefined'?bluffs:['','','']).slice(0,3).map(x=>x||''),        // 恶魔伪装三张
+      herring:(typeof redHerring==='number'&&redHerring>=0)?redHerring:-1,                    // 红鲱鱼座位
+      locked:(typeof lockedRoles!=='undefined')?[...lockedRoles]:[],                          // 锁定的角色
+      ts:Date.now() };
+    const a=_cfgLoadAll(); a.unshift(cfg); _cfgSaveAll(a); toast('已保存：'+cfg.name+'（含角色设置）');
   };
   window.stViewConfigs=function(){ if(role!=='st'){ toast('请先登录说书人'); return; } renderCfgList(); document.getElementById('cfgModal').classList.add('on'); };
   window._cfgClose=function(){ document.getElementById('cfgModal').classList.remove('on'); };
   function renderCfgList(){ const a=_cfgLoadAll(), el=document.getElementById('cfgList');
     if(!a.length){ el.innerHTML='<div class="empty">还没有存档。<br>发好牌后在角色名单里点"保存本局"，即可存下这套角色。</div>'; return; }
-    el.innerHTML=a.map((c,i)=>{ let sub;
-      if(c.roles){ sub=(c.roles.length)+'人 · '+c.roles.map(x=>{ const r=RMAP[x.r]; return r?(r.name+(x.d?'(酒鬼)':'')):x.r; }).join('、'); }
+    el.innerHTML=a.map((c,i)=>{ let sub, extra='';
+      if(c.roles){ const rs=c.roles.filter(x=>x&&x.r);
+        sub=(c.n||rs.length)+'人 · '+rs.map(x=>{ const r=RMAP[x.r]; return r?(r.name+(x.d?'(酒鬼)':'')):x.r; }).join('、');
+        /* v2.63.0：把随存档一起带上的角色设置摘要出来，载入前就能看清 */
+        const tips=[];
+        const bl=(c.bluffs||[]).filter(Boolean).map(id=>RMAP[id]?RMAP[id].name:id);
+        if(bl.length) tips.push('伪装 '+bl.join('/'));
+        if(typeof c.herring==='number'&&c.herring>=0) tips.push('红鲱鱼 '+(c.herring+1)+'号');
+        const regs=c.roles.map((x,k)=>(x&&(x.g==='good'||x.g==='evil'))?((k+1)+'号判'+(x.g==='good'?'善':'恶')):null).filter(Boolean);
+        if(regs.length) tips.push(regs.join('、'));
+        if((c.locked||[]).length) tips.push('锁定 '+c.locked.length+' 个角色');
+        if(tips.length) extra='<div class="sub" style="opacity:.72">⚙ '+E(tips.join(' · '))+'</div>';
+      }
       else { const d=c.dist||[0,0,0,0]; sub=(c.N||'')+'人 · 镇'+d[0]+'/外'+d[1]+'/爪'+d[2]+'/魔'+d[3]; }
-      return '<div class="cfgitem"><div class="info"><div class="nm">'+E(c.name)+'</div><div class="sub">'+E(sub)+'</div></div>'
+      return '<div class="cfgitem"><div class="info"><div class="nm">'+E(c.name)+'</div><div class="sub">'+E(sub)+'</div>'+extra+'</div>'
         +'<button class="load" onclick="_cfgLoad('+i+')">载入</button><button onclick="_cfgDel('+i+')">删除</button></div>'; }).join('');
   }
-  window._cfgLoad=function(i){ const a=_cfgLoadAll(), c=a[i]; if(!c) return;
-    if(c.roles){ const rs=c.roles; N=Math.max(5,Math.min(15,rs.length));
+  window._cfgLoad=async function(i){ const a=_cfgLoadAll(), c=a[i]; if(!c) return;
+    if(typeof gateCfg==='function' && gateCfg()) return;   // v2.63.0 游戏进行中不许覆盖角色与设置
+    try{ if(!await uiConfirm('载入「'+c.name+'」会覆盖当前的座位角色，以及恶魔伪装、红鲱鱼、间谍/陌客善恶误判、角色锁定等全部角色设置。',{title:'载入存档',ok:'载入',cancel:'取消'})) return; }catch(e){}
+    if(c.roles){ const rs=c.roles; N=Math.max(5,Math.min(15, c.n||rs.length));
       if(typeof tokens!=='undefined') tokens.forEach(t=>{ if(t.seat!==null&&t.seat>=N) t.seat=null; });
       if(typeof ensureMeta==='function') ensureMeta();
-      for(let k=0;k<N;k++){ if(meta[k]){ meta[k].role=rs[k].r; meta[k].isDrunk=!!rs[k].d; } }
+      for(let k=0;k<N;k++){ const m=meta[k]; if(!m) continue; const x=rs[k]||{};
+        m.role=x.r||null; m.isDrunk=!!x.d;
+        if(x.g==='good'||x.g==='evil') m.reg=x.g; else delete m.reg; }   // 间谍/陌客善恶误判（老存档没有 → 清回默认）
       customDist=c.dist?c.dist.slice():null;
-    } else {   // 兼容旧存档（只有阵营数量）
+      /* 载入 = 完整替换这套设置；老存档没存的字段一律回默认，避免半新半旧 */
+      if(typeof bluffs!=='undefined'){ const bs=Array.isArray(c.bluffs)?c.bluffs:[]; for(let k=0;k<3;k++) bluffs[k]=bs[k]||''; }
+      redHerring=(typeof c.herring==='number' && c.herring>=0 && c.herring<N) ? c.herring : -1;
+      lockedRoles=new Set(Array.isArray(c.locked)?c.locked:[]);
+      try{ if(typeof refreshOverviewDecoys==='function') refreshOverviewDecoys(); }catch(e){}
+    } else {   // 兼容最旧的存档（只有阵营数量）
       N=Math.max(5,Math.min(15,c.N||N)); if(typeof ensureMeta==='function') ensureMeta();
       customDist=c.dist?c.dist.slice():null; if(c.locked) lockedRoles=new Set(c.locked);
     }
-    try{ save(); }catch(e){} try{ render(); }catch(e){} _cfgClose(); toast('已载入：'+c.name);
+    try{ save(); }catch(e){} try{ render(); }catch(e){} _cfgClose(); toast('已载入：'+c.name+'（含角色设置）');
   };
   window._cfgDel=async function(i){ let ok=true; try{ ok=await uiConfirm('删除这个存档？'); }catch(e){} if(!ok) return; const a=_cfgLoadAll(); a.splice(i,1); _cfgSaveAll(a); renderCfgList(); };
 
