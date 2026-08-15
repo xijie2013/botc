@@ -472,12 +472,14 @@
   .seat .nm{line-height:1.1; color:#fff6df; font-weight:700; word-break:break-all; max-width:94%; text-shadow:0 1px 2px rgba(0,0,0,.65);}   /* max-width 88%→94% 给名字多点余量，短拉丁名（如 Cooler）不被挤到换行 */
   .seat .deathcause{line-height:1.05; margin-top:1px; color:#ff9a8a; font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,.7);}
   /* 已出局：整体变暗淡（座位、名字、身份、座号一起），一眼能和存活玩家分开。
-     .seat.dead 原来的 opacity:.4 会被这条 hascause 完全抵消（当初为了让死因图标清晰），
-     现在改成中等强度：既能明显区分，死因图标与名字又都还看得清。 */
-  .seat.hascause{opacity:.62!important; filter:grayscale(.5)!important;}
-  .seat.dead .nm{color:#b6a88e;}
-  .seat.dead .role, .seat.dead .vrole{opacity:.7;}
-  .seat.dead .num{opacity:.75;}
+     .seat.dead 原来的 opacity:.4 会被这条 hascause 完全抵消（当初为了让死因图标清晰）。
+     v2.57.0 曾改成 opacity:.62 + 灰度，但半透明会透出酒馆背景花纹、反而看不清；
+     v2.58.3 起改为「完全不透明，只去色 + 提亮」：死亡座位底色本就比存活的深（inline 渐变 48,34,58 → 22,15,30），
+     去色后已经很好认，再 brightness(1.16) 把它提回来，名字与死因图标都清清楚楚。 */
+  .seat.hascause{opacity:1!important; filter:grayscale(.8) brightness(1.16)!important;}
+  .seat.dead .nm{color:#d2c7b4;}
+  .seat.dead .role, .seat.dead .vrole{opacity:.88;}
+  .seat.dead .num{opacity:.92;}
   .seat .shieldbadge{position:absolute; z-index:3; pointer-events:none; filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));}
   .seat .shieldbadge img{width:100%; height:100%; object-fit:contain;}
   /* 举手：手掌圆形徽章铺满座位背景（正常/鬼票两张图） */
@@ -1414,6 +1416,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.58.3', d:'2026-08-15', items:[
+    '已出局的座位不再半透明。v2.57.0 用降低不透明度来区分死人，结果酒馆背景的花纹会透上来，名字和死因图标都变糊。现在改成完全不透明，只靠去色（灰度 .8）+ 提亮（1.16）区分——一眼还是能看出是死人，但比之前清楚得多，也不再压得那么暗。',
+  ]},
   {v:'v2.58.2', d:'2026-08-15', items:[
     '修复：因提名贞洁者而当场被处决的座位，只有说书人魔典变灰、玩家笔记那边不变——触发处决后漏了把座位状态推给全场（只推了提名，没推座位）。撤销该提名时同理，现在两端会一起复活。',
   ]},
