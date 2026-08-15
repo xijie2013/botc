@@ -1411,6 +1411,10 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.61.0', d:'2026-08-15', items:[
+    '说书人左下角的「日志」图标现在随时可点（不再需要先分享才亮），打开就是当前这一刻的完整日志，游戏进行中开着它也会跟着实时更新，滚动位置不会被打断。',
+    '「分享给玩家 / 取消分享」按钮从魔典的日志页移到了这个弹窗顶部——在哪看日志就在哪分享。',
+  ]},
   {v:'v2.60.0', d:'2026-08-15', items:[
     '裁决图标现在玩家端也一直显示。说书人宣告胜负之前是灰色不可点，宣告之后就能点开，看到和说书人一模一样的内容——四条胜负条件逐条判定 + 最终结论。说书人若撤回宣告，玩家端会同步变回灰态、正在看的面板也会关掉。',
     '修复：爪牙通过红唇女郎/自杀传位变成小恶魔之后，说书人日志里他变身之前的记录也跟着改了口径——「投毒者 下毒」会显示成「小恶魔 下毒」。现在每条记录在写下的那一刻就把该玩家当时的角色冻结进去，之后不再变（撤销这条记录时一并清掉）。',
@@ -3054,9 +3058,10 @@ window._seatViewTap=function(){
   try{ if(window._toast) window._toast(window.__chatRawView?'已切到【原始座次】：按座号顺序排列，方便分析邻座':'已切回【私聊排列】'); }catch(e){} };
 window._updateStLogFab=function(){ const el=document.getElementById('stLogFab'); if(!el) return;
   const r=window.__botcRole||'', has=!!window.__pubHasGame;
-  if((r!=='player'&&r!=='st') || !has){ el.style.display='none'; return; }   // 一直可见；说书人还没分享时灰态不可点
+  if((r!=='player'&&r!=='st') || !has){ el.style.display='none'; return; }
   el.style.display='flex'; if(!el.firstChild) el.innerHTML=_STLOG_ICON;
-  const on=!!window.__stLogShared;
+  if(r==='st'){ el.classList.remove('fab-off'); el.title='本局日志（可在里面分享给玩家）'; return; }   // v2.61.0 说书人随时可查看当前日志
+  const on=!!window.__stLogShared;                                                                    // 玩家：说书人还没分享时灰态不可点
   el.classList.toggle('fab-off', !on);
   el.title = on ? '查看说书人分享的本局日志' : '说书人还没有分享日志'; };
 /* ---------- 中央时钟 ---------- */
@@ -3503,6 +3508,7 @@ function render(){
   renderBubbles();
   renderWin();
   renderClock();
+  try{ if(window.__stLogOpen && window._stLogPanelRefresh) window._stLogPanelRefresh(); }catch(e){}   // 说书人开着日志弹窗时随游戏进展实时更新
   save();
   try{ if(window._stPushSlayerArmed) _stPushSlayerArmed(); }catch(e){}   // 把猎手「可开枪」状态推给猎手玩家（灰/亮）
   try{ updateStSlayerBar(); }catch(e){}   // 猎手开枪请求：底部弹窗（醒目）
@@ -3653,11 +3659,13 @@ window._stLogShare=function(){
   if(window.__stLogShared){
     Promise.resolve(uiConfirm('取消后，玩家将无法再查看本局说书人日志。',{title:'取消分享',ok:'取消分享',cancel:'返回'})).then(function(ok){
       if(!ok) return; try{ if(window._pubStLog) window._pubStLog(null); }catch(e){} window.__stLogShared=false;
-      try{ if(window._updateStLogFab) window._updateStLogFab(); }catch(e){} try{ if(window._toast) window._toast('已取消分享'); }catch(e){} render(); });
+      try{ if(window._updateStLogFab) window._updateStLogFab(); }catch(e){} try{ if(window._stLogPanelRefresh) window._stLogPanelRefresh(); }catch(e){}
+      try{ if(window._toast) window._toast('已取消分享'); }catch(e){} render(); });
     return; }
   Promise.resolve(uiConfirm('说书人日志包含本局全部角色与夜间信息。确认公开给所有入座玩家吗？（通常在本局结束后复盘时使用）',{title:'分享说书人日志',ok:'确认分享',cancel:'取消'})).then(function(ok){
     if(!ok) return; try{ if(window._pubStLog) window._pubStLog(stLogHTML()); }catch(e){} window.__stLogShared=true;
-    try{ if(window._updateStLogFab) window._updateStLogFab(); }catch(e){} try{ if(window._toast) window._toast('已分享说书人日志给所有玩家'); }catch(e){} render(); }); };
+    try{ if(window._updateStLogFab) window._updateStLogFab(); }catch(e){} try{ if(window._stLogPanelRefresh) window._stLogPanelRefresh(); }catch(e){}
+    try{ if(window._toast) window._toast('已分享说书人日志给所有玩家'); }catch(e){} render(); }); };
 function chipEl(t){
   const d=document.createElement("div");
   d.className="chip"+(selected===t.id?" sel":"")+(t.seat!==null?" seated":"");
@@ -3743,7 +3751,7 @@ function renderGrim(){
     });
     return;
   }
-  if(gtab==="log"){ h+=_stLogShareBar()+stLogHTML(); c.innerHTML=h; return; }
+  if(gtab==="log"){ h+=stLogHTML(); c.innerHTML=h; return; }   /* v2.61.0「分享给玩家」按钮移到左下角日志弹窗里 */
   if(!isGameOn()){   // ⑬ 未进入游戏期：夜晚 / 白天两页留空，避免在配置阶段误操作流程
     h+='<div class="rrow" style="border:none;opacity:.75;line-height:1.75">🕯️ 本局尚未开始。<br>请先在「<b>角色设置</b>」页排好座位与角色，点 <b>新的一局</b>，夜晚与白天的流程才会开始。</div>';
     c.innerHTML=h; return; }
@@ -4866,13 +4874,21 @@ load(); render();
     if(h.length>200000) h=h.slice(0,200000)+'<div class="rrow">（日志过长，已截断）</div>';
     ref.set({h:h, ts:firebase.database.ServerValue.TIMESTAMP}).catch(function(){}); };
   window._closeStLog=function(){ const m=document.getElementById('stLogMask'); if(m) m.remove(); window.__stLogOpen=false; };
-  window._openStLog=function(){ const d=(pub&&pub.stLog)||null;
-    if(!d||!d.h){ try{ toast('说书人还没有分享日志'); }catch(e){} return; }
+  /* 说书人面板正文 = 分享条 + 当前实时日志；玩家面板正文 = 说书人分享的那份快照 */
+  function _stLogBodyHTML(){ if(role==='st'){ try{ return _stLogShareBar()+stLogHTML(); }catch(e){ return '<div class="rrow">日志渲染失败</div>'; } }
+    const d=(pub&&pub.stLog)||null; return (d&&d.h)||''; }
+  /* 说书人开着面板时随游戏进展实时刷新；内容没变就不动，变了也保留滚动位置 */
+  window._stLogPanelRefresh=function(){ if(role!=='st') return; const bd=document.getElementById('stLogBody'); if(!bd) return;
+    const h=_stLogBodyHTML(); if(bd.__sig===h) return; const sc=bd.scrollTop; bd.__sig=h; bd.innerHTML=h; bd.scrollTop=sc; };
+  window._openStLog=function(){
+    const isSt=(role==='st'); const body=_stLogBodyHTML();
+    if(!isSt && !body){ try{ toast('说书人还没有分享日志'); }catch(e){} return; }
     window._closeStLog();
     const mask=document.createElement('div'); mask.id='stLogMask';
-    mask.innerHTML='<div class="slv-box"><div class="slv-hd"><span>📜 说书人日志（本局复盘）</span><span class="slv-x" title="关闭">✕</span></div><div class="slv-bd">'+d.h+'</div></div>';
+    mask.innerHTML='<div class="slv-box"><div class="slv-hd"><span>📜 '+(isSt?'本局说书人日志':'说书人日志（本局复盘）')+'</span><span class="slv-x" title="关闭">✕</span></div><div class="slv-bd" id="stLogBody">'+body+'</div></div>';
     mask.addEventListener('click',function(e){ if(e.target===mask||e.target.classList.contains('slv-x')) window._closeStLog(); });
     document.body.appendChild(mask); window.__stLogOpen=true;
+    const bd=document.getElementById('stLogBody'); if(bd) bd.__sig=body;
     try{ if(window._sfx) window._sfx('grimoire'); }catch(e){} };
   /* 说书人：把「胜负裁决面板」同步给玩家（宣告后玩家左下角裁决图标才可点，内容与说书人一致） */
   window._pubWinJudge=function(html){ if(role!=='st'||!curGid) return;
