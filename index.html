@@ -1282,7 +1282,7 @@ const ROLE_DETAIL={
  virgin:{fn:"你第一次被提名时，若提名你的人是镇民，该提名者立即被处决（你的能力随即用掉）。",act:"仅在你「首次被提名」时触发一次。",sick:"中毒/醉酒时能力无效——提名你不会处决对方，但能力仍视为已用掉。",sri:"是否镇民按提名者真实身份判定；间谍/陌客即使被注册成镇民也不会触发。",tip:"可用来自证、或诱使邪恶提名你而自曝。但只有一次、且中毒会失效，没把握别浪费。"},
  slayer:{fn:"每局一次，在白天公开指认一名玩家；若他（注册上）是恶魔，则立即死亡。",act:"白天使用一次（本工具在处决结果出来前都可开枪）。",sick:"中毒/醉酒时开枪无效，命中也不会死。",sri:"陌客若被注册成恶魔会被你打死（但你没赢，真恶魔还在）；间谍不注册为恶魔，打不死。",tip:"斩杀恶魔的奇兵。可真开枪，也可「假称猎手」威慑邪恶。真开枪最好在锁定恶魔后再打。"},
  soldier:{fn:"你不会被恶魔在夜里杀死。",act:"被动，全程生效。",sick:"中毒/醉酒时免疫失效，会被恶魔杀死。",sri:"与间谍/陌客无直接交互；但投毒者能让你失去免疫。",tip:"可以安全地站出来吸火力、当「验人机」。但要小心投毒者——中毒的你会被一击带走。"},
- mayor:{fn:"若游戏进行到只剩 3 名存活玩家、且当天没有处决任何人，好人直接获胜。此外恶魔夜里选中你时，说书人可让另一人代替你死。",act:"3 人无处决的胜利随时判定；夜里「代死」由说书人裁定。",sick:"中毒/醉酒时上述能力都失效（既无 3 人胜利，也不会代死）。",sri:"与间谍/陌客无直接交互。",tip:"把局势拖到 3 人、当天劝好人别处决，是你的取胜路线；但要防圣徒被误处决、防自己中毒。"},
+ mayor:{fn:"若游戏进行到只剩 3 名存活玩家、且当天没有处决任何人，好人直接获胜。此外恶魔夜里选中你时，说书人可让另一人代替你死。",act:"3 人无处决的胜利随时判定；夜里「代死」由说书人裁定——若代死目标已出局、是士兵、或被僧侣守护，那人今晚不会死，本夜就无人死亡；僧侣守的是镇长本人时，弹刀根本不触发。弹刀次数没有上限。",sick:"中毒/醉酒时上述能力都失效（既无 3 人胜利，也不会代死）。",sri:"与间谍/陌客无直接交互。",tip:"把局势拖到 3 人、当天劝好人别处决，是你的取胜路线；但要防圣徒被误处决、防自己中毒。"},
  butler:{fn:"每夜选一名「主人」；次日白天只有当你的主人投票时，你才能投票（可跟投也可不投）。",act:"每夜选主人。",sick:"中毒/醉酒时投票不受限制，可自由投。",sri:"与间谍/陌客无直接交互。",tip:"你是外来者、本身是好人的负担；尽量选可信的好人当主人，别让邪恶利用你的投票限制卡关键处决。"},
  drunk:{fn:"你以为自己是某个镇民角色，实际上能力完全无效、得到的信息可能全是错的。你是外来者。",act:"你「以为」的角色何时行动你就何时行动，但结果无效。",sick:"你本身等同于永久「中毒」——所有信息都可能假。",sri:"对洗衣妇/图管/调查你按「酒鬼」（外来者）被识别；对送葬者/守鸦人也显示为「酒鬼」真身。",tip:"你往往不知道自己是酒鬼。若你的信息前后矛盾、或与他人强烈冲突，要考虑自己可能是酒鬼，别把队友带偏。"},
  recluse:{fn:"你是善良的外来者，但可能被各种能力「注册成邪恶」，甚至被当作爪牙或恶魔——由说书人决定。",act:"被动，随他人能力触发。",sick:"你自身没有主动能力，中毒/醉酒对你影响不大。",sri:"占卜师可能把你读成恶魔、调查员可能把你当爪牙、共情/厨师可能把你算成邪恶邻座、猎手可能把你当恶魔打死。",tip:"你天然容易被误判成邪恶，要主动解释、争取信任；也可反过来利用这点扰乱邪恶。小心被猎手误杀。"},
@@ -1414,6 +1414,11 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.58.1', d:'2026-08-15', items:[
+    '镇长弹刀补齐官方守护规则：把死亡弹给已出局的玩家、士兵、或被僧侣守护的玩家时，那名玩家今晚不会死——弹刀照常发生，但本夜无人死亡（镇长也活着）。此前是无条件把选中的人打死。',
+    '僧侣守护的正是镇长本人时，弹刀不再触发（镇长对恶魔免疫，压根没有「将死」这回事），下拉直接隐藏；镇长中毒/醉酒时同样不能弹刀。',
+    '弹刀下拉改叫「代死目标」，逐个座位标注（镇长本人 / 已出局·不会死 / 被守护·免疫·不会死），下方实时显示本次结算结果；守护或中毒状态中途改变时会自动重算，代死者该复活就复活。',
+  ]},
   {v:'v2.58.0', d:'2026-08-15', items:[
     '贞洁者能力触发时（健康的贞洁者首次被镇民提名 → 提名者当场处决）：向全体玩家推送底部弹窗公告，写明是谁提名了谁、谁当场出局，点「确认收到」消失；说书人端同时弹一条提示。',
     '同一时刻该提名自动停止计票——不再开启举手、不广播时钟指针，提名直接标记为已停止计票（因为本日处决名额已经用掉了）。说书人若要改判，删掉该提名即可，弹窗与处决会一并撤回。',
@@ -2327,11 +2332,19 @@ function isProtected(target){
 }
 function reResolveKill(){
   const rec=impKills[night]; if(!rec||rec.type!=="normal") return;
+  if(rec.sick) return;                                                 // 恶魔中毒/醉酒：击杀本就无效，不随守护变化重算
   if(rec.deadTarget) return;                                           // ④ 空刀（目标本就已出局）：不随守护变化重算
-  const t=rec.target, blocked=isProtected(t); if(blocked===rec.blocked) return;
+  const t=rec.target, blocked=isProtected(t);
+  const nowMayor=!!(meta[t] && meta[t].role==="mayor" && healthy(t));   // 镇长中毒/醉酒 → 弹刀能力失效
+  const chg=(blocked!==rec.blocked)||(nowMayor!==!!rec.mayor);
+  if(chg && rec.mayor) _mayorClearPick(rec);                           // 守护/清醒状态变了 → 收回上次弹刀选择，回到默认
+  rec.mayor=nowMayor;
+  if(!chg){ if(rec.mayor && !blocked && rec.mrPick!=null) _mayorResolve(rec);   // 原目标状态没变，但代死目标的守护可能变了 → 重算弹刀
+    return; }
   if(blocked){ if(rec.death>=0){ killSeat(rec.death,false); if(rec.death!==t) histSet(rec.death,'death',null); } rec.death=-1;
     histSet(rec.imp,'kill','击杀 '+nameAt(t)+'（被守护/免疫，未死）'); histSet(t,'death',null); histSet(t,'protected','被小恶魔选中但幸免（守护/免疫）'); }
-  else { rec.death=t; killSeat(t,true); histSet(rec.imp,'kill','击杀 '+nameAt(t)); histSet(t,'protected',null); histSet(t,'death','被小恶魔击杀出局'); }
+  else { if(rec.death>=0 && rec.death!==t){ killSeat(rec.death,false); histSet(rec.death,'death',null); }   // 收回上次弹刀造成的代死
+    rec.death=t; killSeat(t,true); histSet(rec.imp,'kill','击杀 '+nameAt(t)); histSet(t,'protected',null); histSet(t,'death','被小恶魔击杀出局'); }
   rec.blocked=blocked;
 }
 function monkPick(v){ if(v==="") delete monkPicks[night]; else monkPicks[night]=+v; reResolveKill(); render(); }
@@ -3259,6 +3272,7 @@ function revertImpKill(prev){
     if(prev.death!=null && prev.death>=0) killSeat(prev.death,false);
     histSet(prev.imp,'kill',null); histSet(prev.target,'death',null); histSet(prev.target,'protected',null);
     if(prev.death!=null && prev.death>=0 && prev.death!==prev.target) histSet(prev.death,'death',null);
+    if(prev.mrSafe!=null && prev.mrSafe>=0) histSet(prev.mrSafe,'protected',null);   // 镇长弹刀落到受守护者身上写下的「幸免」记录
     return;
   }
   if(prev.type==="starpass"){
@@ -3296,15 +3310,33 @@ function impKill(v){
     if(death>=0){ killSeat(death,true); histSet(death,'death','被小恶魔击杀出局'); }
     histSet(imp,'kill','击杀 '+nameAt(target)+(wasDead?'（目标已出局，无人死亡）':(blocked?'（被守护/免疫，未死）':'')));
     if(blocked) histSet(target,'protected','被小恶魔选中但幸免（守护/免疫）');
-    impKills[night]={type:"normal",target:target,imp:imp,blocked:blocked,mayor:isMayor,death:death,deadTarget:wasDead};
+    impKills[night]={type:"normal",target:target,imp:imp,blocked:blocked,mayor:isMayor,death:death,deadTarget:wasDead,mrPick:null,mrSafe:null};
   }
   render();
 }
+/* 镇长弹刀·清除当前选择（回到默认：镇长自己死），顺便清掉写在代死目标上的「幸免」记录 */
+function _mayorClearPick(rec){ if(!rec) return;
+  if(rec.mrSafe!=null && rec.mrSafe>=0) histSet(rec.mrSafe,'protected',null);
+  rec.mrSafe=null; rec.mrPick=null; }
+/* 镇长弹刀·按当前 mrPick 重新结算「本夜实际死亡」。
+   官方规则（Mayor 词条 How to Run）：说书人把死亡弹给「已出局的玩家 / 士兵 / 被僧侣守护的玩家」时，
+   那名玩家今晚不会死 —— 弹刀照常发生，但本夜无人死亡（镇长也活着）。 */
+function _mayorResolve(rec){
+  if(!rec||rec.type!=="normal"||!rec.mayor) return;
+  if(rec.death!=null && rec.death>=0){ killSeat(rec.death,false); histSet(rec.death,'death',null); }   // 先撤销上一次结算
+  if(rec.mrSafe!=null && rec.mrSafe>=0) histSet(rec.mrSafe,'protected',null);
+  rec.mrSafe=null;
+  const t=rec.target, pick=(rec.mrPick==null?t:rec.mrPick);
+  if(pick<0){ rec.death=-1; histSet(rec.imp,'kill','击杀 '+nameAt(t)+'（镇长弹刀 → 本夜无人死亡）'); return; }
+  if(pick===t){ rec.death=t; killSeat(t,true); histSet(t,'death','被小恶魔击杀出局'); histSet(rec.imp,'kill','击杀 '+nameAt(t)); return; }
+  const why = isDeadSeat(pick) ? '已出局' : (isProtected(pick) ? '被守护/免疫' : '');
+  if(why){ rec.death=-1;                                               // 弹给受保护/已出局的人 → 本夜无人死亡
+    if(!isDeadSeat(pick)){ rec.mrSafe=pick; histSet(pick,'protected','镇长弹刀选中但幸免（守护/免疫）'); }
+    histSet(rec.imp,'kill','击杀 '+nameAt(t)+'（镇长弹刀 → '+nameAt(pick)+' '+why+'，本夜无人死亡）'); return; }
+  rec.death=pick; killSeat(pick,true); histSet(pick,'death','镇长弹刀 → 代 '+nameAt(t)+' 死亡');
+  histSet(rec.imp,'kill','击杀 '+nameAt(t)+'（镇长弹刀 → '+nameAt(pick)+' 代死）'); }
 function mayorRedirect(v){ const rec=impKills[night]; if(!rec||rec.type!=="normal"||!rec.mayor) return;
-  if(rec.death>=0){ killSeat(rec.death,false); histSet(rec.death,'death',null); }
-  const nd = v===""?-1:+v; rec.death=nd;
-  if(nd>=0){ killSeat(nd,true); histSet(nd,'death', nd===rec.target?'被小恶魔击杀出局':'镇长弹刀 → 代 '+nameAt(rec.target)+' 死亡'); }
-  render(); }
+  rec.mrPick = (v===""? -1 : +v); _mayorResolve(rec); render(); }
 function chooseNewImp(v){
   if(v==="") return; const ni=+v; const rec=impKills[night];
   if(!rec||rec.type!=="starpass") return;
@@ -3336,10 +3368,18 @@ function impKillUI(){
       else h+='<div class="impkill warn">⚠ 无存活爪牙可接任 → 恶魔真死</div>';
     }
   }
-  if(rec.type==="normal" && rec.mayor){                                // 镇长弹刀：实际死亡可改
-    let mo='<option value=""'+(rec.death<0?' selected':'')+'>无人死亡</option>';
-    for(let i=0;i<N;i++){ if(i===rec.target || i===rec.death || !isDeadSeat(i)){ mo+='<option value="'+i+'"'+(rec.death===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+(i===rec.target?'（镇长本人）':'')+'</option>'; } }
-    h+='<div class="impkill warn">镇长弹刀·实际死亡：<select onchange="mayorRedirect(this.value)">'+mo+'</select></div>';
+  if(rec.type==="normal" && rec.mayor && !rec.blocked && !rec.deadTarget){   // 镇长弹刀（镇长本人被守护时不触发弹刀，故 !blocked）
+    const pick=(rec.mrPick==null?rec.target:rec.mrPick);
+    let mo='<option value=""'+(pick<0?' selected':'')+'>无人死亡</option>';
+    for(let i=0;i<N;i++){
+      const _wasDead=isDeadSeat(i)&&i!==rec.death;                     // i 若正因弹刀而死，不算「本就已出局」
+      const tag = (i===rec.target) ? '（镇长本人）' : (_wasDead ? '（已出局·不会死）' : (isProtected(i) ? '（被守护/免疫·不会死）' : ''));
+      mo+='<option value="'+i+'"'+(pick===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+tag+'</option>'; }
+    const note = (pick<0) ? '本夜无人死亡'
+      : (pick===rec.target) ? '未弹刀 → 镇长本人出局'
+      : (rec.death<0 ? (nameAt(pick)+' 受守护/已出局 → 本夜无人死亡（镇长也活着）') : (nameAt(pick)+' 代镇长死亡'));
+    h+='<div class="impkill warn">镇长弹刀·代死目标：<select onchange="mayorRedirect(this.value)">'+mo+'</select>'
+      +'<div style="margin-top:4px;font-size:12px;opacity:.85">→ '+esc(note)+'</div></div>';
   }
   return h;
 }
