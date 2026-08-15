@@ -332,6 +332,8 @@
   .nflow .nf-btns button{padding:5px 10px; border-radius:7px; font-size:.85em; font-weight:700; cursor:pointer; border:1px solid rgba(122,83,32,.4); background:#f3ead9; color:#43286b;}
   .nflow .nf-send, .nflow .nf-ok{background:linear-gradient(180deg,#7a5aa0,#5e3f80); color:#fff; border-color:#5e3f80;}
   .nflow .nf-btns button[disabled]{opacity:.4; cursor:not-allowed;}
+  .nflow .nf-btns button.nf-undo{background:#f6e7e1; color:#8f2f22; border-color:rgba(143,47,34,.45);}   /* 撤销：偏警示的浅红，和主操作区分开，避免误点 */
+  .nflow .nf-btns button.nf-undo:hover{background:#efd6cc;}
   /* per-seat info bubbles (grimoire) */
   #bubbleLayer{position:absolute; inset:0; z-index:40; pointer-events:none;}
   .bubble{position:absolute; transform:translateY(-50%); pointer-events:auto; z-index:41;
@@ -1402,6 +1404,10 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.56.0', d:'2026-08-14', items:[
+    '夜晚每个步骤新增「撤销」按钮（在「跳过」右侧；已完成的步骤显示为「撤销重做」）。点击需二次确认，确认后会把这一步造成的一切退回：已发给玩家的弹窗与局内信息、魔典日志里的记录、以及它造成的状态（中毒、守护、主人、夜杀与红唇接任、占卜/守鸦人的结果、间谍已下发的魔典快照等），这一步回到「未开始」，可以重新执行。',
+    '这是防误操作的保险——发错人、点错目标、误按代确认时不用再重开一局。',
+  ]},
   {v:'v2.55.0', d:'2026-08-14', items:[
     '说书人日志顶部新增「🎴 开局」小节：点「新的一局」的那一刻把本局板子定格下来——每个座位的玩家与角色（酒鬼会写明自以为的身份）、间谍/陌客的善恶误判、红鲱鱼、三张恶魔伪装、以及阵营配置人数。分享日志给玩家后，他们看这一段就知道本局是什么板子。',
     '这一段是开局当刻的快照而非实时读取，所以红唇女郎接任、酒鬼改判等局中变化不会污染开局记录；重新发牌或重置角色会作废旧板子。',
@@ -2016,6 +2022,54 @@ function _nfRecordInfoToPlayers(id){ if(!window.stRecordGameInfo || stepKind(id)
   const f=nfGet(id); const text=(f.text!=null&&f.text!=='')?f.text:nightAutoText(id); if(!text) return;
   const key='info:'+night+':'+id+':info:'+(f.sid||0);
   (nightSendSeats(id)||[]).forEach(function(seat){ window.stRecordGameInfo(seat,key,text,night,0); }); }
+/* ===== 撤销并重做某个夜间步骤（防误操作的保险）=====
+   把这一步造成的一切退回：玩家端弹窗与已下发的局内信息、魔典里的记录与状态、流程状态，
+   之后这一步回到「未开始」，可以重新发送 / 重新操作。 */
+function _stepLabel(id){ if(id==='_minion') return '爪牙相认'; if(id==='_demon') return '恶魔信息'; if(id==='_newimp') return '新恶魔通知';
+  return (RMAP[id]&&RMAP[id].name)||id; }
+const _UNDO_CHOICE_KEY={poisoner:'choice:poison:n', imp:'choice:imp:n', fortuneteller:'choice:ft:n',
+  monk:'choice:monk:n', butler:'choice:butler:n', ravenkeeper:'choice:raven:n'};
+function _nightUndoApply(id){
+  const f=nightFlow[nfKey(id)]||{};
+  /* 1) 玩家端：清掉夜晚弹窗 */
+  try{ if(window.stNightClear) window.stNightClear(id); }catch(e){}
+  const targets=new Set(nightSendSeats(id)||[]);
+  if(id==='imp'){ const rec=impKills[night];
+    if(rec){ if(rec.imp!=null) targets.add(rec.imp); if(rec.target!=null) targets.add(rec.target); if(rec.newImp!=null) targets.add(rec.newImp); }
+    if(f.newImpSeat!=null) targets.add(f.newImpSeat);
+    targets.forEach(function(x){ try{ if(window._stClearSeatNight && x>=0) window._stClearSeatNight(x); }catch(e){} }); }
+  /* 2) 玩家端：清掉本夜这一步写入的局内信息（key 里带 sid，按前缀清） */
+  const pfs=['info:'+night+':'+id+':'];
+  if(_UNDO_CHOICE_KEY[id]) pfs.push(_UNDO_CHOICE_KEY[id]+night);
+  if(id==='imp') pfs.push('info:'+night+':_newimp:');
+  targets.forEach(function(x){ try{ if(window.stRemoveGameInfoPrefix && x>=0) window.stRemoveGameInfoPrefix(x, pfs); }catch(e){} });
+  /* 3) 间谍：删掉已下发的当夜魔典快照，否则重发会被 transaction 挡住 */
+  if(id==='spy'){ const sp=spySeat(); if(sp>=0){ try{ if(window._stClearSpyGrim) window._stClearSpyGrim(sp, night); }catch(e){} } }
+  /* 4) 本地：退回这一步的实际效果 */
+  if(id==='_minion'||id==='_demon'){ try{ recordSpecial(id,false); }catch(e){} }
+  else if(id==='poisoner'){ try{ poisonPick(''); }catch(e){} }
+  else if(id==='imp'){ try{ impKill(''); }catch(e){} }
+  else if(id==='monk'){ try{ monkPick(''); }catch(e){} }
+  else if(id==='butler'){ try{ butlerPick(''); }catch(e){} }
+  else if(id==='fortuneteller'){ try{ ftPick(0,''); ftPick(1,''); }catch(e){} delete sickAns[night+':fortuneteller']; }
+  else if(id==='ravenkeeper'){ try{ ravenSet('role',''); ravenSet('t',''); }catch(e){} }
+  else if(id==='undertaker'){ delete undertakerPicks[night]; delete sickAns[night+':undertaker']; }
+  else if(id==='chef'||id==='empath'){ delete sickAns[night+':'+id]; }
+  else if(id==='washerwoman'||id==='librarian'||id==='investigator'){ delete pingPicks[id]; }
+  /* 5) 流程状态归零 → 回到「未开始」 */
+  delete nightChecks[nfKey(id)];
+  delete nightFlow[nfKey(id)];
+  save(); render();
+}
+window.nightUndoStep=async function(id){
+  const f=nightFlow[nfKey(id)];
+  if(!f || f.stage==='idle'){ _gt('这一步还没开始，无需撤销'); return; }
+  const nm=_stepLabel(id);
+  if(!await uiConfirm('撤销「'+nm+'」这一步？本夜该步已发给玩家的信息、魔典里的记录与造成的状态都会退回，回到未开始，可以重新执行。',
+      {title:'撤销并重做',ok:'撤销',cancel:'取消'})) return;
+  _nightUndoApply(id);
+  _gt('已撤销「'+nm+'」，可以重新执行这一步');
+};
 /* 跳过：这一步「没有发生」→ 不记入玩家局内信息、不记魔典，仅标记完成以放行「结束本夜」 */
 function nightSkipStep(id){ nfDone(id,true); save(); render(); }
 function nightManualDone(id){ if(id==='imp'){ const rec=impKills[night]||{}; if(rec.type==='starpass' && rec.newImp==null && _minSeats().some(i=>!isDeadSeat(i))){ try{toast('恶魔自杀：请先在下方指定继任爪牙');}catch(e){} return; }
@@ -2086,6 +2140,7 @@ function nfDone(id,skip){ const f=nfGet(id); f.stage='done';
   } else {
     try{ if(window.stNightClear) window.stNightClear(id); }catch(e){}   // 完成后清掉该玩家的夜晚弹窗与回复
   } }
+function _q(x){ return "'"+String(x).replace(/'/g,"\\'")+"'"; }   // 拼 onclick 用：把 id 包成 JS 字符串字面量，省去层层转义
 function _nfEscA(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 function stepDone(s){ if(s.id==='ravenkeeper' && stepAutomated(s) && !ravenActive()) return true;   // 守鸦人本夜未死亡：无需行动，视为已完成（不阻塞结束本夜）
   if(stepAutomated(s)){ const f=nightFlow[night+':'+s.id]; return !!(f&&f.stage==='done'); } return !!nightChecks[night+':'+s.id]; }
@@ -2096,7 +2151,8 @@ function nightPanel(id, active){
   const dead=_stepRoleDead(id);                     // 角色已出局：除「跳过」外其余操作变灰
   const lock = (active&&!dead)?'' : ' disabled';    // 发送等操作在非激活或已出局时禁用
   let h='<div class="nflow">';
-  if(stage==='done'){ return h+'<div class="nf-done">✓ 已完成</div></div>'; }
+  if(stage==='done'){ return h+'<div class="nf-done">✓ 已完成</div>'
+    +'<div class="nf-btns"><button class="nf-undo" onclick="nightUndoStep('+_q(id)+')" title="撤销这一步并重新执行">撤销重做</button></div></div>'; }
   if(id==='ravenkeeper' && !ravenActive()){ return h+'<div class="nf-done">✓ 守鸦人本夜未死亡，无需行动</div></div>'; }   // 仅当守鸦人本夜被恶魔杀死才触发
   if(stage==='idle'){
     const txt=(f.text!=null&&f.text!=='')?f.text:nightAutoText(id);
@@ -2112,19 +2168,22 @@ function nightPanel(id, active){
     h+='<div class="nf-status">玩家已选择：<b>'+_nfEscA(pk)+'</b></div>';
     h+='<div class="nf-btns"><button class="nf-ok"'+lock+' onclick="nightApprove(\''+id+'\')">审核通过（写入魔典）</button>'
       +'<button class="nf-re" onclick="nightRetract(\''+id+'\')">退回重选</button>'
-      +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button></div>';
+      +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button>'
+    +'<button class="nf-undo" onclick="nightUndoStep('+_q(id)+')" title="撤销这一步并重新执行">撤销</button></div>';
     return h+'</div>';
   }
   if(id==='imp' && stage==='review'){
     h+='<div class="nf-status">恶魔行动复核（自杀继任 / 镇长弹刀），确认后完成本步：</div>';
     h+='<div class="nf-imp">'+impKillUI()+'</div>';
-    h+='<div class="nf-btns"><button class="nf-ok" onclick="nightImpReviewDone(\''+id+'\')">✓ 完成本步</button></div>';
+    h+='<div class="nf-btns"><button class="nf-ok" onclick="nightImpReviewDone(\''+id+'\')">✓ 完成本步</button>'
+      +'<button class="nf-undo" onclick="nightUndoStep('+_q(id)+')" title="撤销这一步并重新执行">撤销</button></div>';
     return h+'</div>';
   }
   if(id==='imp' && stage==='newimp'){   // 传位：等待新恶魔确认（新恶魔点确认或说书人代确认才完成本步、放行下一步）
     h+='<div class="nf-status">已传位给新小恶魔 <b>'+_nfEscA(nameAt(f.newImpSeat))+'</b>，等待其确认…</div>';
     h+='<div class="nf-btns"><button class="nf-re" onclick="nightResendNewImp(\''+id+'\')">重发通知</button>'
-      +'<button class="nf-ok" onclick="nightProxyNewImp(\''+id+'\')">代确认</button></div>';
+      +'<button class="nf-ok" onclick="nightProxyNewImp(\''+id+'\')">代确认</button>'
+      +'<button class="nf-undo" onclick="nightUndoStep('+_q(id)+')" title="撤销这一步并重新执行">撤销</button></div>';
     return h+'</div>';
   }
   if(stage==='manual'){   // 代玩家操作：说书人手动选目标（复用现有选择器）
@@ -2132,7 +2191,8 @@ function nightPanel(id, active){
     h+='<div class="nf-status">代玩家操作：请在下方手动选择目标。</div>';
     h+='<div class="nf-imp">'+w+'</div>';
     h+='<div class="nf-btns"><button class="nf-ok" onclick="nightManualDone(\''+id+'\')">✓ 完成本步</button>'
-      +'<button class="nf-skip" onclick="nightForceSkip(\''+id+'\')">无行动 · 跳过</button></div>';
+      +'<button class="nf-skip" onclick="nightForceSkip(\''+id+'\')">无行动 · 跳过</button>'
+      +'<button class="nf-undo" onclick="nightUndoStep('+_q(id)+')" title="撤销这一步并重新执行">撤销</button></div>';
     return h+'</div>';
   }
   if(id==='fortuneteller' && stage==='ftsick'){   // 中毒/醉酒占卜师：说书人先设定要告知的（可假）结果再发送
@@ -2147,7 +2207,8 @@ function nightPanel(id, active){
     h+='<div class="nf-status" style="opacity:.85">将发送：'+ftResultText()+'</div>';
     h+='<div class="nf-btns"><button class="nf-ok"'+(c?'':' disabled')+' onclick="nightSendFtResult(\''+id+'\')">发送结果</button>'
       +'<button class="nf-re" onclick="nightRetract(\''+id+'\')">退回重选</button>'
-      +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button></div>';
+      +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button>'
+    +'<button class="nf-undo" onclick="nightUndoStep('+_q(id)+')" title="撤销这一步并重新执行">撤销</button></div>';
     return h+'</div>';
   }
   if(id==='ravenkeeper' && stage==='ravensick'){   // 中毒/醉酒守鸦人：说书人先设定要告知的（可假）角色再发送
@@ -2159,7 +2220,8 @@ function nightPanel(id, active){
     h+='<div class="nf-status" style="opacity:.85">将发送：'+ravenPlayerResult()+'</div>';
     h+='<div class="nf-btns"><button class="nf-ok"'+(rec.role?'':' disabled')+' onclick="nightSendRavenResult(\''+id+'\')">发送结果</button>'
       +'<button class="nf-re" onclick="nightRetract(\''+id+'\')">退回重选</button>'
-      +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button></div>';
+      +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button>'
+    +'<button class="nf-undo" onclick="nightUndoStep('+_q(id)+')" title="撤销这一步并重新执行">撤销</button></div>';
     return h+'</div>';
   }
   if(stage==='result'){
@@ -2168,7 +2230,8 @@ function nightPanel(id, active){
     h+='<textarea class="nf-ta" oninput="nightEditResult(\''+id+'\',this.value)">'+_nfEscA(rtxt)+'</textarea>';
     h+='<div class="nf-btns"><button class="nf-re" onclick="nightResend(\''+id+'\')">重发结果</button>'
       +'<button class="nf-ok"'+(dead?' disabled':'')+' onclick="nightProxyConfirmResult(\''+id+'\')">代确认</button>'
-      +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button></div>';
+      +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button>'
+    +'<button class="nf-undo" onclick="nightUndoStep('+_q(id)+')" title="撤销这一步并重新执行">撤销</button></div>';
     return h+'</div>';
   }
   let waitMsg;
@@ -2177,7 +2240,8 @@ function nightPanel(id, active){
   h+='<div class="nf-status">'+waitMsg+'</div>';
   h+='<div class="nf-btns"><button class="nf-re" onclick="nightResend(\''+id+'\')">重发</button>'
     +'<button class="nf-ok"'+(dead?' disabled':'')+' onclick="nightProxyConfirm(\''+id+'\')">代确认</button>'
-    +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button></div>';
+    +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button>'
+    +'<button class="nf-undo" onclick="nightUndoStep('+_q(id)+')" title="撤销这一步并重新执行">撤销</button></div>';
   return h+'</div>';
 }
 function syncPoisonToNight(){   // 投毒者的毒只在施放的那一夜(含当天)有效：进入新的一夜自动失效（与投毒者是否存活无关，也不随其换目标而改变旧毒）
@@ -4849,6 +4913,18 @@ load(); render();
     if(seat==null || seat<0) return; const uid=_seatUid(seat); if(!uid) return;
     const k=String(key).replace(/[.#$\[\]\/]/g,'_');
     db.ref('games/'+curGid+'/players/'+uid+'/gameInfo/'+k).set({key:k, n:(n==null?null:n), ord:(ord==null?1:ord), text:text, dp:(dp?true:null), ts:firebase.database.ServerValue.TIMESTAMP}).catch(function(){}); };
+  /* 撤销夜间步骤用：按前缀批量删掉该玩家本夜由这一步写入的局内信息（key 里带 sid，会变，只能按前缀清） */
+  window.stRemoveGameInfoPrefix=function(seat, prefixes){ if(role!=='st'||!curGid) return; if(seat==null||seat<0) return;
+    const uid=_seatUid(seat); if(!uid) return; if(!prefixes||!prefixes.length) return;
+    const ref=db.ref('games/'+curGid+'/players/'+uid+'/gameInfo');
+    ref.once('value').then(function(sn){ const v=sn.val()||{}; const up={};
+      Object.keys(v).forEach(function(k){ for(let i=0;i<prefixes.length;i++){ if(k.indexOf(prefixes[i])===0){ up[k]=null; return; } } });
+      if(Object.keys(up).length) ref.update(up).catch(function(){});
+    }).catch(function(){}); };
+  /* 撤销间谍那一步：删掉已下发的当夜魔典快照（_stSendSpyGrim 用 transaction 写入，不删就无法重发） */
+  window._stClearSpyGrim=function(seat, n){ if(role!=='st'||!curGid) return; if(seat==null||seat<0) return;
+    const uid=_seatUid(seat); if(!uid) return;
+    db.ref('games/'+curGid+'/players/'+uid+'/spyGrim/'+n).remove().catch(function(){}); };
   window.stRemoveGameInfo=function(seat, key){ if(role!=='st'||!curGid) return; if(seat==null||seat<0) return; const uid=_seatUid(seat); if(!uid) return;
     const k=String(key).replace(/[.#$\[\]\/]/g,'_');
     db.ref('games/'+curGid+'/players/'+uid+'/gameInfo/'+k).remove().catch(function(){}); };
