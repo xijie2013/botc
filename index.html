@@ -1411,6 +1411,10 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.62.0', d:'2026-08-15', items:[
+    '日志按钮改为开局之后才点亮：未开局时是灰的，点了会提示先「新的一局」。日志内容也一样——未开局时和「夜晚」「白天」两页显示同一句「本局尚未开始」。',
+    '「结束本局」现在会清空本局日志（每个座位的夜间记录、开局板子快照、提名与处决），如果已经分享给玩家也会一并收回；永久战绩不受影响。确认弹窗里写明了这一点。',
+  ]},
   {v:'v2.61.0', d:'2026-08-15', items:[
     '说书人左下角的「日志」图标现在随时可点（不再需要先分享才亮），打开就是当前这一刻的完整日志，游戏进行中开着它也会跟着实时更新，滚动位置不会被打断。',
     '「分享给玩家 / 取消分享」按钮从魔典的日志页移到了这个弹窗顶部——在哪看日志就在哪分享。',
@@ -2972,9 +2976,19 @@ function gateBanner(txt){ return '<div class="gatebar'+(window.__gateOverride?' 
   +'<span>'+(window.__gateOverride?'已临时解锁，可强行修改（刷新后恢复锁定）':txt)+'</span>'
   +'<span class="regbtn" onclick="toggleGateOverride()">'+(window.__gateOverride?'恢复锁定':'临时解锁')+'</span></div>'; }
 window.stEndGame=async function(){
-  if(!await uiConfirm('结束本局后回到配置期，可以重新调整座位数量、玩家位置与角色。本局的日志与战绩会保留。',{title:'结束本局',ok:'结束本局',cancel:'取消'})) return;
+  if(!await uiConfirm('结束本局后回到配置期，可以重新调整座位数量、玩家位置与角色。\n\n⚠ 本局日志会被清空（若已分享给玩家，也会一并收回）。永久战绩不受影响。',{title:'结束本局',ok:'结束本局',cancel:'取消'})) return;
   window.__gameOn=false; window.__gateOverride=false; window.__winPending=null; window.__winDismissed='';
-  try{ save(); }catch(e){} render(); try{ _updateWinFab(); }catch(e){} _gt('已结束本局，回到配置期');
+  window.__winApproved='';
+  /* 清空本局日志：每座位的夜间记录 + 开局板子快照 + 白天段落用到的提名/处决等 */
+  try{ if(Array.isArray(meta)) meta.forEach(m=>{ if(m){ m.hist={}; m.info=''; } });
+    window.__setupSnap=null;
+    nominations={}; executions={}; virginUsed=false; slayerShot=null;
+  }catch(e){}
+  /* 收回已分享给玩家的日志与裁决面板 */
+  try{ if(window._pubStLog) window._pubStLog(null); }catch(e){} window.__stLogShared=false;
+  try{ if(window._closeStLog) window._closeStLog(); if(window._closeWinJudge) window._closeWinJudge(); }catch(e){}
+  try{ if(window._updateStLogFab) window._updateStLogFab(); }catch(e){}
+  try{ save(); }catch(e){} render(); try{ _updateWinFab(); }catch(e){} _gt('已结束本局，回到配置期（日志已清空）');
 };
 /* ---------- ⑫ 底部弹窗堆栈：说书人/系统的各类底部信息框不再互相重叠 ----------
    规则：提名举手条 #voteBar 永远压在最底（它会一直存在到计票结束，位置不该乱跳）；
@@ -3060,7 +3074,8 @@ window._updateStLogFab=function(){ const el=document.getElementById('stLogFab');
   const r=window.__botcRole||'', has=!!window.__pubHasGame;
   if((r!=='player'&&r!=='st') || !has){ el.style.display='none'; return; }
   el.style.display='flex'; if(!el.firstChild) el.innerHTML=_STLOG_ICON;
-  if(r==='st'){ el.classList.remove('fab-off'); el.title='本局日志（可在里面分享给玩家）'; return; }   // v2.61.0 说书人随时可查看当前日志
+  if(r==='st'){ const on=isGameOn();                                                                    // v2.61.0 开局后随时可查看当前日志；v2.62.0 未开局时灰态
+    el.classList.toggle('fab-off', !on); el.title = on ? '本局日志（可在里面分享给玩家）' : '本局尚未开始'; return; }
   const on=!!window.__stLogShared;                                                                    // 玩家：说书人还没分享时灰态不可点
   el.classList.toggle('fab-off', !on);
   el.title = on ? '查看说书人分享的本局日志' : '说书人还没有分享日志'; };
@@ -3578,7 +3593,11 @@ function setupSnapHTML(){
   return h;
 }
 /* ⑧ 说书人日志正文（抽成函数，便于「分享给玩家」复用同一份 HTML） */
-function stLogHTML(){ let h="";
+/* ⑬ 未进入游戏期时，夜晚 / 白天 / 日志三页统一显示这句 */
+function _notStartedHTML(){
+  return '<div class="rrow" style="border:none;opacity:.75;line-height:1.75">🕯️ 本局尚未开始。<br>请先在「<b>角色设置</b>」页排好座位与角色，点 <b>新的一局</b>，夜晚、白天与日志才会开始记录。</div>'; }
+function stLogHTML(){ if(!isGameOn()) return _notStartedHTML();   // 未开局：与夜晚/白天两页一致
+  let h="";
     const _w0=checkWin(); const _win=(window.__winApproved && winSig(_w0)===window.__winApproved)?_w0:null;   // ⑪ 只有说书人已裁决宣告的胜负才上横幅
     if(_win) h+='<div class="resbadge '+_win.w+'" style="margin-top:2px"><img src="assets/win-'+_win.w+'.png" onerror="this.style.display=\'none\'"><div><b>'+(_win.w==='good'?'好人胜利':'邪恶胜利')+'</b><div class="rb-r">'+esc(_win.r||'')+'</div></div></div>';
     let maxN=night; meta.forEach(m=>{ if(m.hist) Object.keys(m.hist).forEach(k=>maxN=Math.max(maxN,+k)); });
@@ -3751,10 +3770,8 @@ function renderGrim(){
     });
     return;
   }
-  if(gtab==="log"){ h+=stLogHTML(); c.innerHTML=h; return; }   /* v2.61.0「分享给玩家」按钮移到左下角日志弹窗里 */
-  if(!isGameOn()){   // ⑬ 未进入游戏期：夜晚 / 白天两页留空，避免在配置阶段误操作流程
-    h+='<div class="rrow" style="border:none;opacity:.75;line-height:1.75">🕯️ 本局尚未开始。<br>请先在「<b>角色设置</b>」页排好座位与角色，点 <b>新的一局</b>，夜晚与白天的流程才会开始。</div>';
-    c.innerHTML=h; return; }
+  if(gtab==="log"){ h+=stLogHTML(); c.innerHTML=h; return; }   /* v2.61.0「分享给玩家」按钮移到左下角日志弹窗里；v2.62.0 未开局时 stLogHTML 自己会返回「尚未开始」 */
+  if(!isGameOn()){ h+=_notStartedHTML(); c.innerHTML=h; return; }   // ⑬ 未进入游戏期：夜晚 / 白天两页留空，避免在配置阶段误操作流程
   if(gtab==="day"){
     const day=night, alive=countAlive(), thr=dayThreshold();
     h+='<div class="rrow" style="border:none;font-weight:800;color:#43286b">第 '+day+' 天 · 存活 '+alive+' 人 · 处决需 ≥ '+thr+' 票</div>';
@@ -4881,7 +4898,9 @@ load(); render();
   window._stLogPanelRefresh=function(){ if(role!=='st') return; const bd=document.getElementById('stLogBody'); if(!bd) return;
     const h=_stLogBodyHTML(); if(bd.__sig===h) return; const sc=bd.scrollTop; bd.__sig=h; bd.innerHTML=h; bd.scrollTop=sc; };
   window._openStLog=function(){
-    const isSt=(role==='st'); const body=_stLogBodyHTML();
+    const isSt=(role==='st');
+    if(isSt && !(typeof isGameOn==='function' && isGameOn())){ try{ toast('本局尚未开始——请先在「角色设置」页点「新的一局」'); }catch(e){} return; }
+    const body=_stLogBodyHTML();
     if(!isSt && !body){ try{ toast('说书人还没有分享日志'); }catch(e){} return; }
     window._closeStLog();
     const mask=document.createElement('div'); mask.id='stLogMask';
