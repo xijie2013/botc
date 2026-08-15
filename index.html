@@ -1414,6 +1414,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.58.2', d:'2026-08-15', items:[
+    '修复：因提名贞洁者而当场被处决的座位，只有说书人魔典变灰、玩家笔记那边不变——触发处决后漏了把座位状态推给全场（只推了提名，没推座位）。撤销该提名时同理，现在两端会一起复活。',
+  ]},
   {v:'v2.58.1', d:'2026-08-15', items:[
     '镇长弹刀补齐官方守护规则：把死亡弹给已出局的玩家、士兵、或被僧侣守护的玩家时，那名玩家今晚不会死——弹刀照常发生，但本夜无人死亡（镇长也活着）。此前是无条件把选中的人打死。',
     '僧侣守护的正是镇长本人时，弹刀不再触发（镇长对恶魔免疫，压根没有「将死」这回事），下拉直接隐藏；镇长中毒/醉酒时同样不能弹刀。',
@@ -3125,6 +3128,7 @@ function addNomination(nr,ne){ if(nr===""||ne==="") return; const day=night;
     try{ if(window._pubVirginPop) window._pubVirginPop(day,nr,ne); }catch(e){}
     try{ if(window._voteForceClose) window._voteForceClose(); }catch(e){}
     _gt('贞洁者能力触发：'+nameAt(nr)+' 当场处决出局，本次提名已自动停止计票');
+    if(window._syncSeats) window._syncSeats();   // ⚠ killSeat 改了座位死亡状态 → 必须推 public.seats，否则玩家笔记那边不会变灰
   } else {
     if(window._clockBroadcastNom) window._clockBroadcastNom(nr,ne);
     if(window._voteOpen) window._voteOpen(day,nr,ne);   // 开启一轮公开举手（玩家端出现举手选项）
@@ -3140,7 +3144,9 @@ async function removeNomination(day,idx){
     if(nom.virginExec!=null){ killSeat(nom.virginExec,false); histSet(nom.virginExec,'death',null); if(executions[day]===nom.virginExec) delete executions[day]; try{ _clearExecFromAll(day); }catch(e){}
       try{ if(window._clearVirginPop) window._clearVirginPop(); }catch(e){} } }   // 撤销贞洁者处决 → 一并收回全场弹窗
   nominations[day].splice(idx,1); if(!nominations[day].length) delete nominations[day]; }
-  if(window._syncNoms) window._syncNoms(); render(); }
+  if(window._syncNoms) window._syncNoms();
+  if(window._syncSeats) window._syncSeats();   // ⚠ 撤销贞洁者处决会复活座位 → 同步 public.seats
+  render(); }
 function toggleVote(day,nomIdx,seat){ const nom=nominations[day][nomIdx];
   if(nom.tallied && !window.__gateOverride){ _gt('本次投票已停止计票；要改票请先点「重新计票」'); return; }   // ⑬ 停止计票后不可再随意改票
   const at=nom.voters.indexOf(seat);
