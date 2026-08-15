@@ -1404,6 +1404,10 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.56.1', d:'2026-08-14', items:[
+    '修复猎人无法开枪：v2.53.1 给猎人加「只在白天进行中可开枪」的判断时，新加的行末注释把同一行后面的 `const t=+v; const sl=…` 一并注释掉了，导致开枪函数一执行就报错，说书人代开枪和猎手自己拖弩请求都会毫无反应。',
+    '顺带修掉两处同类隐患：随机发牌时若阵营数量与人数对不上，原本调用的提示函数 uiAlert 从未定义（会直接报错而不是给提示）；说书人魔典里 23 处提示（如「玩家还没提交选择」「恶魔自杀：请先指定继任爪牙」）因为调用的是另一段脚本内部的函数，一直静默失败，现在都能正常弹出了。',
+  ]},
   {v:'v2.56.0', d:'2026-08-14', items:[
     '夜晚每个步骤新增「撤销」按钮（在「跳过」右侧；已完成的步骤显示为「撤销重做」）。点击需二次确认，确认后会把这一步造成的一切退回：已发给玩家的弹窗与局内信息、魔典日志里的记录、以及它造成的状态（中毒、守护、主人、夜杀与红唇接任、占卜/守鸦人的结果、间谍已下发的魔典快照等），这一步回到「未开始」，可以重新执行。',
     '这是防误操作的保险——发错人、点错目标、误按代确认时不用再重开一局。',
@@ -1710,7 +1714,7 @@ function seatClick(i){ if(selected!==null){ moveToken(selected,i); selected=null
 async function dealRoles(){
   if(gateCfg()) return;
   const base=customDist||DIST[N]; if(!base) return;
-  if(base.reduce((a,b)=>a+b,0)!==N){ await uiAlert('各阵营数量合计与人数（'+N+'）不符，请调整后再发牌。'); return; }
+  if(base.reduce((a,b)=>a+b,0)!==N){ _gt('各阵营数量合计与人数（'+N+'）不符，请调整后再发牌。'); return; }   // 原来调的 uiAlert 从未定义，会抛 ReferenceError
   if(!await uiConfirm("确定随机发牌？将重新分配所有身份。")) return;
   try{ if(window._histNewRound) _histNewRound(); }catch(e){}   // 新一局：胜负另记一条
   ensureMeta(); night=1; impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
@@ -1957,9 +1961,9 @@ function ftResultText(){ const cur=ftPicks[night]; if(!cur||cur[0]==null||cur[1]
   return '【占卜结果】你所占卜的 '+nameAt(cur[0])+'、'+nameAt(cur[1])+' 之中'+(has?'有':'没有')+'恶魔。'; }
 /* 说书人操作：发送 / 编辑文本 / 审核通过 / 退回重选 / 代确认跳过 / 重发 */
 function nightSend(id){ const kind=stepKind(id); if(!kind) return; const f=nfGet(id);
-  const seats=nightSendSeats(id); if(!seats.length){ try{toast('没找到该角色对应的已登录玩家，可用「代确认/跳过」');}catch(e){} }
+  const seats=nightSendSeats(id); if(!seats.length){ try{window._toast&&_toast('没找到该角色对应的已登录玩家，可用「代确认/跳过」');}catch(e){} }
   const text=(f.text!=null&&f.text!=='')?f.text:nightAutoText(id);
-  if(kind==='info' && (!text||!text.trim())){ try{toast('请先在上方选择/设定要告知的信息');}catch(e){} return; }   // 洗衣妇等：未选好揭示内容不发送
+  if(kind==='info' && (!text||!text.trim())){ try{window._toast&&_toast('请先在上方选择/设定要告知的信息');}catch(e){} return; }   // 洗衣妇等：未选好揭示内容不发送
   f.text=text;
   let phase='info', pick=null; if(kind!=='info'){ phase='pick'; pick={count:kind==='pick2info'?2:1, options:_pickOptionsFor(id)}; }
   f.stage='sent'; f.phase=phase; f.sid=(f.sid||0)+1; f.pick=null;
@@ -1968,7 +1972,7 @@ function nightSend(id){ const kind=stepKind(id); if(!kind) return; const f=nfGet
   save(); render(); }
 function nightEditText(id,val){ nfGet(id).text=val; }
 function nightEditResult(id,val){ nfGet(id).resultText=val; }
-function nightApprove(id){ const f=nfGet(id); if(!f.pick||!f.pick.length){ try{toast('玩家还没提交选择');}catch(e){} return; }
+function nightApprove(id){ const f=nfGet(id); if(!f.pick||!f.pick.length){ try{window._toast&&_toast('玩家还没提交选择');}catch(e){} return; }
   if(id==='poisoner'){ poisonPick(String(f.pick[0])); nfDone(id); }
   else if(id==='monk'){ monkPick(String(f.pick[0])); nfDone(id); }
   else if(id==='butler'){ butlerPick(String(f.pick[0])); nfDone(id); }
@@ -1990,7 +1994,7 @@ function nightApprove(id){ const f=nfGet(id); if(!f.pick||!f.pick.length){ try{t
     const seats=nightSendSeats(id); if(window.stNightSend) window.stNightSend(id,'result',rtext,null,seats,f.sid); }
   save(); render(); }
 function nightImpReviewDone(id){ const rec=impKills[night]||{};
-  if(rec.type==='starpass' && rec.newImp==null && _minSeats().some(i=>!isDeadSeat(i))){ try{toast('恶魔自杀：请先指定一名存活爪牙继任为新恶魔');}catch(e){} return; }
+  if(rec.type==='starpass' && rec.newImp==null && _minSeats().some(i=>!isDeadSeat(i))){ try{window._toast&&_toast('恶魔自杀：请先指定一名存活爪牙继任为新恶魔');}catch(e){} return; }
   _impDone(id); }
 function nightRetract(id){ const f=nfGet(id); const kind=stepKind(id); f.pick=null; f.stage='sent'; f.phase='pick'; f.sid=(f.sid||0)+1;
   const seats=nightSendSeats(id); const pick={count:kind==='pick2info'?2:1, options:_pickOptionsFor(id)};
@@ -2001,7 +2005,7 @@ function nightResend(id){ const f=nfGet(id);
 /* 代确认：这一步「确实发生了」（说书人替离线玩家确认/操作）→ 记入玩家局内信息。信息步直接记录+完成；选择步进入代选择器由说书人替玩家选。 */
 function nightProxyConfirm(id){ const kind=stepKind(id);
   if(kind==='info'){ const f=nfGet(id); const text=(f.text!=null&&f.text!=='')?f.text:nightAutoText(id);
-    if(!text||!text.trim()){ try{toast('请先在上方选择/设定要告知的信息');}catch(e){} return; }   // 洗衣妇等：未选好揭示内容不代确认
+    if(!text||!text.trim()){ try{window._toast&&_toast('请先在上方选择/设定要告知的信息');}catch(e){} return; }   // 洗衣妇等：未选好揭示内容不代确认
     if(id==='spy'){ try{ _spyEmitGrim(); }catch(e){} }   // 间谍代确认：也把当夜魔典快照写入（离线间谍登录后即可查看）
     _nfRecordInfoToPlayers(id); nfDone(id); save(); render(); return; }
   nfGet(id).stage='manual'; save(); render(); }                // 选目标步：代玩家操作 → 说书人手动选目标
@@ -2072,7 +2076,7 @@ window.nightUndoStep=async function(id){
 };
 /* 跳过：这一步「没有发生」→ 不记入玩家局内信息、不记魔典，仅标记完成以放行「结束本夜」 */
 function nightSkipStep(id){ nfDone(id,true); save(); render(); }
-function nightManualDone(id){ if(id==='imp'){ const rec=impKills[night]||{}; if(rec.type==='starpass' && rec.newImp==null && _minSeats().some(i=>!isDeadSeat(i))){ try{toast('恶魔自杀：请先在下方指定继任爪牙');}catch(e){} return; }
+function nightManualDone(id){ if(id==='imp'){ const rec=impKills[night]||{}; if(rec.type==='starpass' && rec.newImp==null && _minSeats().some(i=>!isDeadSeat(i))){ try{window._toast&&_toast('恶魔自杀：请先在下方指定继任爪牙');}catch(e){} return; }
     _impDone(id); return; }
   if(id==='fortuneteller'){ try{ if(typeof recordFt==='function') recordFt(); }catch(e){}   // 代占卜：把结果记入魔典日志
     try{ const cur=ftPicks[night]; if(window.stRecordGameInfo && cur && cur[0]!=null && cur[1]!=null){ const seat=(nightSendSeats('fortuneteller')||[])[0]; if(seat!=null&&seat>=0) window.stRecordGameInfo(seat,'info:'+night+':fortuneteller:result:1',ftResultText(),night,2); } }catch(e){}   // 代占卜也把结果记入占卜师局内信息（否则只有选择没有结果）
@@ -3108,8 +3112,9 @@ function toggleVote(day,nomIdx,seat){ const nom=nominations[day][nomIdx];
   render(); }
 /* ---------- 猎人：每局一次，白天指认，命中恶魔则其死 ---------- */
 function registersDemon(i){ const m=meta[i]; if(!m||!m.role) return false; if(RMAP[m.role].team==="dem") return true; if(m.role==="recluse"&&effReg(i)==="evil") return true; return false; }
-function slayerFire(v){ if(v===""||slayerShot||executions[night]!==undefined) return;
-  if(!dfDawned()||dfDusked()){ _gt(dfDusked()?'本日已结束，猎人不能再开枪':'白天尚未开始（请先「结束本夜」），猎人不能开枪'); return; }   // ⑬ 只在白天进行中可开枪 const t=+v; const sl=meta.findIndex(m=>m&&m.role==="slayer"); if(sl<0) return;   // 处决结果出来后不能再开枪
+function slayerFire(v){ if(v===""||slayerShot||executions[night]!==undefined) return;   // 处决结果出来后不能再开枪
+  if(!dfDawned()||dfDusked()){ _gt(dfDusked()?'本日已结束，猎人不能再开枪':'白天尚未开始（请先「结束本夜」），猎人不能开枪'); return; }   // ⑬ 只在白天进行中可开枪
+  const t=+v; const sl=meta.findIndex(m=>m&&m.role==="slayer"); if(sl<0) return;
   const hit = healthy(sl) && !isDeadSeat(sl) && registersDemon(t);
   slayerShot={target:t, day:night, hit};
   let _sfull=false;
@@ -4837,10 +4842,10 @@ load(); render();
   window._nightPickChange=function(){ const nm=S&&S.night; if(!nm||!nm.pick) return; const w=document.getElementById('nbSuccWrap'); if(!w) return;
     const el=document.getElementById('nbSel0'); const self=nm.pick.selfSeat;
     w.style.display=(el&&self!=null&&el.value!==''&&(+el.value)===(+self))?'block':'none'; };
-  window._nightSubmitPick=function(count){ const nm=S&&S.night; const picks=[]; for(let k=0;k<count;k++){ const el=document.getElementById('nbSel'+k); if(!el||el.value===''){ try{toast('请选择'+count+'名玩家');}catch(e){} return; } picks.push(+el.value); }
-    if(count>=2 && picks[0]===picks[1]){ try{toast('请选择两名不同玩家');}catch(e){} return; }
+  window._nightSubmitPick=function(count){ const nm=S&&S.night; const picks=[]; for(let k=0;k<count;k++){ const el=document.getElementById('nbSel'+k); if(!el||el.value===''){ try{window._toast&&_toast('请选择'+count+'名玩家');}catch(e){} return; } picks.push(+el.value); }
+    if(count>=2 && picks[0]===picks[1]){ try{window._toast&&_toast('请选择两名不同玩家');}catch(e){} return; }
     if(nm&&nm.pick&&nm.pick.selfSeat!=null && picks[0]===(+nm.pick.selfSeat) && nm.pick.succ && nm.pick.succ.length){   // 自杀 → 必须指定传位爪牙
-      const se=document.getElementById('nbSucc'); if(!se||se.value===''){ try{toast('你选择了自杀，请指定传位的爪牙');}catch(e){} return; } picks.push(+se.value); }
+      const se=document.getElementById('nbSucc'); if(!se||se.value===''){ try{window._toast&&_toast('你选择了自杀，请指定传位的爪牙');}catch(e){} return; } picks.push(+se.value); }
     _nightWriteReply(picks); };
 
   /* 说书人：开启一轮举手 */
@@ -5031,9 +5036,9 @@ load(); render();
     }).sort((a,b)=>(a.ts||0)-(b.ts||0)); }
   function _myChatInv(){ return _myChatInvList()[0]||null; }   // 最早的一个=当前可操作的；有任意未了结即视为「忙」(左下角图标灰)
   window._chatFabTap=function(){ if(role!=='player'||myVoteSeat()<0) return;
-    if(!isChatDay()){ try{toast('夜晚不能发起私聊');}catch(e){} return; }
-    if(pub&&pub.nomStarted){ try{toast('说书人已解散私聊、进入提名环节，本轮不能再私聊');}catch(e){} return; }   // 本轮已解散→冻结发起
-    if(_myChatInv()&&!_chatSelMode){ try{toast('请先处理当前的私聊邀请');}catch(e){} return; }   // 有未了结邀请→不能发起新的
+    if(!isChatDay()){ try{window._toast&&_toast('夜晚不能发起私聊');}catch(e){} return; }
+    if(pub&&pub.nomStarted){ try{window._toast&&_toast('说书人已解散私聊、进入提名环节，本轮不能再私聊');}catch(e){} return; }   // 本轮已解散→冻结发起
+    if(_myChatInv()&&!_chatSelMode){ try{window._toast&&_toast('请先处理当前的私聊邀请');}catch(e){} return; }   // 有未了结邀请→不能发起新的
     _chatToggleInvite(); };
   window._chatToggleInvite=function(){ if(role!=='player'||myVoteSeat()<0||!isChatDay()) return; if(_myChatInv()&&!_chatSelMode) return;
     if(!_chatSelMode){ _chatSelMode=true; _chatSel=new Set(); updateChatFab(); drawSeats(); return; }
@@ -5084,10 +5089,10 @@ load(); render();
     try{ notesRef.child('chatAck').set({iid:iid,from:from,ts:Date.now()}).catch(function(){}); }catch(e){}
     updateChatInv(); updateChatFab(); };
   window._chatLeave=function(){ const from=myVoteSeat(); if(from<0||!notesRef||!isChatDay()) return;
-    try{ notesRef.child('chatLeave').set({from:from,ts:Date.now()}).catch(function(){}); }catch(e){} try{toast('已退出私聊');}catch(e){} };
-  window._chatJoinReq=function(cid){ const from=myVoteSeat(); if(from<0||!notesRef) return; if(!isChatDay()){ try{toast('夜晚不能加入私聊');}catch(e){} return; }
-    if(pub&&pub.nomStarted){ try{toast('说书人已进入提名环节，本轮不能再加入私聊');}catch(e){} return; }
-    if(_myChatInv()){ try{toast('请先处理当前的私聊邀请');}catch(e){} return; }
+    try{ notesRef.child('chatLeave').set({from:from,ts:Date.now()}).catch(function(){}); }catch(e){} try{window._toast&&_toast('已退出私聊');}catch(e){} };
+  window._chatJoinReq=function(cid){ const from=myVoteSeat(); if(from<0||!notesRef) return; if(!isChatDay()){ try{window._toast&&_toast('夜晚不能加入私聊');}catch(e){} return; }
+    if(pub&&pub.nomStarted){ try{window._toast&&_toast('说书人已进入提名环节，本轮不能再加入私聊');}catch(e){} return; }
+    if(_myChatInv()){ try{window._toast&&_toast('请先处理当前的私聊邀请');}catch(e){} return; }
     try{ notesRef.child('chatJoin').set({chat:cid,from:from,ts:Date.now()}).catch(function(){}); }catch(e){} };
 
   /* ---- 玩家端：底部常驻私聊弹窗（一次一个，含实时状态 + 20s 倒计时；发起人取消 / 被邀请人同意·拒绝 / 最终结果需点确定）---- */
@@ -5126,7 +5131,7 @@ load(); render();
   window.updateChatInv=updateChatInv;
   function chatNotices(){ if(role!=='player') return; const seat=myVoteSeat(); if(seat<0) return;
     const notes=(pub&&pub.chatNote)||[]; window.__chatSeen=window.__chatSeen||{};
-    (Array.isArray(notes)?notes:Object.keys(notes).map(k=>notes[k])).forEach(n=>{ if(!n||n.to!==seat||window.__chatSeen[n.id]) return; window.__chatSeen[n.id]=1; try{toast(n.text);}catch(e){} }); }
+    (Array.isArray(notes)?notes:Object.keys(notes).map(k=>notes[k])).forEach(n=>{ if(!n||n.to!==seat||window.__chatSeen[n.id]) return; window.__chatSeen[n.id]=1; try{window._toast&&_toast(n.text);}catch(e){} }); }
   window.chatNotices=chatNotices;
   /* 玩家端：说书人「解散私聊」广播通知（底部弹窗，无倒计时，点确认收到即消失；全体玩家可见） */
   window.__disbandAcked=window.__disbandAcked||{};
@@ -5200,7 +5205,7 @@ load(); render();
       const mc=_crMyChat(); if(mc){ const jt=mc.joinTs||0; if(_crMaxKey(window.__crRoom,function(m){return m.f!==seat && (m.ts||0)>=jt;}) > (rd['room:'+mc.cid]||'')) dots.push('rgb('+_crRGB(mc.color).join(',')+')'); } }
     badge.innerHTML=dots.map(function(c){return '<i style="background:'+c+'"></i>';}).join(''); badge.style.display=dots.length?'flex':'none'; }
   window._crIconDots=_crIconDots;
-  window._openChatRoom=function(){ if(!_crCanOpen()){ try{toast('先坐到座位上再打开聊天室');}catch(e){} return; }
+  window._openChatRoom=function(){ if(!_crCanOpen()){ try{window._toast&&_toast('先坐到座位上再打开聊天室');}catch(e){} return; }
     window.__crOpen=true; _crEnsureWatch(); const m=document.getElementById('chatRoom'); if(m) m.classList.add('on');
     if(!_crTabsDef().some(t=>t.k===_crTab)) _crTab='st';
     if(_crTab==='room' && !_crIsSt() && !_crMyChat()) _crTab='st';   // 灰态「当前私聊」不作为默认落点
@@ -5298,12 +5303,12 @@ load(); render();
     body.innerHTML=h; body.scrollTop=body.scrollHeight; }
   window._crSend=function(){ const ta=document.getElementById('crText'); if(!ta) return; const txt=(ta.value||'').trim(); if(!txt) return;
     if(_crIsSt() && _crTab==='room'){ return; }   // 说书人旁观房间不发言
-    if(_crTab==='lobby' && !isChatDay()){ try{toast('夜晚大厅已关闭');}catch(e){} return; }
-    if(_crTab==='room' && !_crIsSt() && !_crMyChat()){ try{toast('你已不在这个私聊里');}catch(e){} return; }
-    const from=_crMe(); if(!_crIsSt() && from<0){ try{toast('先坐到座位上');}catch(e){} return; }
-    if(_crIsSt() && _crTab==='st' && _crPeer<0){ try{toast('先选择一个玩家');}catch(e){} return; }
+    if(_crTab==='lobby' && !isChatDay()){ try{window._toast&&_toast('夜晚大厅已关闭');}catch(e){} return; }
+    if(_crTab==='room' && !_crIsSt() && !_crMyChat()){ try{window._toast&&_toast('你已不在这个私聊里');}catch(e){} return; }
+    const from=_crMe(); if(!_crIsSt() && from<0){ try{window._toast&&_toast('先坐到座位上');}catch(e){} return; }
+    if(_crIsSt() && _crTab==='st' && _crPeer<0){ try{window._toast&&_toast('先选择一个玩家');}catch(e){} return; }
     const ref=_crActivePath(); if(!ref) return; ta.value='';
-    try{ ref.push({f:from, t:txt, ts:firebase.database.ServerValue.TIMESTAMP}).catch(function(err){ try{toast('发送失败'+(err&&err.code?'：'+err.code:'（请先部署聊天室规则）'));}catch(e){} }); }catch(e){} };
+    try{ ref.push({f:from, t:txt, ts:firebase.database.ServerValue.TIMESTAMP}).catch(function(err){ try{window._toast&&_toast('发送失败'+(err&&err.code?'：'+err.code:'（请先部署聊天室规则）'));}catch(e){} }); }catch(e){} };
   function _crOnPubChange(){ if(!window.__crOpen) return;
     if(_crTab==='room' && !_crIsSt() && !_crMyChat()){ _crSwitch('st'); return; }   // 玩家离开了私聊→回说书人 tab（「当前私聊」置灰）
     _crEnsureRoomWatch(); _crApplyLock(); _crRenderTabs();   // 重画 tab（当前私聊灰/亮切换）
