@@ -378,8 +378,14 @@
   #resultLayer{position:fixed; inset:0; z-index:200; display:none; flex-direction:column; align-items:center; justify-content:center; font-family:inherit;}
   #resultLayer.on{display:flex; animation:rlFade .5s ease both;}
   #resultLayer .backdrop{position:absolute; inset:0; background:radial-gradient(circle at 50% 42%,var(--glow2),rgba(8,5,14,.92) 72%),rgba(6,3,12,.72);}
+  /* v2.65.0 光芒改成矢量扇形（SVG），不再用 repeating-conic-gradient：
+     iPad（DPR2）上这块元素超过 3500 device px，Safari 对超大 conic 渐变会降精度光栅化再拉伸，
+     导致射线歪斜/波浪。矢量图形走的是另一条绘制路径，任意尺寸都正。同时去掉 mix-blend-mode
+     （深色背景上 screen 与普通叠加在 opacity:.13 下几乎无差别），少一层 iOS 合成层。 */
   #resultLayer .rays{position:absolute; width:150vmax; height:150vmax; left:50%; top:42%; transform:translate(-50%,-50%);
-    background:repeating-conic-gradient(from 0deg,var(--ray) 0deg 6deg,transparent 6deg 18deg); opacity:.13; animation:rlspin 42s linear infinite; mix-blend-mode:screen;}
+    opacity:.13; animation:rlspin 42s linear infinite; pointer-events:none; will-change:transform;}
+  #resultLayer .rays svg{width:100%; height:100%; display:block;}
+  #resultLayer .rays polygon{fill:var(--ray);}
   #resultLayer .parts{position:absolute; inset:0; overflow:hidden; pointer-events:none;}
   #resultLayer .p{position:absolute; bottom:-20px; border-radius:50%; background:var(--part); filter:blur(.3px) drop-shadow(0 0 6px var(--part)); animation:rlrise linear infinite;}
   #resultLayer .emblem{position:relative; width:min(38vh,340px); animation:emblemIn 1s cubic-bezier(.2,1.3,.35,1) both;}
@@ -1412,6 +1418,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.65.0', d:'2026-08-15', items:[
+    '修复 iPad 上胜利结算画面背景光芒歪斜的问题：放射光芒从 CSS 圆锥渐变改成矢量扇形绘制，并去掉一层混合模式。iPad 这类高分屏上这块元素的实际像素超过 Safari 的光栅化上限，会被降精度画完再拉伸，射线因此看起来是歪的/波浪形；改成矢量后任意屏幕都正。',
+  ]},
   {v:'v2.64.0', d:'2026-08-15', items:[
     '红鲱鱼改为跟着「角色」走，不再钉在座位上：把某个角色拖到别的座位、或和另一个座位互换身份时，红鲱鱼标记跟着那个角色一起挪过去；那个角色被移出场，红鲱鱼才变回未设。',
     '存档里的红鲱鱼也改成记角色（不是座位号）。载入时会把红鲱鱼落到「坐着这个角色的那个座位」，哪怕座位顺序和存档时不一样也不会指错人。存档列表的 ⚙ 摘要现在显示「红鲱鱼 洗衣妇」而不是「红鲱鱼 5号」。',
@@ -4187,7 +4196,7 @@ load(); render();
   <div class="set-log" id="setLog"></div>
 </div></div>
 <div id="resultLayer">
-  <div class="backdrop"></div><div class="rays"></div><div class="parts" id="rlParts"></div>
+  <div class="backdrop"></div><div class="rays"><svg viewBox="-100 -100 200 200" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false"><polygon points="0,0 0,-142 14.84,-141.22"/><polygon points="0,0 43.88,-135.05 57.76,-129.72"/><polygon points="0,0 83.47,-114.88 95.02,-105.53"/><polygon points="0,0 114.88,-83.47 122.98,-71"/><polygon points="0,0 135.05,-43.88 138.9,-29.52"/><polygon points="0,0 142,-0 141.22,14.84"/><polygon points="0,0 135.05,43.88 129.72,57.76"/><polygon points="0,0 114.88,83.47 105.53,95.02"/><polygon points="0,0 83.47,114.88 71,122.98"/><polygon points="0,0 43.88,135.05 29.52,138.9"/><polygon points="0,0 0,142 -14.84,141.22"/><polygon points="0,0 -43.88,135.05 -57.76,129.72"/><polygon points="0,0 -83.47,114.88 -95.02,105.53"/><polygon points="0,0 -114.88,83.47 -122.98,71"/><polygon points="0,0 -135.05,43.88 -138.9,29.52"/><polygon points="0,0 -142,0 -141.22,-14.84"/><polygon points="0,0 -135.05,-43.88 -129.72,-57.76"/><polygon points="0,0 -114.88,-83.47 -105.53,-95.02"/><polygon points="0,0 -83.47,-114.88 -71,-122.98"/><polygon points="0,0 -43.88,-135.05 -29.52,-138.9"/></svg></div><div class="parts" id="rlParts"></div>
   <button class="rclose" onclick="hideResult()" title="收起">✕</button>
   <div class="emblem"><img id="rlEmblem" alt="" onerror="this.style.display='none'"></div>
   <div class="rtitle" id="rlTitle"></div>
