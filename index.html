@@ -471,15 +471,12 @@
     border:1.5px solid rgba(233,196,106,.9); box-shadow:0 1px 4px rgba(0,0,0,.55);}
   .seat .nm{line-height:1.1; color:#fff6df; font-weight:700; word-break:break-all; max-width:94%; text-shadow:0 1px 2px rgba(0,0,0,.65);}   /* max-width 88%→94% 给名字多点余量，短拉丁名（如 Cooler）不被挤到换行 */
   .seat .deathcause{line-height:1.05; margin-top:1px; color:#ff9a8a; font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,.7);}
-  /* 已出局：整体变暗淡（座位、名字、身份、座号一起），一眼能和存活玩家分开。
-     .seat.dead 原来的 opacity:.4 会被这条 hascause 完全抵消（当初为了让死因图标清晰）。
-     v2.57.0 曾改成 opacity:.62 + 灰度，但半透明会透出酒馆背景花纹、反而看不清；
-     v2.58.3 起改为「完全不透明，只去色 + 提亮」：死亡座位底色本就比存活的深（inline 渐变 48,34,58 → 22,15,30），
-     去色后已经很好认，再 brightness(1.16) 把它提回来，名字与死因图标都清清楚楚。 */
-  .seat.hascause{opacity:1!important; filter:grayscale(.8) brightness(1.16)!important;}
-  .seat.dead .nm{color:#d2c7b4;}
-  .seat.dead .role, .seat.dead .vrole{opacity:.88;}
-  .seat.dead .num{opacity:.92;}
+  /* 已出局：只把座位底色压成灰调，一眼能和存活玩家分开，但图标与文字不受影响。
+     试过的两条弯路：v2.57.0 用 opacity:.62 → 半透明会把酒馆背景的花纹透上来，字和死因图标全糊；
+     v2.58.3 用 filter:grayscale(.8) → filter 会连同子元素一起压，死因图标、名字、身份、阵营边框全被抽成灰的。
+     v2.58.4 定案：**只换座位底色**（下面 .seat.dead 的灰色渐变 + 四处 JS inline 的死亡渐变同步改灰），
+     不用 opacity、不用 filter —— 死因图标保持原色鲜艳，名字/身份/座号/阵营边框一律不动。 */
+  .seat.hascause{opacity:1!important; filter:none!important;}
   .seat .shieldbadge{position:absolute; z-index:3; pointer-events:none; filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));}
   .seat .shieldbadge img{width:100%; height:100%; object-fit:contain;}
   /* 举手：手掌圆形徽章铺满座位背景（正常/鬼票两张图） */
@@ -494,7 +491,7 @@
   .seat.over{border-color:#ffd76b; transform:translate(-50%,-50%) scale(1.09); box-shadow:0 0 0 3px rgba(255,215,107,.5),0 4px 12px rgba(0,0,0,.5);}
   .seat.nb{border-color:#ffd76b; box-shadow:0 0 0 4px rgba(246,214,120,.55),0 3px 8px rgba(0,0,0,.45);}
   .seat:hover{border-color:#ffd76b; box-shadow:0 0 0 4px rgba(246,214,120,.6),0 4px 12px rgba(0,0,0,.5); z-index:5;}
-  .seat.dead{opacity:.4; filter:grayscale(.7);}
+  .seat.dead{background:radial-gradient(circle at 50% 35%, rgba(78,74,82,.92), rgba(34,32,38,.95));}   /* 已出局：底色由紫转灰（无死因图标时也生效）*/
   .seat .skull{position:absolute; top:-6px; right:-6px; width:calc(1.7 * var(--sw) / 100); height:calc(1.7 * var(--sw) / 100);
     border-radius:50%; background:#2a1a10; border:1px solid var(--gold); color:#e9c46a; font-size:calc(1 * var(--sw) / 100); line-height:1;
     display:none; align-items:center; justify-content:center; cursor:pointer;}
@@ -1416,6 +1413,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.58.4', d:'2026-08-15', items:[
+    '已出局座位的区分方式最终定为「只换底色」：座位底色由紫转灰，死因图标（爪击/处决等）保持原色鲜艳，名字、身份、座号、阵营边框（蓝/红）一律不再被压。此前用整体去色，会把图标和文字一起抽成灰的。',
+  ]},
   {v:'v2.58.3', d:'2026-08-15', items:[
     '已出局的座位不再半透明。v2.57.0 用降低不透明度来区分死人，结果酒馆背景的花纹会透上来，名字和死因图标都变糊。现在改成完全不透明，只靠去色（灰度 .8）+ 提亮（1.16）区分——一眼还是能看出是死人，但比之前清楚得多，也不再压得那么暗。',
   ]},
@@ -3808,7 +3808,7 @@ function renderSeats(){
       if(t){ html+='<div class="nm" style="font-size:'+nmF+'px">'+esc(t.name)+'</div>';
         s.classList.add("filled"); if(t.dead){ s.classList.add("dead","hascause"); const isClaw=deathCauseLabel(i)==='夜晚死亡';
           const pos=isClaw?'calc(50% + 6px) center':'center', sz=isClaw?'80%':'62%';
-          s.style.background="url('"+deathCauseIcon(i)+"') "+pos+" / "+sz+" no-repeat, radial-gradient(circle at 50% 35%, rgba(48,34,58,.9), rgba(22,15,30,.95))"; } }
+          s.style.background="url('"+deathCauseIcon(i)+"') "+pos+" / "+sz+" no-repeat, radial-gradient(circle at 50% 35%, rgba(78,74,82,.92), rgba(34,32,38,.95))"; } }
       s.innerHTML=html;
       s.addEventListener("click",()=>seatClick(i));
     } else {
@@ -3824,7 +3824,7 @@ function renderSeats(){
         html+='<div class="role" style="font-size:'+rfz+'px;color:'+TEAMC.out+'">'+label+'</div>'; }
       if(dead){ s.classList.add("hascause"); const isClaw=deathCauseLabel(i)==='夜晚死亡';
         const pos=isClaw?'calc(50% + 6px) center':'center', sz=isClaw?'80%':'62%';
-        s.style.background="url('"+deathCauseIcon(i)+"') "+pos+" / "+sz+" no-repeat, radial-gradient(circle at 50% 35%, rgba(48,34,58,.9), rgba(22,15,30,.95))"; }
+        s.style.background="url('"+deathCauseIcon(i)+"') "+pos+" / "+sz+" no-repeat, radial-gradient(circle at 50% 35%, rgba(78,74,82,.92), rgba(34,32,38,.95))"; }
       else if(shieldShown(i)){ const rk=impKills[night]; const hit = rk && rk.type==="normal" && rk.target===i && rk.blocked;
         s.style.background=(hit?"url('assets/kp-demonkill.png') calc(50% + 6px) center / 60% no-repeat, ":"")+"url('assets/bg-shield.png') calc(50% + 6px) center / 78% no-repeat, radial-gradient(circle at 50% 35%, rgba(90,60,110,.9), rgba(45,28,60,.95))"; }
       const r=seatD/2, bD=seatD*0.24*1.1, dist=r*1.3;   /* v2.42.5 去掉标记徽标下限，守护/红鲱鱼等标记纯按 seatD 等比缩放 */
@@ -4518,7 +4518,7 @@ load(); render();
       if(o.label){ const rfz=Math.min(rF, Math.floor(0.8*seatD/Math.max(o.label.length,1)));
         html+='<div class="role" style="font-size:'+rfz+'px;color:'+(o.col||'#43286b')+'">'+_nbEsc(o.label)+'</div>'; }
       if(o.dead && o.deadIcon){ s.classList.add('hascause'); const isClaw=!!o.claw; const pos=isClaw?'calc(50% + 6px) center':'center', sz=isClaw?'80%':'62%';
-        s.style.background="url('"+o.deadIcon+"') "+pos+" / "+sz+" no-repeat, radial-gradient(circle at 50% 35%, rgba(48,34,58,.9), rgba(22,15,30,.95))"; }
+        s.style.background="url('"+o.deadIcon+"') "+pos+" / "+sz+" no-repeat, radial-gradient(circle at 50% 35%, rgba(78,74,82,.92), rgba(34,32,38,.95))"; }
       else if(o.protectedBg){ s.style.background=(o.shieldHit?"url('assets/kp-demonkill.png') calc(50% + 6px) center / 60% no-repeat, ":"")+"url('assets/bg-shield.png') calc(50% + 6px) center / 78% no-repeat, radial-gradient(circle at 50% 35%, rgba(90,60,110,.9), rgba(45,28,60,.95))"; }
       const r=seatD/2, bD=seatD*0.24*1.1, dist=r*1.3;   /* v2.42.5 去掉标记徽标下限，守护/红鲱鱼等标记纯按 seatD 等比缩放 */
       const badge=function(deg,ic,t,scl,glow){ const bd=bD*(scl||1); const a=deg*Math.PI/180, bx=r+dist*Math.sin(a), by=r-dist*Math.cos(a);
@@ -5565,7 +5565,7 @@ load(); render();
       h+='<div class="nm" style="font-size:'+nmF+'px">'+(E(ps.name)||'<span style=\"opacity:.5\">空</span>')+'</div>';
       const rid=mine&&mine.role; if(rid&&RMAP[rid]) h+='<div class="vrole" style="font-size:'+rF+'px;color:'+TEAMC[RMAP[rid].team]+'">'+RMAP[rid].name+'</div>';
       s.innerHTML=h;
-      if(dead&&ps.cause&&CAUSE[ps.cause]) s.style.background="url('"+CAUSE[ps.cause].img+"') center / 70% no-repeat, radial-gradient(circle at 50% 35%, rgba(48,34,58,.9), rgba(22,15,30,.95))";
+      if(dead&&ps.cause&&CAUSE[ps.cause]) s.style.background="url('"+CAUSE[ps.cause].img+"') center / 70% no-repeat, radial-gradient(circle at 50% 35%, rgba(78,74,82,.92), rgba(34,32,38,.95))";
       const marks=(mine&&mine.status)?mine.status.slice():[];
       { const _gi=marks.indexOf('dead'); if(_gi>=0) marks.splice(_gi,1); }   // ⑥ 骷髅头改作「已投鬼票」标识：死亡状态已由座位底图的死因体现
       if(ghostUsedPub(i)) marks.push('dead');
