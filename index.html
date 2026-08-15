@@ -617,13 +617,16 @@
   #stDisbandFab img{width:100%; height:100%; object-fit:contain; display:block; filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));}
   #stDisbandFab.sdf-off{filter:grayscale(1) brightness(.8); opacity:.5; cursor:not-allowed;}   /* 夜晚 / 白天无私聊：灰掉不可点 */
   /* 说书人解散私聊后：全体玩家的底部通知弹窗（无倒计时，点确认收到即消失） */
-  #chatDisbandPop{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:123; display:none; pointer-events:none;}
-  #chatDisbandPop .cdb{width:350px; max-width:94vw; box-sizing:border-box; pointer-events:auto; background:linear-gradient(180deg,rgba(52,32,66,.98),rgba(28,16,38,.98));
+  #chatDisbandPop, #virginPop{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:123; display:none; pointer-events:none;}
+  #chatDisbandPop .cdb, #virginPop .cdb{width:350px; max-width:94vw; box-sizing:border-box; pointer-events:auto; background:linear-gradient(180deg,rgba(52,32,66,.98),rgba(28,16,38,.98));
     border:1.5px solid rgba(233,196,106,.6); border-radius:16px; padding:14px 16px 12px; box-shadow:0 10px 34px rgba(0,0,0,.55);}   /* 与夜晚信息一致：紫底金边 */
-  #chatDisbandPop .cdb-t{font-size:14px; font-weight:800; color:#ffe9b8; line-height:1.5; margin-bottom:8px; text-align:center;}
-  #chatDisbandPop .cdb-s{font-size:12.5px; color:#e6d6b0; text-align:center; line-height:1.55; margin-bottom:11px;}
-  #chatDisbandPop .cdb-ok{display:block; margin:0 auto; min-width:130px; padding:9px 0; border-radius:12px; font-size:14px; font-weight:800; cursor:pointer;
+  #chatDisbandPop .cdb-t, #virginPop .cdb-t{font-size:14px; font-weight:800; color:#ffe9b8; line-height:1.5; margin-bottom:8px; text-align:center;}
+  #chatDisbandPop .cdb-s, #virginPop .cdb-s{font-size:12.5px; color:#e6d6b0; text-align:center; line-height:1.55; margin-bottom:11px;}
+  #chatDisbandPop .cdb-ok, #virginPop .cdb-ok{display:block; margin:0 auto; min-width:130px; padding:9px 0; border-radius:12px; font-size:14px; font-weight:800; cursor:pointer;
     border:1.5px solid rgba(233,196,106,.7); background:linear-gradient(180deg,rgba(60,38,78,.98),rgba(34,20,44,.98)); color:#e9c46a;}
+  /* 贞洁者触发：全体玩家的底部通知弹窗（同款紫底金边，边框与标题偏红以示「有人立即出局」） */
+  #virginPop .cdb{border-color:rgba(214,110,110,.75); box-shadow:0 10px 34px rgba(0,0,0,.55), 0 0 16px rgba(214,80,80,.25);}
+  #virginPop .cdb-t{color:#ffcfc2;}
   /* 聊天室入口：私聊图标右侧的聊天泡泡（纯等比，随舞台缩放） */
   #chatRoomFab{position:fixed; left:16px; bottom:16px; z-index:124; width:66px; height:66px;
     display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent;}   /* v2.50.8 去掉圆形按钮底；v2.50.14 放大10% */
@@ -694,7 +697,7 @@
   .gatebar.unlocked{background:rgba(46,125,67,.14); border-color:rgba(46,125,67,.5); color:#256b3c;}
   .gatebar .regbtn{flex:0 0 auto;}
   /* ⑫ 底部弹窗堆栈：由 _barStack() 统一分配 bottom，位移加过渡让上层平滑下移 */
-  #voteBar, #nightBar, #stSlayerBar, #stSwBar, #stWinBar, #slayerResult, #chatDisbandPop, #chatStack{ transition:bottom .18s ease; }
+  #voteBar, #nightBar, #stSlayerBar, #stSwBar, #stWinBar, #slayerResult, #chatDisbandPop, #virginPop, #chatStack{ transition:bottom .18s ease; }
   #stLogMask{position:fixed; inset:0; z-index:330; background:rgba(8,5,14,.62); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:16px;}
   #stLogMask .slv-box{width:min(560px,94vw); max-height:88dvh; display:flex; flex-direction:column; overflow:hidden;
     background:linear-gradient(180deg,#f6ecd4,#efe0c0); border:2px solid #7a5320; border-radius:14px; box-shadow:0 18px 60px rgba(0,0,0,.6); color:#3a2a12;}
@@ -1154,6 +1157,7 @@
     <div id="slayerResult"></div>
     <div id="chatStack"></div>
     <div id="chatDisbandPop"></div>
+    <div id="virginPop"></div>
     <div id="chatFab" onclick="_chatFabTap()" title="发起/邀请私聊" style="display:none">
       <img src="assets/ic-invite.png" alt="" draggable="false"><span class="cf-badge"></span></div>
     <div id="stDisbandFab" onclick="_stDisbandTap()" title="解散所有私聊，玩家回到原座位" style="display:none">
@@ -1410,6 +1414,10 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.58.0', d:'2026-08-15', items:[
+    '贞洁者能力触发时（健康的贞洁者首次被镇民提名 → 提名者当场处决）：向全体玩家推送底部弹窗公告，写明是谁提名了谁、谁当场出局，点「确认收到」消失；说书人端同时弹一条提示。',
+    '同一时刻该提名自动停止计票——不再开启举手、不广播时钟指针，提名直接标记为已停止计票（因为本日处决名额已经用掉了）。说书人若要改判，删掉该提名即可，弹窗与处决会一并撤回。',
+  ]},
   {v:'v2.57.0', d:'2026-08-14', items:[
     '已出局的玩家座位整体变暗淡（座位底色、名字、身份、座号一起淡下去），说书人魔典与玩家笔记两端一致，一眼就能和存活玩家分开。此前 CSS 里的变暗规则被「保证死因图标清晰」那条 !important 完全抵消了，死人和活人看起来几乎一样亮。',
   ]},
@@ -2890,7 +2898,7 @@ window.stEndGame=async function(){
    规则：提名举手条 #voteBar 永远压在最底（它会一直存在到计票结束，位置不该乱跳）；
         其余按「出现先后」自下而上堆叠，下面的消失后上面的自动下移；互不阻塞，可同时操作。 */
 (function(){
-  const BAR_IDS=['voteBar','nightBar','stSlayerBar','stSwBar','stWinBar','slayerResult','chatDisbandPop','chatStack'];
+  const BAR_IDS=['voteBar','nightBar','stSlayerBar','stSwBar','stWinBar','slayerResult','chatDisbandPop','virginPop','chatStack'];
   const GAP=10; let seq=0, pending=false, applying=false;
   function els(){ return BAR_IDS.map(function(id){ return document.getElementById(id); }).filter(Boolean); }
   function shown(el){
@@ -3087,19 +3095,27 @@ function addNomination(nr,ne){ if(nr===""||ne==="") return; const day=night;
   if(nominations[day].some(x=>x.nominator===nr) || nominations[day].some(x=>x.nominee===ne)) return;
   nominations[day].push({nominator:nr,nominee:ne,voters:[]});
   // 贞洁者：首次被提名，若提名者为镇民 → 立即处决提名者
-  const nem=meta[ne];
+  const nem=meta[ne]; let _vgExec=false;
   if(nem && nem.role==="virgin" && !virginUsed){
     virginUsed=true; const nom=nominations[day][nominations[day].length-1]; nom.virginConsumed=true;
     const nrm=meta[nr];
     if(healthy(ne) && nrm && RMAP[nrm.role] && RMAP[nrm.role].team==="tf"){
       executions[day]=nr; killSeat(nr,true); nom.virginExec=nr;
+      _vgExec=true;
+      nom.tallied=true;   // ② 已有人当场被处决 → 本次提名自动停止计票（不开举手）
       try{ _broadcastExecToAll(day, nr); }catch(e){}   // 贞洁者触发处决也向所有玩家广播【xxx被处决】
       histSet(ne,'info','贞洁者首次被提名（'+nameAt(nr)+'）→ 触发');
       histSet(nr,'death','被贞洁者处决出局');
     } else histSet(ne,'info','贞洁者首次被提名 → 提名者非镇民（或贞洁者失效），无事发生');
   }
-  if(window._clockBroadcastNom) window._clockBroadcastNom(nr,ne);
-  if(window._voteOpen) window._voteOpen(day,nr,ne);   // 开启一轮公开举手（玩家端出现举手选项）
+  if(_vgExec){   // ①② 贞洁者当场处决：向全体玩家弹窗公告，并跳过开票（既不广播指针也不开举手）
+    try{ if(window._pubVirginPop) window._pubVirginPop(day,nr,ne); }catch(e){}
+    try{ if(window._voteForceClose) window._voteForceClose(); }catch(e){}
+    _gt('贞洁者能力触发：'+nameAt(nr)+' 当场处决出局，本次提名已自动停止计票');
+  } else {
+    if(window._clockBroadcastNom) window._clockBroadcastNom(nr,ne);
+    if(window._voteOpen) window._voteOpen(day,nr,ne);   // 开启一轮公开举手（玩家端出现举手选项）
+  }
   if(window._syncNoms) window._syncNoms();            // 实时把提名推给所有端
   render(); }
 async function removeNomination(day,idx){
@@ -3108,7 +3124,8 @@ async function removeNomination(day,idx){
   if(!await uiConfirm(nameAt(_n.nominator)+' 提名 '+nameAt(_n.nominee)+'（'+((_n.voters||[]).length)+' 票）将被删除，确定吗？',{title:'删除提名',ok:'删除',cancel:'取消'})) return;   // ⑧ 删提名需二次确认
   if(nominations[day]){ const nom=nominations[day][idx];
   if(nom && nom.virginConsumed){ virginUsed=false; histSet(nom.nominee,'info',null);   // 撤销贞洁者能力消耗
-    if(nom.virginExec!=null){ killSeat(nom.virginExec,false); histSet(nom.virginExec,'death',null); if(executions[day]===nom.virginExec) delete executions[day]; try{ _clearExecFromAll(day); }catch(e){} } }
+    if(nom.virginExec!=null){ killSeat(nom.virginExec,false); histSet(nom.virginExec,'death',null); if(executions[day]===nom.virginExec) delete executions[day]; try{ _clearExecFromAll(day); }catch(e){}
+      try{ if(window._clearVirginPop) window._clearVirginPop(); }catch(e){} } }   // 撤销贞洁者处决 → 一并收回全场弹窗
   nominations[day].splice(idx,1); if(!nominations[day].length) delete nominations[day]; }
   if(window._syncNoms) window._syncNoms(); render(); }
 function toggleVote(day,nomIdx,seat){ const nom=nominations[day][nomIdx];
@@ -3618,7 +3635,8 @@ function renderGrim(){
       for(let s=0;s<N;s++){ const voted=nom.voters.includes(s), dead=isDeadSeat(s), raising=active&&hands[s]&&!voted;
         h+='<span class="voter'+(voted?' on':'')+(dead?' ghost':'')+(raising?' raising':'')+'" title="'+nameAt(s)+(dead?'（已出局）':'')+(raising?'（正在举手）':'')+'" onclick="toggleVote('+day+','+idx+','+s+')">'+(s+1)+'</span>'; }
       h+='</div>';
-      if(!nom.tallied){ h+='<div class="votectl">'+(active?'<span class="hcnt">'+handCnt+' 人举手中</span>':'')
+      if(nom.virginExec!=null){ h+='<div class="votectl"><span class="revok">✓ 贞洁者触发 · 已自动停止计票</span><span class="regbtn" style="opacity:.4;cursor:default" title="提名者已被贞洁者当场处决，本轮不再计票；要撤销请点上方「删」">重新计票</span></div>'; }   // 贞洁者当场处决 → 本轮不开票
+      else if(!nom.tallied){ h+='<div class="votectl">'+(active?'<span class="hcnt">'+handCnt+' 人举手中</span>':'')
           +'<span class="regbtn pub" onclick="_voteTally('+day+','+idx+')">停止计票</span></div>'; }
       else if(voting){ h+='<div class="votectl"><span class="revok">✓ 已计票 · '+v+' 票</span><span class="regbtn" style="opacity:.4;cursor:default" title="有投票正在进行，先停止计票">重新计票</span></div>'; }   // 别的提名正在计票 → 暂不可重新计票
       else { h+='<div class="votectl"><span class="revok">✓ 已计票 · '+v+' 票</span><span class="regbtn" onclick="_voteReopen('+day+','+idx+')">重新计票</span></div>'; }
@@ -4609,7 +4627,7 @@ load(); render();
     try{ const p=(typeof buildPublic==='function')?buildPublic():null;
       const upd={ result:null, vote:null, exec:null, phase:'night', nomStarted:false, clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null} };   // 重置角色→回第一夜，私聊冻结、提名未开
       if(p){ upd.seats=p.seats; upd.noms=(p.noms&&p.noms.length)?p.noms:null; upd.day=p.day; upd.count=p.count; }
-      upd.chats=null; upd.chatInv=null; upd.chatNote=null; upd.chatDisband=null;   // 私聊分组/解散通知一并清零
+      upd.chats=null; upd.chatInv=null; upd.chatNote=null; upd.chatDisband=null; upd.virginPop=null;   // 私聊分组/解散通知、贞洁者公告一并清零
       upd.stLog=null; window.__stLogShared=false; try{ if(window._updateStLogFab) window._updateStLogFab(); if(window._closeStLog) window._closeStLog(); }catch(e){}   // ⑧ 新一局：撤回上一局分享的说书人日志
       db.ref('games/'+curGid+'/public').update(upd).catch(()=>{});
     }catch(e){} try{ _chatReset(); }catch(e){} };
@@ -4708,7 +4726,7 @@ load(); render();
       if(role==='st'&&stPlayersRef){ stPlayersRef.once('value').then(ss=>recomputeHands(ss.val())).catch(()=>{}); }
       updateVoteBar();
       try{ updateSlayerGun(); }catch(e){}   // 开局/结束/换天 → 更新猎手十字弩显隐
-      try{ if(role==='player'){ updateChatInv(); chatNotices(); updateChatFab(); updateChatDisband(); _updateChatRoomFab(); if(window.__crOpen) _crOnPubChange(); } }catch(e){}   // 私聊：邀请弹窗 + 通知 + 解散通知 + 聊天室入口/刷新
+      try{ if(role==='player'){ updateChatInv(); chatNotices(); updateChatFab(); updateChatDisband(); updateVirginPop(); _updateChatRoomFab(); if(window.__crOpen) _crOnPubChange(); } }catch(e){}   // 私聊：邀请弹窗 + 通知 + 解散通知 + 贞洁者公告 + 聊天室入口/刷新
       try{ if(role==='st'&&mode==='st'){ const csig=JSON.stringify((pub&&pub.chats)||null); if(csig!==window.__stChatSig){ window.__stChatSig=csig; if(typeof renderSeats==='function') renderSeats(); } if(window.updateStChatDisband) window.updateStChatDisband(); if(window._updateChatRoomFab) _updateChatRoomFab(); if(window.__crOpen&&window._crOnPubChange) _crOnPubChange(); } }catch(e){}   // 说书人魔典：私聊分组变化时重排座位圈+重画色带；解散按钮灰亮；聊天室入口/刷新
       if(mode!=='st') renderView(); }); }
   /* ⑧ 说书人日志分享：写 public/stLog（ST 可写、全场可读；发布前剥掉 script/on* 事件属性） */
@@ -5154,6 +5172,30 @@ load(); render();
   window.updateChatDisband=updateChatDisband;
   window._chatDisbandAck=function(id){ window.__disbandAcked[String(id)]=1; updateChatDisband(); };
 
+  /* 玩家端：贞洁者能力触发广播（底部弹窗，全体玩家可见，点「确认收到」即消失） */
+  window.__virginAcked=window.__virginAcked||{};
+  function updateVirginPop(){ const pop=document.getElementById('virginPop'); if(!pop) return;
+    const d=pub&&pub.virginPop; const seat=(role==='player')?myVoteSeat():-1;
+    Object.keys(window.__virginAcked).forEach(id=>{ if(!d||String(d.id)!==id) delete window.__virginAcked[id]; });   // 通知换了/清了→清本地已读态
+    if(role!=='player'||seat<0||!d||!d.id||window.__virginAcked[String(d.id)]){ pop.style.display='none'; pop.innerHTML=''; return; }
+    pop.innerHTML='<div class="cdb"><div class="cdb-t">贞洁者能力触发</div>'
+      +'<div class="cdb-s">'+esc(d.byName||'')+'（'+((+d.by||0)+1)+'号）提名了 '+esc(d.toName||'')+'（'+((+d.to||0)+1)+'号），'
+      +'触发贞洁者能力 —— '+esc(d.byName||'')+'当场被处决出局。<br>本次提名不再计票。</div>'
+      +'<button class="cdb-ok" onclick="_virginPopAck(\''+d.id+'\')">确认收到</button></div>';
+    pop.style.display='block'; }
+  window.updateVirginPop=updateVirginPop;
+  window._virginPopAck=function(id){ window.__virginAcked[String(id)]=1; updateVirginPop(); };
+  /* 说书人：广播 / 收回 贞洁者弹窗 */
+  window._pubVirginPop=function(day,by,to){ if(role!=='st'||!curGid) return; const now=Date.now();
+    db.ref('games/'+curGid+'/public').update({virginPop:{id:now, day:+day, by:+by, to:+to,
+      byName:(typeof nameAt==='function'?nameAt(by):''), toName:(typeof nameAt==='function'?nameAt(to):''), ts:now}}).catch(()=>{}); };
+  window._clearVirginPop=function(){ if(role!=='st'||!curGid) return;
+    db.ref('games/'+curGid+'/public/virginPop').set(null).catch(()=>{}); };
+  /* 说书人：不计入举手地强制结束本轮投票（贞洁者当场处决时用；与 _voteTally 区别是不把举手写进 voters） */
+  window._voteForceClose=function(){ if(role!=='st'||!curGid) return;
+    db.ref('games/'+curGid+'/public/vote').set(null).catch(()=>{});
+    db.ref('games/'+curGid+'/public/clock/nom').set(null).catch(()=>{}); };
+
   /* ============ 聊天室（step1：说书人私信 / 大厅；当前私聊 tab 见 step2）============
      消息直写 firebase：games/{gid}/chat/{lobby/main | st/{seat}}/{pushId}={f(座位, -1=说书人), t, ts}。
      ⚠️ 各 section 统一 3 层深（chat/$section/$bucket/$msgId）以配合规则里的 $msgId .validate，所以大厅是 chat/lobby/main/{id}。
@@ -5451,7 +5493,7 @@ load(); render();
     if(window._syncNoms) window._syncNoms(); if(typeof render==='function') render(); };
 
   /* ---------- 渲染分发 ---------- */
-  function renderView(){ if(mode==='hall') renderHall(); else if(mode==='notes') renderNotes(); drawSeats(); if(window.renderClock) renderClock(); updateVoteBar(); updateNightBar(); try{ if(role==='player'){ updateChatInv(); chatNotices(); updateChatFab(); updateChatDisband(); _updateChatRoomFab(); } }catch(e){} try{ window._updateSeatViewFab(); window._updateStLogFab(); }catch(e){} }
+  function renderView(){ if(mode==='hall') renderHall(); else if(mode==='notes') renderNotes(); drawSeats(); if(window.renderClock) renderClock(); updateVoteBar(); updateNightBar(); try{ if(role==='player'){ updateChatInv(); chatNotices(); updateChatFab(); updateChatDisband(); updateVirginPop(); _updateChatRoomFab(); } }catch(e){} try{ window._updateSeatViewFab(); window._updateStLogFab(); }catch(e){} }
 
   /* ---------- 座位圈（访客，复刻说书人比例，画进 #tableZone） ---------- */
   function drawSeats(){ if(mode==='st') return; const zone=document.getElementById('tableZone'); if(!zone) return;
@@ -5669,7 +5711,7 @@ load(); render();
     }catch(e){}
     const gid='t'+Date.now();
     const seats=[]; for(let i=0;i<N;i++){ const t=seatToken(i); seats.push({name:(t&&t.name)?t.name:'', dead:false, cause:''}); }
-    const g={ name:window.__botcGameName, count:N, day:night, seats:seats, locked:[...lockedRoles], dist:(customDist||DIST[N]||[0,0,0,0]), noms:[], clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null}, result:null, vote:null, phase:'night', nomStarted:false };   /* 开局=第一夜，私聊冻结，提名未开 */
+    const g={ name:window.__botcGameName, count:N, day:night, seats:seats, locked:[...lockedRoles], dist:(customDist||DIST[N]||[0,0,0,0]), noms:[], clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null}, result:null, vote:null, virginPop:null, phase:'night', nomStarted:false };   /* 开局=第一夜，私聊冻结，提名未开 */
     try{ await db.ref('storytellerUid').set({uid:me.uid, sid:_stSid, name:(me&&me.displayName)||'', ts:firebase.database.ServerValue.TIMESTAMP}); try{ db.ref('storytellerUid').onDisconnect().remove(); }catch(e){} await db.ref('games/'+gid+'/public').set(g);
       /* 私密下发每位已登录玩家本局的角色（仅本人与说书人可读；酒鬼下发其自以为的镇民牌） */
       try{ const accSnap=await db.ref('accounts').once('value'); const accs=accSnap.val()||{}; const ru={};
@@ -5698,7 +5740,7 @@ load(); render();
     const p=buildPublic(); try{ await db.ref('games/'+curGid+'/public').update({seats:p.seats,noms:p.noms,day:p.day,count:p.count,
         phase:'day',   /* 天亮→白天：玩家端私聊功能解冻（左下角图标可点、座位圈加入/退出按钮出现） */
         nomStarted:false,   /* 天亮先锁提名：说书人点「解散私聊」后才解锁 */
-        vote:null, clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null}}); toast('天亮了'); }
+        vote:null, virginPop:null, clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null}}); toast('天亮了'); }
     catch(e){ toast('更新失败：'+(e.code||'')); } };
   /* 入夜（结束本日）：公开 phase='night'，玩家端私聊整体冻结 */
   window.stDusk=function(){ if(role!=='st'||!curGid) return; try{ db.ref('games/'+curGid+'/public/phase').set('night').catch(()=>{}); }catch(e){} };
