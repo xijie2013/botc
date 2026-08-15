@@ -1396,6 +1396,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.53.3', d:'2026-08-14', items:[
+    '修复占卜师、厨师、共情者、送葬者的夜间信息在天亮后被错误归到「☀ 第 n 天」的问题：这几条记录由界面每次刷新都会重写一次，之前每次重写都按当时的昼夜阶段重新打标，天亮后就被挪到白天去了。现在一条记录的昼/夜归属只在它第一次出现时决定，之后的重写不再改变。',
+  ]},
   {v:'v2.53.2', d:'2026-08-14', items:[
     '修正说书人日志里夜间记录的排序：排序依据由「这条记录属于哪个座位的角色」改为「这条记录属于哪一个夜间步骤」。此前投毒者的「爪牙互认」会跟着投毒者的下毒步一起排到恶魔信息后面，现在恢复成正确顺序——爪牙互认 → 恶魔信息 → 投毒者下毒 → 被下毒 → 后续信息类角色。被下毒、被守护、夜杀出局、红唇接任这类被动记录也会紧跟在造成它的那一步之后。',
   ]},
@@ -1794,10 +1797,12 @@ function histSet(seat,tag,text){
   const h=meta[seat].hist;
   if(typeof h[night]==="string") h[night]={info:h[night]};   // 旧数据兼容
   if(!h[night]) h[night]={};
+  const _had=Object.prototype.hasOwnProperty.call(h[night], tag);   // 昼/夜归属只在这条记录「第一次出现」时决定
   if(text==null||text===""){ delete h[night][tag]; if(h[night]._d) delete h[night]._d[tag]; }
   else { h[night][tag]=text;
-    if(histIsDayNow()){ (h[night]._d||(h[night]._d={}))[tag]=1; }   // ⑭ 白天写入的条目（处决出局/猎人射杀等）打标，日志里归到「☀ 第 n 天」
-    else if(h[night]._d) delete h[night]._d[tag]; }
+    /* ⑭ 只有新建的条目才打昼/夜标签：占卜师/厨师/共情者/送葬者这类由 render() 每帧重写的记录，
+       天亮后会被原样重写一次，若每次都按当前阶段打标就会被错误地挪到「☀ 第 n 天」。 */
+    if(!_had){ if(histIsDayNow()) (h[night]._d||(h[night]._d={}))[tag]=1; else if(h[night]._d) delete h[night]._d[tag]; } }
   if(h[night]._d && Object.keys(h[night]._d).length===0) delete h[night]._d;
   if(Object.keys(h[night]).length===0) delete h[night];
 }
