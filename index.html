@@ -471,7 +471,13 @@
     border:1.5px solid rgba(233,196,106,.9); box-shadow:0 1px 4px rgba(0,0,0,.55);}
   .seat .nm{line-height:1.1; color:#fff6df; font-weight:700; word-break:break-all; max-width:94%; text-shadow:0 1px 2px rgba(0,0,0,.65);}   /* max-width 88%→94% 给名字多点余量，短拉丁名（如 Cooler）不被挤到换行 */
   .seat .deathcause{line-height:1.05; margin-top:1px; color:#ff9a8a; font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,.7);}
-  .seat.hascause{opacity:1!important; filter:none!important;}
+  /* 已出局：整体变暗淡（座位、名字、身份、座号一起），一眼能和存活玩家分开。
+     .seat.dead 原来的 opacity:.4 会被这条 hascause 完全抵消（当初为了让死因图标清晰），
+     现在改成中等强度：既能明显区分，死因图标与名字又都还看得清。 */
+  .seat.hascause{opacity:.62!important; filter:grayscale(.5)!important;}
+  .seat.dead .nm{color:#b6a88e;}
+  .seat.dead .role, .seat.dead .vrole{opacity:.7;}
+  .seat.dead .num{opacity:.75;}
   .seat .shieldbadge{position:absolute; z-index:3; pointer-events:none; filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));}
   .seat .shieldbadge img{width:100%; height:100%; object-fit:contain;}
   /* 举手：手掌圆形徽章铺满座位背景（正常/鬼票两张图） */
@@ -1404,6 +1410,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.57.0', d:'2026-08-14', items:[
+    '已出局的玩家座位整体变暗淡（座位底色、名字、身份、座号一起淡下去），说书人魔典与玩家笔记两端一致，一眼就能和存活玩家分开。此前 CSS 里的变暗规则被「保证死因图标清晰」那条 !important 完全抵消了，死人和活人看起来几乎一样亮。',
+  ]},
   {v:'v2.56.1', d:'2026-08-14', items:[
     '修复猎人无法开枪：v2.53.1 给猎人加「只在白天进行中可开枪」的判断时，新加的行末注释把同一行后面的 `const t=+v; const sl=…` 一并注释掉了，导致开枪函数一执行就报错，说书人代开枪和猎手自己拖弩请求都会毫无反应。',
     '顺带修掉两处同类隐患：随机发牌时若阵营数量与人数对不上，原本调用的提示函数 uiAlert 从未定义（会直接报错而不是给提示）；说书人魔典里 23 处提示（如「玩家还没提交选择」「恶魔自杀：请先指定继任爪牙」）因为调用的是另一段脚本内部的函数，一直静默失败，现在都能正常弹出了。',
