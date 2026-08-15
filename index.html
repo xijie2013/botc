@@ -518,7 +518,8 @@
   .align-badge.good{background:rgba(79,127,214,.25); color:#8db4f0;}
   .align-badge.evil{background:rgba(207,68,54,.28); color:#ef8f84;}
   /* 游戏内确认框 */
-  .cfmask{position:fixed; inset:0; background:rgba(10,6,16,.62); display:none; align-items:center; justify-content:center; z-index:320;}
+  /* ⚠ 通用确认框必须盖在所有弹层之上（日志 330 / 裁决 332 / 角色详情 340），否则在日志弹窗里点「分享给玩家」时确认框被挡住，得先关掉日志才能回答。v2.62.1 由 320 提到 360。 */
+  .cfmask{position:fixed; inset:0; background:rgba(10,6,16,.62); display:none; align-items:center; justify-content:center; z-index:360;}
   .cfmask.on{display:flex;}
   .cfbox{width:min(86vw,360px); max-width:calc(80vw / var(--uiscale)); max-height:calc(80dvh / var(--uiscale)); overflow-y:auto; background:linear-gradient(180deg,#2b2038,#20172a); border:2px solid #e9c46a; border-radius:14px;
     padding:20px 22px 18px; color:#efe6d2; text-align:center; box-shadow:0 14px 44px rgba(0,0,0,.6), inset 0 0 34px rgba(233,196,106,.07);
@@ -1411,6 +1412,10 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.62.1', d:'2026-08-15', items:[
+    '修复：在日志弹窗里点「分享给玩家」时，确认框被日志挡在下面，得先关掉日志才能回答。现在通用确认框永远盖在最上层。',
+    '私聊房间的青色底调淡了一半（半透明由 30~40% 降到 15~22%），酒馆背景透得出来，看着更清透。',
+  ]},
   {v:'v2.62.0', d:'2026-08-15', items:[
     '日志按钮改为开局之后才点亮：未开局时是灰的，点了会提示先「新的一局」。日志内容也一样——未开局时和「夜晚」「白天」两页显示同一句「本局尚未开始」。',
     '「结束本局」现在会清空本局日志（每个座位的夜间记录、开局板子快照、提名与处决），如果已经分享给玩家也会一并收回；永久战绩不受影响。确认弹窗里写明了这一点。',
@@ -5394,7 +5399,7 @@ load(); render();
   function _crMul(rgb,f){ return rgb.map(function(v){return Math.round(Math.min(255,v*f));}).join(','); }
   function _crDark(rgb){ return (0.299*rgb[0]+0.587*rgb[1]+0.114*rgb[2])>160; }
   function _crRoomBubbleStyle(color){ const rgb=_crRGB(color); return 'background:linear-gradient(180deg,rgb('+_crMul(rgb,0.92)+'),rgb('+_crMul(rgb,0.66)+'));color:'+(_crDark(rgb)?'#241a06':'#fff')+';'; }
-  function _crRoomBgStyle(color){ const rgb=_crRGB(color).join(','); return 'linear-gradient(180deg,rgba('+rgb+',.30),rgba('+rgb+',.40))'; }
+  function _crRoomBgStyle(color){ const rgb=_crRGB(color).join(','); return 'linear-gradient(180deg,rgba('+rgb+',.15),rgba('+rgb+',.22))'; }   /* v2.62.1 青色底更清透（原 .30/.40 压得太实） */
   function _crRoomTabStyle(color,on){ const rgb=_crRGB(color);
     return on ? 'background:linear-gradient(180deg,rgb('+_crMul(rgb,0.82)+'),rgb('+_crMul(rgb,0.55)+'));color:'+(_crDark(rgb)?'#241a06':'#fff')+';border-color:rgba('+rgb.join(',')+',.75);'
               : 'background:rgba('+rgb.join(',')+',.18);color:rgb('+_crMul(rgb,1.05)+');border-color:rgba('+rgb.join(',')+',.42);'; }
