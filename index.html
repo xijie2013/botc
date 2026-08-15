@@ -1399,6 +1399,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.53.8', d:'2026-08-14', items:[
+    '给间谍下发魔典现在也会记入说书人日志。这一步没有任何「选择」动作，此前完全不会留下记录；被「跳过」的夜晚仍然不记。至此夜晚顺序表里的每一个步骤都会进日志。',
+  ]},
   {v:'v2.53.7', d:'2026-08-14', items:[
     '左下角「日志」图标改为一直可见：说书人还没分享时是灰色、点不动（点了会提示还没分享），分享后才亮起可点。',
     '「私聊 / 座次」切换图标现在与「发起私聊」按钮同一个有效期——只在白天、且本轮还没解散私聊开启提名时可点；其余时间灰掉（那时座位本就按座次排列，不需要切换）。',
@@ -2415,6 +2418,15 @@ function pingResult(roleId){
     return mk(pair(rec.a,rec.b)+' 中有一个是 '+RMAP[rec.role].name, real);
   }
 }
+/* 间谍看魔典：这一步没有任何「选择」，纯粹是说书人把当夜魔典快照发下去，
+   所以也得靠每帧回写才进得了日志（判定依据＝该夜 spy 步的流程状态；被「跳过」的不记）。 */
+function recordSpy(){
+  const sp=meta.findIndex(m=>m&&m.role==='spy'); if(sp<0) return;
+  const f=nightFlow[night+':spy']; const st=f&&f.stage;
+  const skipped=(st==='done') && !nightChecks[night+':spy'];   // nfDone(id,true)=跳过：不置 nightChecks
+  const sent = !!st && st!=='idle' && !skipped;
+  histSet(sp,'info', sent ? '查看魔典（说书人已下发当夜魔典快照）' : null);
+}
 /* 僧侣守护 / 管家选主人：选择本身就是一次夜间行动，也要进日志。
    monkPicks / butlerPicks 都按夜归档，所以每帧回写只会影响当前这一夜，安全。
    注意别用 isDeadSeat 做守卫：僧侣可能守护完当夜就被杀，那样会把刚写的记录抹掉。 */
@@ -3221,7 +3233,7 @@ function render(){
   applyView();
   document.getElementById("countVal").textContent=N;
   document.getElementById("nightVal").textContent=night;
-  recordUndertaker(); recordFt(); recordPings(); recordMonkButler(); recordNum("chef","相邻邪恶对数"); recordNum("empath","两侧存活邻座邪恶数");
+  recordUndertaker(); recordFt(); recordPings(); recordMonkButler(); recordSpy(); recordNum("chef","相邻邪恶对数"); recordNum("empath","两侧存活邻座邪恶数");
   renderLedger();
   renderGrim();
   renderSeats();
