@@ -1396,6 +1396,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.53.2', d:'2026-08-14', items:[
+    '修正说书人日志里夜间记录的排序：排序依据由「这条记录属于哪个座位的角色」改为「这条记录属于哪一个夜间步骤」。此前投毒者的「爪牙互认」会跟着投毒者的下毒步一起排到恶魔信息后面，现在恢复成正确顺序——爪牙互认 → 恶魔信息 → 投毒者下毒 → 被下毒 → 后续信息类角色。被下毒、被守护、夜杀出局、红唇接任这类被动记录也会紧跟在造成它的那一步之后。',
+  ]},
   {v:'v2.53.1', d:'2026-08-14', items:[
     '说书人日志改为「一个行动一条」：同一角色在同一夜里的多次行动（例如投毒者的爪牙互认与之后的下毒）不再挤在同一行，各自单独成条（座位悬浮气泡同理）。',
     '小恶魔重新可以选择已出局的玩家作为击杀目标（用来制造空刀假象）；这一刀会记进日志，但不会改写该玩家原本的死亡方式图标。',
@@ -3220,24 +3223,35 @@ function stLogHTML(){ let h="";
     for(let n=1;n<=maxN;n++){
       h+='<div class="gsec" style="color:#43286b">🌙 第 '+n+' 夜</div>'; let any=false;
       const order=NIGHT[n===1?"first":"other"];
-      const keyFor=(i,e)=>{ const m=meta[i]; const rk=order.findIndex(s=>s.id===m.role); if(rk>=0) return rk;
-        const team=m.role?RMAP[m.role].team:null;
-        if(e.evil){ const k=order.findIndex(s=>s.id===(team==="dem"?"_demon":"_minion")); if(k>=0) return k; }
-        return 500+i; };   /* 有夜间行动的角色按夜间顺序在前；夜杀出局等被动条目排其后（按座位号） */
-      const seatsN=[], seatsD=[];   // ⑭ 同一 night 键里，_d 标记过的条目属于「白天」，其余属于「夜晚」
+      /* ① 排序键按「这条记录属于哪一个夜间步骤」算，而不是按座位角色算——
+         例如投毒者的「爪牙互认」属于 _minion 步（第 0 步），不能跟着 poisoner 步（第 2 步）走。 */
+      const _oi=id=>{ const k=order.findIndex(s=>s.id===id); return k>=0?k:-1; };
+      const stepKeyOf=(i,tag)=>{ const m=meta[i]; const team=(m.role&&RMAP[m.role])?RMAP[m.role].team:null;
+        let k=-1;
+        if(tag==='evil') k=_oi(team==='dem'?'_demon':'_minion');   // 爪牙互认 / 恶魔信息
+        else if(tag==='poison') k=_oi('poisoner');                 // 投毒者下毒
+        else if(tag==='kill') k=_oi('imp');                        // 恶魔夜杀
+        else if(tag==='info') k=_oi(m.role);                       // 该角色自己的信息步
+        if(k>=0) return k;
+        if(tag==='poisoned'){ const q=_oi('poisoner'); if(q>=0) return q+0.5; }                                  // 被下毒：紧跟「下毒」之后
+        if(tag==='protected'||tag==='death'||tag==='role'){ const q=_oi('imp'); if(q>=0) return q+0.5; }          // 被守护 / 夜杀出局 / 红唇接任：紧跟夜杀之后
+        const r=_oi(m.role); if(r>=0) return r;
+        return 500+i; };
+      const rowsN=[], seatsD=[];   // ⑭ 同一 night 键里，_d 标记过的条目属于「白天」，其余属于「夜晚」；① 一条记录=一行
       meta.forEach((m,i)=>{ if(!m.hist||!m.hist[n]) return; let e=m.hist[n]; if(typeof e==="string") e={info:e};
-        const d=e._d||{}; const nT=TAGO.filter(t=>e[t]&&!d[t]), dT=TAGO.filter(t=>e[t]&&d[t]);
-        if(nT.length) seatsN.push({i,e,tags:nT}); if(dT.length) seatsD.push({i,e,tags:dT}); });
-      seatsN.sort((A,B)=> (keyFor(A.i,A.e)-keyFor(B.i,B.e)) || (A.i-B.i));
-      seatsD.sort((A,B)=> A.i-B.i);
-      const rowFor=({i,tags})=>{ const m=meta[i];
+        const d=e._d||{};
+        TAGO.forEach((t,ti)=>{ if(!e[t]) return;
+          if(d[t]) seatsD.push({i:i, tag:t, o:ti}); else rowsN.push({i:i, tag:t, o:ti, k:stepKeyOf(i,t)}); }); });
+      rowsN.sort((A,B)=> (A.k-B.k) || (A.i-B.i) || (A.o-B.o));
+      seatsD.sort((A,B)=> (A.i-B.i) || (A.o-B.o));
+      const rowFor=({i,tag})=>{ const m=meta[i];
         let e2=m.hist[n]; if(typeof e2==="string") e2={info:e2};
         const r=m.role?RMAP[m.role]:null;
         const roleHtml=r?' <b style="color:'+(m.isDrunk?TEAMC.out:TEAMC[r.team])+'">'+r.name+(m.isDrunk?'-酒鬼':'')+'</b>':'';
         const stArr=[]; if(isDeadSeat(i))stArr.push('出局'); if(m.poison)stArr.push('中毒'); if(m.drunk&&!m.isDrunk)stArr.push('醉酒');
         const stHtml=stArr.length?' <span style="color:#b0402e;font-size:.88em">['+stArr.join('/')+']</span>':'';
-        return tags.map(t=>'<div class="rrow">'+(i+1)+' '+nameAt(i)+roleHtml+stHtml+'：'+e2[t]+'</div>').join(''); };   // ① 一个行动一行：同一角色一夜内多次行动（如爪牙互认 + 下毒）分开记录
-      seatsN.forEach(x=>{ any=true; h+=rowFor(x); });
+        return '<div class="rrow">'+(i+1)+' '+nameAt(i)+roleHtml+stHtml+'：'+e2[tag]+'</div>'; };
+      rowsN.forEach(x=>{ any=true; h+=rowFor(x); });
       if(!any) h+='<div class="rrow" style="opacity:.45">（无记录）</div>';
       const noms=nominations[n], ex=executions[n], slDay=slayerShot&&slayerShot.day===n;
       if((noms&&noms.length) || ex!==undefined || slDay || seatsD.length){
