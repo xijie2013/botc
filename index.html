@@ -1396,6 +1396,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.53.4', d:'2026-08-14', items:[
+    '修复洗衣妇 / 图书管理员 / 调查员的信息没有写进说书人日志的问题——尤其是不需要说书人做任何选择的答案（例如场上没有外来者时，图书管理员固定得到「没有外来者」）此前完全不会被记录。现在这三个角色与占卜师、厨师一样，答案一确定就自动进日志。',
+  ]},
   {v:'v2.53.3', d:'2026-08-14', items:[
     '修复占卜师、厨师、共情者、送葬者的夜间信息在天亮后被错误归到「☀ 第 n 天」的问题：这几条记录由界面每次刷新都会重写一次，之前每次重写都按当时的昼夜阶段重新打标，天亮后就被挪到白天去了。现在一条记录的昼/夜归属只在它第一次出现时决定，之后的重写不再改变。',
   ]},
@@ -2398,6 +2401,14 @@ function pingResult(roleId){
     return mk(pair(rec.a,rec.b)+' 中有一个是 '+RMAP[rec.role].name, real);
   }
 }
+/* 洗衣妇 / 图书管理员 / 调查员：与占卜师、厨师一样每帧回写日志。
+   必须这样做的原因：有些答案根本不需要说书人做任何选择（例如场上没有外来者时，图书管理员固定得到
+   「没有外来者」），只靠 pingSet 触发就永远写不进日志。这三个角色只在第一夜行动，故只在第一夜回写；
+   后续夜晚不再改动已记下的内容（避免中毒状态变化把第一夜的记录改掉）。 */
+function recordPings(){ if(night!==1) return;
+  ['washerwoman','librarian','investigator'].forEach(function(id){
+    const seat=meta.findIndex(m=>m&&m.role===id); if(seat<0) return;
+    const r=pingResult(id); histSet(seat,'info', (r&&r.text)?r.text:null); }); }
 /* 洗衣妇/图书管理员/调查员：给玩家看的干净文本（去掉说书人端的「· 真/假」标注）；未选好则返回'' */
 function pingPlayerText(roleId){ const r=pingResult(roleId); if(!r||!r.text) return '';
   const label={washerwoman:'洗衣妇',librarian:'图书管理员',investigator:'调查员'}[roleId]||'';
@@ -2406,7 +2417,7 @@ function pingPlayerText(roleId){ const r=pingResult(roleId); if(!r||!r.text) ret
 function pingSet(roleId,field,v){ if(!pingPicks[roleId]) pingPicks[roleId]={}; const rec=pingPicks[roleId];
   if(field==="role"||field==="regRole") rec[field] = v===""?null:v; else rec[field] = v===""?null:+v;   // role/regRole 是角色 id（字符串），别 +v
   if(field==="a"||field==="b") rec.swap = Math.random()<0.5;   // 每次改选人重新掷一次展示顺序（存档持久化，渲染期间稳定）
-  const seat=meta.findIndex(m=>m&&m.role===roleId); const r=pingResult(roleId); histSet(seat,'info', r?r.text:null); render(); }
+  render(); }   // 日志由 render() 里的 recordPings() 统一回写
 function pingUI(roleId){
   const seat=meta.findIndex(m=>m&&m.role===roleId); if(seat<0) return "";
   if(isDeadSeat(seat)) return '<div class="impkill done" style="color:#8a6a2a">已出局，未行动</div>';
@@ -3176,7 +3187,7 @@ function render(){
   applyView();
   document.getElementById("countVal").textContent=N;
   document.getElementById("nightVal").textContent=night;
-  recordUndertaker(); recordFt(); recordNum("chef","相邻邪恶对数"); recordNum("empath","两侧存活邻座邪恶数");
+  recordUndertaker(); recordFt(); recordPings(); recordNum("chef","相邻邪恶对数"); recordNum("empath","两侧存活邻座邪恶数");
   renderLedger();
   renderGrim();
   renderSeats();
