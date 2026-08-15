@@ -766,7 +766,7 @@
     cursor:pointer; z-index:5; user-select:none; -webkit-tap-highlight-color:transparent; transition:transform .14s cubic-bezier(.34,1.56,.64,1), filter .16s ease;}   /* v2.50.8 纯图标无圆底；v2.50.9 点击弹窗确认；v2.50.13 悬停/按下互动 */
   #tableZone .chatbtn:hover{ transform:translate(-50%,-50%) scale(1.16); filter:brightness(1.13); }
   #tableZone .chatbtn:active{ transform:translate(-50%,-50%) scale(.9); }
-  #tableZone .chatbtn svg{width:100%; height:100%; display:block; pointer-events:none; filter:drop-shadow(0 1px 2px rgba(0,0,0,.7));}   /* 加入/退出图标（v2.59.0 内联 SVG）*/
+  #tableZone .chatbtn img, #tableZone .chatbtn svg{width:100%; height:100%; object-fit:contain; display:block; pointer-events:none; filter:drop-shadow(0 1px 2px rgba(0,0,0,.7));}   /* 加入/退出图标（v2.59.3 改回 PNG，svg 选择器保留备用）*/
   .nb-note{padding:4px 2px; border-bottom:1px solid rgba(122,83,32,.14); line-height:1.35;}
   .nb-nom{border:1px solid rgba(74,43,107,.22); border-radius:8px; padding:6px 8px; margin:6px 0; background:rgba(255,252,244,.6);}
   .nb-nomhead{font-weight:700; color:#6b4a1e;}
@@ -1411,6 +1411,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.59.3', d:'2026-08-15', items:[
+    '座位圈上的「加入私聊 / 退出私聊」两个按钮换回原来的手绘图标——新画的几版矢量都不如原图好看。左下角那一排（聊天室 / 发起私聊 / 发出邀请 / 解散私聊 / 座次 / 日志 / 裁决）保持 v2.59 的新图标不变。',
+  ]},
   {v:'v2.59.2', d:'2026-08-15', items:[
     '「发起私聊」按钮不再有任何辉光。改成和「座次」按钮一样的做法：点进选人模式后，图标本身直接变成青色；选中人之后换成本来就是青色的「发送」纸飞机。',
   ]},
@@ -2985,6 +2988,8 @@ const _CF_ICON_INVITE='<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/sv
 const _CF_ICON_INVITE_SEL='<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><g opacity=".5"><circle cx="38" cy="21.9" r="4.2" fill="rgba(74,194,180,.16)" stroke="#4ac2b4" stroke-width="2.1"/><path d="M30.2 36.3 a 7.8 7.8 0 0 1 15.6 0" fill="rgba(74,194,180,.16)" stroke="#4ac2b4" stroke-width="2.1" stroke-linecap="round"/></g><g opacity="1"><circle cx="22" cy="19.1" r="5.2" fill="rgba(74,194,180,.16)" stroke="#4ac2b4" stroke-width="2.1"/><path d="M12.4 36.7 a 9.6 9.6 0 0 1 19.2 0" fill="rgba(74,194,180,.16)" stroke="#4ac2b4" stroke-width="2.1" stroke-linecap="round"/></g><circle cx="51" cy="11" r="7" fill="rgba(110,194,122,.24)" stroke="#6ec27a" stroke-width="2"/><path d="M51 7.5 V14.5 M47.5 11 H54.5" stroke="#6ec27a" stroke-width="2.4" stroke-linecap="round"/><text x="32" y="58" text-anchor="middle" font-family="system-ui,sans-serif" font-size="15" font-weight="700" fill="#4ac2b4">邀请</text></svg>';
 const _CF_ICON_SEND='<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><path d="M6 27 L56 9 L42 43 L33 33 Z" fill="rgba(74,194,180,.16)" stroke="#4ac2b4" stroke-width="2.2" stroke-linejoin="round"/><path d="M6 27 L33 33 L56 9" fill="none" stroke="#4ac2b4" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><text x="32" y="58" text-anchor="middle" font-family="system-ui,sans-serif" font-size="15" font-weight="700" fill="#4ac2b4">发送</text></svg>';
 const _SDF_ICON='<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><g transform="rotate(-20 16 30)"><circle cx="16" cy="21.3" r="4.6" fill="rgba(233,196,106,.16)" stroke="#e9c46a" stroke-width="2.1"/><path d="M7.5 36.8 a 8.5 8.5 0 0 1 17 0" fill="rgba(233,196,106,.16)" stroke="#e9c46a" stroke-width="2.1" stroke-linecap="round"/></g><g transform="rotate(20 43 30)"><circle cx="43" cy="21.3" r="4.6" fill="rgba(233,196,106,.16)" stroke="#e9c46a" stroke-width="2.1"/><path d="M34.5 36.8 a 8.5 8.5 0 0 1 17 0" fill="rgba(233,196,106,.16)" stroke="#e9c46a" stroke-width="2.1" stroke-linecap="round"/></g><circle cx="54" cy="10" r="6.8" fill="rgba(224,106,90,.24)" stroke="#e06a5a" stroke-width="2"/><path d="M51.1 7.1 L56.9 12.9 M56.9 7.1 L51.1 12.9" stroke="#e06a5a" stroke-width="2.4" stroke-linecap="round"/><text x="32" y="58" text-anchor="middle" font-family="system-ui,sans-serif" font-size="15" font-weight="700" fill="#e9c46a">解散</text></svg>';
+/* ⚠ 下面这两个座位圈「加入/退出」的 SVG 版本 v2.59.3 起已停用（用户选择保留原来的手绘 PNG ic-join/ic-leave），
+   常量留着以备将来想换回矢量；真正在用的是 _chatDrawButtons 里的 <img>。 */
 const _CB_ICON_JOIN='<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><path d="M33 9 H50 a7 7 0 0 1 7 7 V48 a7 7 0 0 1 -7 7 H33" fill="rgba(233,196,106,.14)" stroke="#e9c46a" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M5 32 H31" stroke="#6ec27a" stroke-width="4.4" stroke-linecap="round"/><path d="M21 22 L31 32 L21 42" fill="none" stroke="#6ec27a" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const _CB_ICON_LEAVE='<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><path d="M33 9 H50 a7 7 0 0 1 7 7 V48 a7 7 0 0 1 -7 7 H33" fill="rgba(233,196,106,.14)" stroke="#e9c46a" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M31 32 H5" stroke="#e06a5a" stroke-width="4.4" stroke-linecap="round"/><path d="M15 22 L5 32 L15 42" fill="none" stroke="#e06a5a" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const _STLOG_ICON='<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="7" width="34" height="34" rx="5" fill="rgba(233,196,106,.13)" stroke="#e9c46a" stroke-width="2"/><path d="M22 16 h20 M22 24 h20 M22 32 h13" stroke="#e9c46a" stroke-width="2.2" stroke-linecap="round" fill="none"/><text x="32" y="58" text-anchor="middle" font-family="system-ui,sans-serif" font-size="15" font-weight="700" fill="#e9c46a">日志</text></svg>';
@@ -5112,7 +5117,7 @@ load(); render();
       const inChat=!!(myc && myc.id===c.id), base=inChat?'退出':'加入';
       const b=document.createElement('div'); b.className='chatbtn '+(inChat?'cb-exit':'cb-join');
       b.style.cssText='left:'+bx+'px;top:'+by+'px;width:'+bd+'px;height:'+bd+'px;';
-      b.innerHTML=inChat?_CB_ICON_LEAVE:_CB_ICON_JOIN; b.title=base+'私聊';
+      b.innerHTML='<img src="assets/'+(inChat?'ic-leave':'ic-join')+'.png" alt="'+base+'" draggable="false">'; b.title=base+'私聊';   /* v2.59.3 座位圈这两个按钮改回原来的手绘 PNG（左下角那几个仍是新的内联 SVG）*/
       b.addEventListener('click',function(e){ e.stopPropagation();   // v2.50.9 弹窗确认（原两连点圆圈）
         Promise.resolve(uiConfirm(inChat?'确认离开该私聊吗？':'确认加入该私聊吗？',{title:inChat?'离开私聊':'加入私聊',ok:inChat?'离开':'加入',cancel:'取消'})).then(function(ok){
           if(!ok) return; if(inChat) window._chatLeave(); else window._chatJoinReq(c.id); }); });
