@@ -1534,6 +1534,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.70.0', d:'2026-08-29', items:[
+    '玩家笔记「概览」页新增「夜间顺序」：在本局配置下方按官方夜单列出首夜与其余夜晚的角色行动次序（含爪牙相认、恶魔信息），角色名按阵营配色，本局未启用的显示为灰色。两个剧本都有，帮助玩家理解谁先谁后行动。',
+  ]},
   {v:'v2.69.0', d:'2026-08-29', items:[
     '换板第 1 期·夜间死亡引擎：黯月初升的夜晚面板底部新增「本夜死亡记录」——选玩家、选死因（恶魔击杀/刺客/赌徒/月之子/造谣者/其他）点记录，死亡自动写进魔典日志、座位变为出局、并和暗流涌动的夜杀一样在「结束本夜」天亮时才对玩家公布；记错可一键撤销（日志与座位一并还原）。这也是后续恶魔自动化（双杀/延迟死/假死/复活）的统一底层。暗流涌动的夜杀流程不受影响、不显示此区。',
   ]},
@@ -6044,6 +6047,15 @@ load(); render();
   }
   function refHTML(){ const locked=new Set(pub.locked||[]); const d=pub.dist||DIST[pub.count]||[0,0,0,0];
     let h='<div class="nb-role"><b style="color:#43286b">本局配置</b><br><span style="color:#43286b">'+((SCRIPTS[(pub&&pub.script)||'tb']||SCRIPTS.tb).name)+' · '+pub.count+'人</span> · <span style="color:'+TEAMC.tf+'">镇民'+d[0]+'</span> <span style="color:'+TEAMC.out+'">外来者'+d[1]+'</span> <span style="color:'+TEAMC.min+'">爪牙'+d[2]+'</span> <span style="color:'+TEAMC.dem+'">恶魔'+d[3]+'</span></div>';
+    /* v2.70.0 夜间顺序：帮玩家理解本剧本各角色的行动次序（首夜/其余夜晚，按官方夜单；灰色=本局未启用） */
+    { const _nn=NIGHTS[(pub&&pub.script)||'tb']||NIGHT;
+      const _nseq=list=>list.map(s=>{ let nm,color,off=false;
+        if(s.special){ nm=s.name; color=(s.special==='dem')?TEAMC.dem:TEAMC.min; }
+        else { const r=RMAP[s.id]; if(!r) return ''; nm=r.name; color=TEAMC[r.team]; off=locked.has(s.id); }
+        return '<span style="color:'+color+';font-weight:700;white-space:nowrap;'+(off?'opacity:.35;':'')+'">'+nm+'</span>'; }).filter(Boolean).join('<span style="opacity:.45"> → </span>');
+      h+='<div class="nb-sec">夜间顺序（灰色为本局未启用）</div>';
+      h+='<div class="nb-role"><b style="color:#43286b">首夜</b><div style="margin-top:3px;line-height:1.9">'+_nseq(_nn.first)+'</div></div>';
+      h+='<div class="nb-role"><b style="color:#43286b">其余夜晚</b><div style="margin-top:3px;line-height:1.9">'+_nseq(_nn.other)+'</div></div>'; }
     h+='<div class="nb-sec">剧本角色（灰色为本局未启用）</div>';
     ORDER.forEach(t=>{ const list=scriptRoles((pub&&pub.script)||'tb').filter(r=>r.team===t); if(!list.length) return;   /* v2.68.0：参考页按本局剧本 */
       h+='<div style="font-weight:800;color:'+TEAMC[t]+';margin:8px 0 3px">'+TEAMLABEL[t]+'</div>';
