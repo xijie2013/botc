@@ -1418,9 +1418,11 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
-  {v:'v2.65.1', d:'2026-08-15', items:[
-    '墨水瓶的「写字沙沙声」改柔和：从 1 秒缩到 0.65 秒，砍掉高频毛刺（6kHz 以上能量从 23% 降到 0.6%）并压平瞬态、收尾淡出，整体也轻了约 3dB。',
-    '时钟指针的「哒哒哒」改柔和：原素材 84% 的能量都在 6kHz 以上、瞬态又尖又硬，现在高频降 12dB、限制在 9kHz 以内并压瞬态，还是那个节奏但不扎耳了。',
+  {v:'v2.65.2', d:'2026-08-29', items:[
+    '修复对局记录（永久战绩）丢失的 bug：说书人宣告胜负时战绩会正常写入，但随后点「结束本局」准备下一局时，会被误当成「撤回误判」而从记录里删掉——所以每局打完记录都会消失（8 月 22 日晚的四局就是这么丢的，已删的记录无法找回）。现在「结束本局」会封存已写入的战绩：宣告即入档，只有在结束本局前主动撤回宣告（或改判/复活导致胜负条件消失）才会删除对应记录。「重置角色」同样修正。',
+  ]},
+  {v:'v2.65.1', d:'2026-08-23', items:[
+    '玩家端夜晚选人下拉（管家选主人、僧侣守护、占卜师、投毒者等）里的「（已出局）」标记只反映本夜之前的死亡：当夜刚被恶魔击杀的玩家，在说书人点「结束本夜」之前对所有玩家仍按存活显示，避免管家等后行动角色提前从下拉菜单里看出谁死了。说书人魔典自己的下拉不受影响，仍显示真实状态。',
   ]},
   {v:'v2.65.0', d:'2026-08-15', items:[
     '修复 iPad 上胜利结算画面背景光芒歪斜的问题：放射光芒从 CSS 圆锥渐变改成矢量扇形绘制，并去掉一层混合模式。iPad 这类高分屏上这块元素的实际像素超过 Safari 的光栅化上限，会被降精度画完再拉伸，射线因此看起来是歪的/波浪形；改成矢量后任意屏幕都正。',
@@ -1845,8 +1847,10 @@ async function dealRoles(){
 async function resetRoles(){ if(gateCfg()) return; if(!await uiConfirm("重置所有身份、状态、备注、伪装？（保留名字与座位）")) return;
   meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
   Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); Object.keys(dayFlow).forEach(k=>delete dayFlow[k]); Object.keys(spySent).forEach(k=>delete spySent[k]); overviewDecoys=[]; tokens.forEach(t=>t.dead=false);
-  window.__gameOn=false; window.__winApproved=''; window.__winPending=null; window.__winDismissed=''; window.__setupSnap=null; render();
-  try{ if(window._stClearPlayerRoles) _stClearPlayerRoles(); }catch(e){} try{ if(window._stClearPlayerNotes) _stClearPlayerNotes(); }catch(e){} try{ if(window._stResetPublic) _stResetPublic(); }catch(e){} try{ if(window._histNewRound) _histNewRound(); }catch(e){} }   // 重置角色：清空玩家角色卡 + 局内信息/座位备注/标记 + 公开状态（大厅/笔记的死亡/处决/胜负等一并清零）；胜负另记一条
+  window.__gameOn=false; window.__winApproved=''; window.__winPending=null; window.__winDismissed=''; window.__setupSnap=null;
+  try{ if(window._histNewRound) _histNewRound(); }catch(e){}   /* 必须在 render() 之前封存战绩（同 stEndGame，v2.65.2）：否则 renderWin→_autoResult(null) 会删掉已宣告写入的那条 */
+  render();
+  try{ if(window._stClearPlayerRoles) _stClearPlayerRoles(); }catch(e){} try{ if(window._stClearPlayerNotes) _stClearPlayerNotes(); }catch(e){} try{ if(window._stResetPublic) _stResetPublic(); }catch(e){} }   // 重置角色：清空玩家角色卡 + 局内信息/座位备注/标记 + 公开状态（大厅/笔记的死亡/处决/胜负等一并清零）；胜负另记一条
 function setBluff(k,v){ if(gateCfg()) return; bluffs[k]=v; refreshOverviewDecoys(); render(); }
 
 /* ---------- 夜晚信息自动计算 ---------- */
@@ -2021,7 +2025,11 @@ function nfGet(id){ const k=nfKey(id); return nightFlow[k]||(nightFlow[k]={stage
 function _demSeat(){ let dead=-1; for(let i=0;i<N;i++){ const m=meta[i]; if(m&&m.role&&RMAP[m.role]&&RMAP[m.role].team==='dem'){ if(!isDeadSeat(i)) return i; dead=i; } } return dead; }   // 传位后优先返回存活的恶魔
 function _minSeats(){ const a=[]; meta.forEach((m,i)=>{ if(m&&m.role&&RMAP[m.role]&&RMAP[m.role].team==='min') a.push(i); }); return a; }
 function nightSendSeats(id){ if(id==='_minion') return _minSeats(); if(id==='_demon'){ const d=_demSeat(); return d>=0?[d]:[]; } if(id==='imp'){ const s=impSeat(); return s>=0?[s]:[]; } const s=meta.findIndex(m=>m&&m.role===id); return s>=0?[s]:[]; }
-function nightSeatOptions(exclude){ const a=[]; for(let i=0;i<N;i++){ if(exclude!=null && i===exclude) continue; a.push({seat:i, name:(i+1)+'号 '+nameAt(i)+(isDeadSeat(i)?'（已出局）':'')}); } return a; }
+/* 发给玩家的夜晚下拉里的「（已出局）」只认本夜之前的死亡：本夜被刀/弹刀/自杀的玩家在「结束本夜」之前对所有玩家仍按存活显示（夜里死亡保密到天亮；白天照常）。
+   判定：该座位本夜(hist[night])有一条非白天的 death 记录 → 视为本夜新死，不标。说书人魔典自己的下拉不走这里，仍显示真实状态。 */
+function deadBeforeNight(i){ if(!isDeadSeat(i)) return false; if(histIsDayNow()) return true;
+  const hh=meta[i]&&meta[i].hist, e=hh&&hh[night]; if(e&&typeof e==='object'&&e.death&&!(e._d&&e._d.death)) return false; return true; }
+function nightSeatOptions(exclude){ const a=[]; for(let i=0;i<N;i++){ if(exclude!=null && i===exclude) continue; a.push({seat:i, name:(i+1)+'号 '+nameAt(i)+(deadBeforeNight(i)?'（已出局）':'')}); } return a; }
 /* 僧侣/管家不能选自己：从玩家的可选目标里排除该角色自身座位 */
 function _pickOptionsFor(id){ const ex=(id==='monk'||id==='butler'||id==='ravenkeeper')?((nightSendSeats(id)||[])[0]):null; return nightSeatOptions(ex==null?undefined:ex); }
 /* 守鸦人本夜是否触发（被恶魔杀死）+ 给玩家看的结果文本 */
@@ -3022,6 +3030,7 @@ window.stEndGame=async function(){
   if(!await uiConfirm('结束本局后回到配置期，可以重新调整座位数量、玩家位置与角色。\n\n⚠ 本局日志会被清空（若已分享给玩家，也会一并收回）。永久战绩不受影响。',{title:'结束本局',ok:'结束本局',cancel:'取消'})) return;
   window.__gameOn=false; window.__gateOverride=false; window.__winPending=null; window.__winDismissed='';
   window.__winApproved='';
+  try{ if(window._histNewRound) _histNewRound(); }catch(e){}   /* 先封存已写入的永久战绩：下面 render()→renderWin 会因 __winApproved 清空而走 _autoResult(null)，若不清 _histKey 会把刚存的战绩当「撤回误判」删掉（v2.65.2 修，2026-08-22 四局丢失的根因） */
   /* 清空本局日志：每座位的夜间记录 + 开局板子快照 + 白天段落用到的提名/处决等 */
   try{ if(Array.isArray(meta)) meta.forEach(m=>{ if(m){ m.hist={}; m.info=''; } });
     window.__setupSnap=null;
