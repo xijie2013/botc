@@ -1529,6 +1529,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.68.1', d:'2026-08-29', items:[
+    '界面精简：角色设置页剧本切换那排去掉「📜 剧本」标题和「夜间为手动模式」提示，只留两个剧本按钮；玩家笔记概览「本局配置」里的剧本名去掉 📜 图标。',
+  ]},
   {v:'v2.68.0', d:'2026-08-29', items:[
     '新增剧本（换板子）：角色设置页顶部可以在「暗流涌动」和「黯月初升」之间切换。黯月初升 25 个角色全部就位——名字、阵营、能力简介、官方夜间顺序、以及概览页每个角色的详尽介绍（功能/何时行动/中毒醉酒/特殊交互/推荐玩法）。切换剧本会清空已分配的角色与相关设置（座位和玩家保留），游戏进行中不能切换。',
     '黯月初升目前是「手动模式」：夜晚面板会按官方夜序逐步列出该唤醒谁、做什么（爪牙相认与恶魔信息两步仍是自动发送+玩家确认），但击杀、保护、醉酒等结算由说书人自行裁定，信息用私聊发给玩家。夜间自动化后续按角色逐个接入。',
@@ -3910,9 +3913,8 @@ function renderGrim(){
     if(isGameOn()) h+=gateBanner('游戏进行中：座位数量 / 玩家位置 / 角色分配与角色设置已锁定，点下方「结束本局」可回到配置期');
     const _cl=cfgLocked(); if(_cl) h+='<div class="gatelock">';   // ⑥ 角色/阵营/误判/红鲱鱼/伪装 一并只读；下方「牌局」区在遮罩之外仍可点
     /* v2.68.0 剧本选择（配置期）：切板清空角色相关设置，座位与玩家保留 */
-    h+='<div class="gsec" style="color:#43286b;display:flex;align-items:center;gap:8px"><span>📜 剧本</span>'
-      +Object.keys(SCRIPTS).map(sid=>'<span class="regbtn'+(sid===(window.__scriptId||'tb')?' on':'')+'" onclick="setScript(\''+sid+'\')">'+SCRIPTS[sid].name+'</span>').join('')
-      +((window.__scriptId==='bmr')?'<span style="font-weight:400;font-size:calc(.88 * var(--sw) / 100);color:#8a5f28">夜间为手动模式（无自动结算）</span>':'')+'</div>';
+    h+='<div class="gsec" style="color:#43286b;display:flex;align-items:center;gap:8px">'
+      +Object.keys(SCRIPTS).map(sid=>'<span class="regbtn'+(sid===(window.__scriptId||'tb')?' on':'')+'" onclick="setScript(\''+sid+'\')">'+SCRIPTS[sid].name+'</span>').join('')+'</div>';
     const _usedSet=new Set(); meta.forEach(m=>{ if(!m) return; if(m.isDrunk){ _usedSet.add('drunk'); if(m.role) _usedSet.add(m.role); } else if(m.role) _usedSet.add(m.role); });   // 酒鬼占用「酒鬼」牌+其自以为的镇民牌（都半透明）
     (bluffs||[]).forEach(b=>{ if(b) _usedSet.add(b); });   // 恶魔伪装选中的身份也占用（半透明）
     ORDER.forEach((team,idx)=>{
@@ -5992,7 +5994,7 @@ load(); render();
     return h;
   }
   function refHTML(){ const locked=new Set(pub.locked||[]); const d=pub.dist||DIST[pub.count]||[0,0,0,0];
-    let h='<div class="nb-role"><b style="color:#43286b">本局配置</b><br><span style="color:#43286b">📜 '+((SCRIPTS[(pub&&pub.script)||'tb']||SCRIPTS.tb).name)+' · '+pub.count+'人</span> · <span style="color:'+TEAMC.tf+'">镇民'+d[0]+'</span> <span style="color:'+TEAMC.out+'">外来者'+d[1]+'</span> <span style="color:'+TEAMC.min+'">爪牙'+d[2]+'</span> <span style="color:'+TEAMC.dem+'">恶魔'+d[3]+'</span></div>';
+    let h='<div class="nb-role"><b style="color:#43286b">本局配置</b><br><span style="color:#43286b">'+((SCRIPTS[(pub&&pub.script)||'tb']||SCRIPTS.tb).name)+' · '+pub.count+'人</span> · <span style="color:'+TEAMC.tf+'">镇民'+d[0]+'</span> <span style="color:'+TEAMC.out+'">外来者'+d[1]+'</span> <span style="color:'+TEAMC.min+'">爪牙'+d[2]+'</span> <span style="color:'+TEAMC.dem+'">恶魔'+d[3]+'</span></div>';
     h+='<div class="nb-sec">剧本角色（灰色为本局未启用）</div>';
     ORDER.forEach(t=>{ const list=scriptRoles((pub&&pub.script)||'tb').filter(r=>r.team===t); if(!list.length) return;   /* v2.68.0：参考页按本局剧本 */
       h+='<div style="font-weight:800;color:'+TEAMC[t]+';margin:8px 0 3px">'+TEAMLABEL[t]+'</div>';
