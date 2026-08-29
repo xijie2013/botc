@@ -1427,6 +1427,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.67.2', d:'2026-08-29', items:[
+    '阵营标记分成两行：善良/邪恶一行，镇民/外来者/爪牙/恶魔单独一行。',
+  ]},
   {v:'v2.67.1', d:'2026-08-29', items:[
     '标记页页码钮右侧的「5 块独立标记板 · 盘不同逻辑线」说明文字去掉，页码一排更清爽。',
   ]},
@@ -5842,9 +5845,11 @@ load(); render();
     h+='<div class="nb-sec">状态标记 · 拖到座位上添加；单击划掉</div><div>';
     h+=STAT_ORDER.map(k=>{ const b=BADGE[k]; const gc=(MARK[k]&&MARK[k][3])||'rgba(122,83,32,.4)'; const ic=MARK[k]?'<img src="'+MARK[k][1]+'" draggable="false" style="width:17px;height:17px;object-fit:contain;vertical-align:middle;margin-right:2px">':'';
       return '<span class="nbtok'+(crossed.has('stat:'+k)?' crossed':'')+'" data-drag="pstat:'+k+'" onclick="_nbCross(\'stat:'+k+'\')" style="border-color:'+gc+'">'+ic+b.t+'</span>'; }).join('')+'</div>';
-    h+='<div class="nb-sec">阵营标记 · 拖到座位上记录阵营判断；单击划掉</div><div>';
-    h+=Object.keys(VTEAM).map(id=>{ const t=VTEAM[id];
-      return '<span class="nbtok'+(crossed.has('role:'+id)?' crossed':'')+'" data-drag="prole:'+id+'" onclick="_nbCross(\'role:'+id+'\')" style="border-color:'+t.c+';color:'+t.c+'">'+t.n+'</span>'; }).join('')+'</div>';
+    h+='<div class="nb-sec">阵营标记 · 拖到座位上记录阵营判断；单击划掉</div>';
+    const _vt=id=>{ const t=VTEAM[id];
+      return '<span class="nbtok'+(crossed.has('role:'+id)?' crossed':'')+'" data-drag="prole:'+id+'" onclick="_nbCross(\'role:'+id+'\')" style="border-color:'+t.c+';color:'+t.c+'">'+t.n+'</span>'; };
+    h+='<div>'+['T:good','T:evil'].map(_vt).join('')+'</div>';                    /* v2.67.2：善良/邪恶一行 */
+    h+='<div>'+['T:tf','T:out','T:min','T:dem'].map(_vt).join('')+'</div>';       /* v2.67.2：镇民/外来者/爪牙/恶魔单独一行 */
     h+='<div class="nb-sec">在场角色 · 拖到座位上记录猜测；单击划掉</div><div>';
     const locked=new Set(pub.locked||[]); const rs=ROLES.filter(r=>!locked.has(r.id)).map(r=>r.id);
     h+=rs.map(id=>{ const r=RMAP[id]; if(!r) return '';
