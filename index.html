@@ -1463,7 +1463,7 @@ function blankMeta(){return {role:null,poison:false,drunk:false,dead:false,note:
 function ensureMeta(){ while(meta.length<N) meta.push(blankMeta()); meta.length=N; }
 
 function save(){ if(window.__stApplyingRemote) return;   // 正在应用远端同步时不重复写/上传，避免回声循环
-  try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,nightFlow,dayFlow,spySent,impKills,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,sickAns,redHerring,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist,gameOn:!!window.__gameOn,winApproved:(window.__winApproved||''),setupSnap:(window.__setupSnap||null),script:(window.__scriptId||'tb'),ts:Date.now()})); }catch(e){}
+  try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,nightFlow,dayFlow,spySent,impKills,nightDeaths,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,sickAns,redHerring,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist,gameOn:!!window.__gameOn,winApproved:(window.__winApproved||''),setupSnap:(window.__setupSnap||null),script:(window.__scriptId||'tb'),ts:Date.now()})); }catch(e){}
   try{ if(window._stCloudPush) window._stCloudPush(); }catch(e){} }   // 说书人存档实时云同步（防抖上传）
 function load(){
   try{ const d=JSON.parse(localStorage.getItem(KEY)||"{}");
@@ -1487,6 +1487,7 @@ function load(){
     window.__setupSnap = (d.setupSnap&&typeof d.setupSnap==='object') ? d.setupSnap : null;
     window.__scriptId = (d.script&&SCRIPTS[d.script]) ? d.script : 'tb';   // v2.68.0 剧本随本地状态恢复；老数据=暗流涌动
     if(d.impKills&&typeof d.impKills==="object") impKills=d.impKills;
+    if(d.nightDeaths&&typeof d.nightDeaths==="object") nightDeaths=d.nightDeaths;   // v2.69.0 夜间死亡事件（换板引擎）
     if(d.poisonPicks&&typeof d.poisonPicks==="object") poisonPicks=d.poisonPicks;
     if(d.monkPicks&&typeof d.monkPicks==="object") monkPicks=d.monkPicks;
     if(d.ftPicks&&typeof d.ftPicks==="object") ftPicks=d.ftPicks;
@@ -1533,6 +1534,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.69.0', d:'2026-08-29', items:[
+    '换板第 1 期·夜间死亡引擎：黯月初升的夜晚面板底部新增「本夜死亡记录」——选玩家、选死因（恶魔击杀/刺客/赌徒/月之子/造谣者/其他）点记录，死亡自动写进魔典日志、座位变为出局、并和暗流涌动的夜杀一样在「结束本夜」天亮时才对玩家公布；记错可一键撤销（日志与座位一并还原）。这也是后续恶魔自动化（双杀/延迟死/假死/复活）的统一底层。暗流涌动的夜杀流程不受影响、不显示此区。',
+  ]},
   {v:'v2.68.2', d:'2026-08-29', items:[
     '大厅主标题跟随当前剧本：切到黯月初升后，说书人端与玩家端的大厅横幅都显示「黯月初升」，切回则显示「暗流涌动」。魔典/玩家笔记/日志等页面的专属标题不变。',
   ]},
@@ -1949,7 +1953,7 @@ async function dealRoles(){
   if(base.reduce((a,b)=>a+b,0)!==N){ _gt('各阵营数量合计与人数（'+N+'）不符，请调整后再发牌。'); return; }   // 原来调的 uiAlert 从未定义，会抛 ReferenceError
   if(!await uiConfirm("确定随机发牌？将重新分配所有身份。")) return;
   try{ if(window._histNewRound) _histNewRound(); }catch(e){}   // 新一局：胜负另记一条
-  ensureMeta(); night=1; impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
+  ensureMeta(); night=1; impKills={}; nightDeaths={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
   Object.keys(nightChecks).forEach(k=>delete nightChecks[k]);   // 清空每夜勾选
   Object.keys(nightFlow).forEach(k=>delete nightFlow[k]);       // 清空夜晚信息流程
   Object.keys(dayFlow).forEach(k=>delete dayFlow[k]);           // 清空昼夜推进状态
@@ -1987,7 +1991,7 @@ async function dealRoles(){
   render();
 }
 async function resetRoles(){ if(gateCfg()) return; if(!await uiConfirm("重置所有身份、状态、备注、伪装？（保留名字与座位）")) return;
-  meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
+  meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; nightDeaths={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
   Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); Object.keys(dayFlow).forEach(k=>delete dayFlow[k]); Object.keys(spySent).forEach(k=>delete spySent[k]); overviewDecoys=[]; tokens.forEach(t=>t.dead=false);
   window.__gameOn=false; window.__winApproved=''; window.__winPending=null; window.__winDismissed=''; window.__setupSnap=null;
   try{ if(window._histNewRound) _histNewRound(); }catch(e){}   /* 必须在 render() 之前封存战绩（同 stEndGame，v2.65.2）：否则 renderWin→_autoResult(null) 会删掉已宣告写入的那条 */
@@ -1998,7 +2002,7 @@ function setBluff(k,v){ if(gateCfg()) return; bluffs[k]=v; refreshOverviewDecoys
 window.setScript=async function(sid){ if(gateCfg()) return; if(!SCRIPTS[sid]||sid===(window.__scriptId||'tb')) return;
   if(!await uiConfirm('切换剧本到「'+SCRIPTS[sid].name+'」？\n\n座位上已分配的角色、伪装、红鲱鱼、误判、锁定角色与阵营数量会被清空（座位与玩家保留）。'+(sid==='bmr'?'\n\n提示：黯月初升目前为手动模式——夜晚面板按官方夜序逐步提示，但结算与信息发送由说书人自行完成。':''),{title:'切换剧本',ok:'切换',cancel:'取消'})) return;
   window.__scriptId=sid;
-  meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
+  meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; nightDeaths={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
   Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); Object.keys(dayFlow).forEach(k=>delete dayFlow[k]); Object.keys(spySent).forEach(k=>delete spySent[k]); overviewDecoys=[]; lockedRoles=new Set(); customDist=null; tokens.forEach(t=>t.dead=false);
   window.__gameOn=false; window.__winApproved=''; window.__winPending=null; window.__winDismissed=''; window.__setupSnap=null;
   try{ if(window._histNewRound) _histNewRound(); }catch(e){}
@@ -2530,6 +2534,29 @@ function stEndDay(){ const d=night; if(dayFlow[d]&&dayFlow[d].dusk) return; (day
 /* ---------- 小恶魔夜间击杀 / 自杀转移 ---------- */
 function isDeadSeat(i){ const t=seatToken(i); return t?!!t.dead:!!(meta[i]&&meta[i].dead); }
 function killSeat(i,dead){ const t=seatToken(i); if(t) t.dead=dead; else { ensureMeta(); meta[i].dead=dead; } }
+/* ==================== v2.69.0 通用夜间死亡结算引擎（换板第1期地基） ====================
+   nightDeaths[night]=[{t:座位, src:'manual'|角色id, label:死因文案, k:'kill'}]
+   目标：黯月初升等新剧本的夜间死亡走统一入口——日志(histSet 'death')/座位死亡/天亮才公布/可撤销，口径与 TB 恶魔刀一致。
+   TB 的 impKills 路径完全不经这里、保持不动。第2期起恶魔自动化（多杀/延迟死/假死/复活）在此扩展。
+   ⚠ histSet 按全局 night 写日志，所以 ndKill/ndUndo 只对「当前夜」的事件安全——UI 只暴露本夜列表。 */
+let nightDeaths={};
+const ND_CAUSES=['被恶魔击杀出局','被刺客暗杀出局','赌错身份死亡（赌徒）','月之子指认死亡','造谣者宣言应验死亡','其他原因死亡'];
+function ndEvents(n){ if(!nightDeaths[n]) nightDeaths[n]=[]; return nightDeaths[n]; }
+function ndKill(target,opts){ opts=opts||{}; if(target==null||target<0||target>=N||isDeadSeat(target)) return null;
+  const label=opts.label||'夜间死亡';
+  killSeat(target,true); histSet(target,'death',label);
+  const ev={t:target, src:opts.src||'manual', label:label, k:'kill'};
+  ndEvents(night).push(ev); return ev; }
+function ndUndo(n,idx){ if(n!==night) return false;   // 只撤当前夜（histSet 按全局 night 写，跨夜撤销会清错日志）
+  const a=ndEvents(n); const ev=a[idx]; if(!ev) return false;
+  if(ev.k==='kill'){ killSeat(ev.t,false); histSet(ev.t,'death',null); }
+  a.splice(idx,1); if(!a.length) delete nightDeaths[n]; return true; }
+window._ndKillTap=function(){ const s=document.getElementById('ndSeatSel'), c=document.getElementById('ndCauseSel');
+  if(!s||s.value===''){ _gt('先选择要记录死亡的玩家'); return; }
+  const label=ND_CAUSES[+((c&&c.value)||0)]||ND_CAUSES[ND_CAUSES.length-1];
+  const ev=ndKill(+s.value,{src:'manual',label:label});
+  if(ev){ try{ save(); }catch(e){} render(); } };
+window._ndUndoTap=function(ix){ if(ndUndo(night,ix)){ try{ save(); }catch(e){} render(); } };
 function livingSeats(){ const r=[]; for(let i=0;i<N;i++) if(!isDeadSeat(i)) r.push(i); return r; }
 function ghostVoteUsed(i){ if(!isDeadSeat(i)) return false;   // ⑥ 该座位是否已经用掉鬼票（扫全局提名的 ghostVoters）
   for(const d in nominations){ const a=nominations[d]||[]; for(let k=0;k<a.length;k++){ const g=a[k].ghostVoters; if(g&&g.indexOf(i)>=0) return true; } }
@@ -3188,7 +3215,7 @@ window.stEndGame=async function(){
   /* 清空本局日志：每座位的夜间记录 + 开局板子快照 + 白天段落用到的提名/处决等 */
   try{ if(Array.isArray(meta)) meta.forEach(m=>{ if(m){ m.hist={}; m.info=''; } });
     window.__setupSnap=null;
-    nominations={}; executions={}; virginUsed=false; slayerShot=null;
+    nominations={}; executions={}; nightDeaths={}; virginUsed=false; slayerShot=null;
   }catch(e){}
   /* 收回已分享给玩家的日志与裁决面板 */
   try{ if(window._pubStLog) window._pubStLog(null); }catch(e){} window.__stLogShared=false;
@@ -4077,6 +4104,19 @@ function renderGrim(){
       if(s.id==="chef") h+=numUI("chef","相邻邪恶对数",Math.max(2,meta.filter((m,i)=>regEvil(i)).length));
       if(s.id==="empath") h+=numUI("empath","两侧存活邻座邪恶数",2);
       if(s.id==="washerwoman"||s.id==="librarian"||s.id==="investigator") h+=pingUI(s.id); });
+    /* v2.69.0 换板第1期：非暗流涌动剧本的「本夜死亡记录」——手动局的夜间死亡统一从这里进引擎（写日志/座位死亡/天亮才公布/可撤销）。TB 夜杀走 imp 自动化，不显示此区。 */
+    if((window.__scriptId||'tb')!=='tb'){
+      const _sel='style="flex:1;min-width:0;font-weight:400;font-size:clamp(9px,.9vw,12px);padding:3px;border:1px solid rgba(122,83,32,.5);border-radius:5px;background:rgba(255,252,244,.85);color:#3a2a12;font-family:inherit"';
+      h+='<div class="gsec" style="margin-top:12px;border-top:1px solid rgba(122,83,32,.25);padding-top:8px;color:#43286b">本夜死亡记录</div>';
+      ndEvents(night).forEach((ev,ix)=>{ h+='<div class="rrow" style="border:none">✝ '+(ev.t+1)+'号 '+nameAt(ev.t)+' · '+esc(ev.label)+' <span class="regbtn" onclick="_ndUndoTap('+ix+')">撤销</span></div>'; });
+      let _so='<option value="">选择玩家…</option>'; for(let _i=0;_i<N;_i++){ if(!isDeadSeat(_i)) _so+='<option value="'+_i+'">'+(_i+1)+'号 '+nameAt(_i)+'</option>'; }
+      let _co=''; ND_CAUSES.forEach((c,k)=>{ _co+='<option value="'+k+'">'+c+'</option>'; });
+      h+='<div class="rrow" style="border:none;display:flex;gap:6px;align-items:center">'
+        +'<select id="ndSeatSel" '+_sel+'>'+_so+'</select>'
+        +'<select id="ndCauseSel" '+_sel+'>'+_co+'</select>'
+        +'<button class="btn purple" style="flex:0 0 auto;padding:6px 10px" onclick="_ndKillTap()">记录死亡</button></div>';
+      h+='<div class="rrow" style="border:none;font-size:calc(.88 * var(--sw) / 100);color:#8a6b3a;opacity:.85">死亡在点「结束本夜」天亮时才对玩家公布；记错可撤销。</div>';
+    }
     const _dawnReady = steps.length>0 && steps.every(s=> stepDone(s));   // 用 stepDone：自动化步骤看 f.stage（跳过也算完成），非自动化看 nightChecks
     const _dawned = !!(dayFlow[night]&&dayFlow[night].dawn);
     h+='<div style="margin-top:14px">';
@@ -6103,7 +6143,7 @@ load(); render();
     window.__botcGameName=nm||'本局';
     /* 重置本局进程（保留座位与角色）：清空提名/处决/夜数/举手，并复活所有人 */
     try{ night=1; nominations={}; executions={}; virginUsed=false; slayerShot=null;
-      impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={};
+      impKills={}; nightDeaths={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={};
       if(typeof nightChecks==='object') Object.keys(nightChecks).forEach(k=>delete nightChecks[k]);
       if(typeof nightFlow==='object') Object.keys(nightFlow).forEach(k=>delete nightFlow[k]);
       if(typeof dayFlow==='object') Object.keys(dayFlow).forEach(k=>delete dayFlow[k]);
