@@ -571,6 +571,12 @@
   #notesPanel .nbcontent{flex:1; min-height:0; overflow:auto; padding-right:3px; font-size:calc(1 * var(--sw) / 100); color:#3a2a12; scrollbar-width:thin; scrollbar-color:rgba(122,83,32,.55) transparent;}
   #notesPanel .nbcontent::-webkit-scrollbar{width:6px;} #notesPanel .nbcontent::-webkit-scrollbar-track{background:transparent;} #notesPanel .nbcontent::-webkit-scrollbar-thumb{background:rgba(122,83,32,.55); border-radius:3px;}   /* 玩家笔记/局内信息滚动条：改玩家笔记主题深金褐（原紫色），透明轨道 */
   .nb-sec{font-weight:800; color:#6b4a1e; margin:8px 0 4px; letter-spacing:.5px;}
+  /* v2.67.0 标记分页（5 块独立标记板）：页码钮走玩家笔记主题（浅黄底/深金字，选中金底白字） */
+  .nb-pgrow{display:flex; align-items:center; gap:6px; margin:2px 0 6px;}
+  .nb-pgrow .nb-pg{width:30px; height:26px; border-radius:8px; font-weight:800; font-size:calc(1.02 * var(--sw) / 100); border:1.5px solid rgba(122,83,32,.4); background:rgba(255,252,244,.85); color:#6b4a1e; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,.15);}
+  .nb-pgrow .nb-pg:hover{filter:brightness(.95);}
+  .nb-pgrow .nb-pg.on{background:rgba(184,134,11,.85); color:#fff; border-color:rgba(122,83,32,.7); box-shadow:0 0 6px rgba(184,134,11,.5);}
+  .nb-pgrow .nb-pghint{font-size:calc(.88 * var(--sw) / 100); color:#8a6b3a;}
   .nbtok{display:inline-flex; align-items:center; gap:4px; font-size:calc(1.02 * var(--sw) / 100); font-weight:700; padding:3px 9px; border-radius:14px; margin:0 5px 5px 0;
     border:1.5px solid rgba(122,83,32,.4); background:rgba(255,252,244,.85); color:#3a2a12; cursor:grab; user-select:none; white-space:nowrap; box-shadow:0 1px 2px rgba(0,0,0,.15);}   /* 与魔典/角色设置的 .rchip 一致：同字号/字重、彩色边框、阴影 */
   .nbtok:hover{filter:brightness(.95); transform:translateY(-1px);}
@@ -1423,6 +1429,10 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.67.0', d:'2026-08-29', items:[
+    '玩家笔记「标记」页新增 5 个分页（页码 1~5）：每一页都是一块独立的座位标记板，身份/阵营标签、状态标记、划掉状态各页互不影响——盘多条逻辑线时开几页分别摆，不用来回拖拽重摆了。当前页码会记住，换设备也保留。',
+    '座位备注（点座位写的文字）跨页共享，不随分页切换；「清除所有标记」相应改名「清除本页标记」，只清当前页的标记与划掉状态，不再清座位备注。',
+  ]},
   {v:'v2.66.0', d:'2026-08-29', items:[
     '玩家笔记「标记」页新增一排阵营标签：善良、邪恶、镇民、外来者、爪牙、恶魔。用法与身份标签一样——拖到座位上记录你的阵营判断，单击划掉，也能像身份一样在座位间转移、交换或拖到空白处移除。阵营和身份共用同一个位置：先标了阵营，之后确定身份把角色拖上去就会替换掉；悬停座位时显示为【阵营】邪恶这样的格式。',
   ]},
@@ -4831,7 +4841,7 @@ load(); render();
   window._stClearPlayerNotes=function(){ if(role!=='st'||!curGid) return;
     db.ref('games/'+curGid+'/players').once('value').then(s=>{ const v=s.val()||{}; const up={};
       Object.keys(v).forEach(uid=>{ const b='games/'+curGid+'/players/'+uid+'/';
-        up[b+'gameInfo']=null; up[b+'seats']=null; up[b+'crossed']=null; up[b+'night']=null; up[b+'nightReply']=null; up[b+'spyGrim']=null; up[b+'slayerReq']=null; up[b+'slayerResult']=null; up[b+'slayerArmed']=null; up[b+'masterSoft']=null; up[b+'chatReq']=null; up[b+'chatResp']=null; up[b+'chatLeave']=null; up[b+'chatJoin']=null; up[b+'chatCancel']=null; up[b+'chatAck']=null; });
+        up[b+'gameInfo']=null; up[b+'seats']=null; up[b+'crossed']=null; up[b+'pages']=null; up[b+'pg']=null; up[b+'night']=null; up[b+'nightReply']=null; up[b+'spyGrim']=null; up[b+'slayerReq']=null; up[b+'slayerResult']=null; up[b+'slayerArmed']=null; up[b+'masterSoft']=null; up[b+'chatReq']=null; up[b+'chatResp']=null; up[b+'chatLeave']=null; up[b+'chatJoin']=null; up[b+'chatCancel']=null; up[b+'chatAck']=null; });
       if(Object.keys(up).length) db.ref().update(up).catch(()=>{});
     }).catch(()=>{}); try{ _chatReset(); }catch(e){} };
   /* 说书人重置角色：把公开状态（座位死亡/死因、胜负横幅、提名、处决/击杀动画、举手、指针）一并清零，让大厅与玩家笔记同步复位 */
@@ -5745,7 +5755,7 @@ load(); render();
     /* 私聊分组：把成员拉到发起人身边聚拢，非成员保持环序；posOf: 座位号 -> 显示位 k */
     const _chOrder=window.chatOrderView(N, pubChats()); const posOf={}; _chOrder.forEach((o,k)=>{ posOf[o.seat]=k; });   // ③ 视图开关
     for(let i=0;i<N;i++){ const ps=seats[i]||{}, _k=(posOf[i]!=null?posOf[i]:i), ang=-Math.PI/2+_k*2*Math.PI/N, x=cx+R*Math.cos(ang), y=cy+R*Math.sin(ang);
-      const mine=(mode==='notes'&&S&&S.seats)?(S.seats[i]||{}):null, dead=!!ps.dead;
+      const mine=(mode==='notes'&&S&&S.seats)?(_pgMark(i)||{}):null, dead=!!ps.dead;   /* v2.67.0：身份/状态标记按当前标记页取 */
       const _csel=(window._chatSelMode&&window._chatSel&&_chatSel.has(i));
       const s=document.createElement('div'); s.className='seat filled'+(dead?' dead hascause':'')+(_csel?' chatsel':''); s.dataset.seat=i; s.style.cssText='left:'+x+'px;top:'+y+'px;width:'+seatD+'px;height:'+seatD+'px';
       let h='<div class="num" style="width:'+numD+'px;height:'+numD+'px;font-size:'+numF+'px">'+(i+1)+'</div>';
@@ -5776,7 +5786,7 @@ load(); render();
         else s.removeAttribute('data-drag');
         /* 点自己加的状态标记 → 移除（死亡除外） */
         s.querySelectorAll('.shieldbadge[data-mk]').forEach(bel=>{ const k=bel.dataset.mk; if(k==='dead') return;
-          bel.addEventListener('click',e=>{ e.stopPropagation(); ensureS(); const st=S.seats[i]; if(!st||!st.status) return; const ix=st.status.indexOf(k); if(ix>=0){ st.status.splice(ix,1); saveNotes(); drawSeats(); } }); });
+          bel.addEventListener('click',e=>{ e.stopPropagation(); const st=_pgMark(i); if(!st||!st.status) return; const ix=st.status.indexOf(k); if(ix>=0){ st.status.splice(ix,1); saveNotes(); drawSeats(); } }); });
       }
       zone.appendChild(s);
     }
@@ -5826,8 +5836,9 @@ load(); render();
     if(_nbSeatPage){ c.innerHTML=_rb+seatNotesPageHTML(); return; }
     if(nbTab==='mark') c.innerHTML=_rb+markTabHTML(); else if(nbTab==='nom') c.innerHTML=_rb+nomLogHTML(); else c.innerHTML=_rb+refHTML();
   }
-  function markTabHTML(){ ensureS(); const crossed=new Set(S.crossed||[]);
-    let h='<div class="nb-sec">状态标记 · 拖到座位上添加；单击划掉</div><div>';
+  function markTabHTML(){ ensureS(); const crossed=new Set(_pgCrossed());
+    let h='<div class="nb-pgrow">'+[1,2,3,4,5].map(p=>'<button class="nb-pg'+(p===S.pg?' on':'')+'" onclick="_nbPg('+p+')">'+p+'</button>').join('')+'<span class="nb-pghint">5 块独立标记板 · 盘不同逻辑线</span></div>';
+    h+='<div class="nb-sec">状态标记 · 拖到座位上添加；单击划掉</div><div>';
     h+=STAT_ORDER.map(k=>{ const b=BADGE[k]; const gc=(MARK[k]&&MARK[k][3])||'rgba(122,83,32,.4)'; const ic=MARK[k]?'<img src="'+MARK[k][1]+'" draggable="false" style="width:17px;height:17px;object-fit:contain;vertical-align:middle;margin-right:2px">':'';
       return '<span class="nbtok'+(crossed.has('stat:'+k)?' crossed':'')+'" data-drag="pstat:'+k+'" onclick="_nbCross(\'stat:'+k+'\')" style="border-color:'+gc+'">'+ic+b.t+'</span>'; }).join('')+'</div>';
     h+='<div class="nb-sec">阵营标记 · 拖到座位上记录阵营判断；单击划掉</div><div>';
@@ -5837,7 +5848,7 @@ load(); render();
     const locked=new Set(pub.locked||[]); const rs=ROLES.filter(r=>!locked.has(r.id)).map(r=>r.id);
     h+=rs.map(id=>{ const r=RMAP[id]; if(!r) return '';
       return '<span class="nbtok'+(crossed.has('role:'+id)?' crossed':'')+'" data-drag="prole:'+id+'" onclick="_nbCross(\'role:'+id+'\')" style="border-color:'+TEAMC[r.team]+';color:'+TEAMC[r.team]+'">'+r.name+'</span>'; }).join('')+'</div>';
-    h+='<button class="nb-clearall" onclick="_nbClearAll(this)">清除所有标记</button>';
+    h+='<button class="nb-clearall" onclick="_nbClearAll(this)">清除本页标记</button>';
     /* 私聊分组：邀请改到左下角图标(#chatFab)发起、退出/加入改到座位圈按钮，笔记页不再放按钮 */
     return h;
   }
@@ -5862,21 +5873,21 @@ load(); render();
   /* 拖拽落点路由（玩家笔记）：由统一指针拖拽系统在放开时调用（座位=添加身份/状态；拖出=删除座位身份） */
   window._plTouchDrop=function(idx, payload){ if(role!=='player'&&mode!=='notes'){} ensureS();
     if(payload.indexOf('seatrole:')===0){ const from=+payload.slice(9);
-      const sf=S.seats[from]; if(!sf||!sf.role) return;
+      const sf=_pgMark(from); if(!sf||!sf.role) return;        // v2.67.0：只动当前标记页
       if(idx===from) return;                                   // 拖回原座位 = 不动
       if(idx<0){ sf.role=''; saveNotes(); drawSeats(); return; }   // 拖到名册/空白 = 移除
-      const stt=S.seats[idx]; if(!stt) return;
+      const stt=_pgMark(idx); if(!stt) return;
       const a=sf.role, b=stt.role||'';
       stt.role=a; sf.role=b;                                   // b 为空 → 转移；b 有身份 → 交换
       saveNotes(); drawSeats(); return; }
-    if(idx<0) return; const st=S.seats[idx]; if(!st) return;
+    if(idx<0) return; const st=_pgMark(idx); if(!st) return;
     if(payload.indexOf('prole:')===0){ st.role=payload.slice(6); saveNotes(); drawSeats(); }
     else if(payload.indexOf('pstat:')===0){ const k=payload.slice(6); if(!st.status) st.status=[]; if(st.status.indexOf(k)<0){ st.status.push(k); saveNotes(); drawSeats(); } } };
-  window._nbCross=function(tok){ ensureS(); if(!Array.isArray(S.crossed)) S.crossed=[]; const ix=S.crossed.indexOf(tok); if(ix>=0) S.crossed.splice(ix,1); else S.crossed.push(tok); saveNotes(); renderNotes(); };   // 单击划掉/恢复
+  window._nbCross=function(tok){ const cr=_pgCrossed(); const ix=cr.indexOf(tok); if(ix>=0) cr.splice(ix,1); else cr.push(tok); saveNotes(); renderNotes(); };   // 单击划掉/恢复（v2.67.0：按当前标记页记）
   window._nbClearAll=function(btn){ ensureS();
-    if(btn && !btn.classList.contains('confirm')){ btn.classList.add('confirm'); btn.textContent='确认清除？再点一次'; setTimeout(function(){ try{ btn.classList.remove('confirm'); btn.textContent='清除所有标记'; }catch(_){}} ,2500); return; }
-    (S.seats||[]).forEach(st=>{ if(st){ st.role=''; st.status=[]; st.note=''; } });   // 清除所有座位的身份、状态标记与座位备注
-    S.crossed=[]; saveNotes(); renderNotes();
+    if(btn && !btn.classList.contains('confirm')){ btn.classList.add('confirm'); btn.textContent='确认清除本页？再点一次'; setTimeout(function(){ try{ btn.classList.remove('confirm'); btn.textContent='清除本页标记'; }catch(_){}} ,2500); return; }
+    (_pgMarkArr()||[]).forEach(st=>{ if(st){ st.role=''; st.status=[]; } });   // v2.67.0：只清当前标记页的身份/阵营/状态标记与划掉状态；座位备注跨页共享，不动
+    const _cr=_pgCrossed(); _cr.length=0; saveNotes(); renderNotes(); drawSeats();
   };
   let _pnoteSeat=-1, _noteSaveT=null;
   function seatTap(i, sx, sy, sd){
@@ -5908,8 +5919,8 @@ load(); render();
   function closePnote(){ const layer=document.getElementById('bubbleLayer'); if(layer) layer.innerHTML='';
     if(_pnoteSeat>=0){ _pnoteSeat=-1; clearTimeout(_noteSaveT); saveNotes(); if(mode==='notes') renderNotes(); } }
   /* 悬停框：复用魔典 #hoverBox，出现在座位圈正中央，显示身份猜测/状态/备注 */
-  function showSeatNote(i){ if(_pnoteSeat===i) return; ensureS(); const st=S.seats[i]||{};
-    const note=st.note||'', rid=st.role, marks=(st.status||[]);
+  function showSeatNote(i){ if(_pnoteSeat===i) return; ensureS(); const st=S.seats[i]||{}, mk=_pgMark(i)||{};
+    const note=st.note||'', rid=mk.role, marks=(mk.status||[]);   /* v2.67.0：身份/状态按当前标记页，备注跨页共享 */
     if(!note && !rid && !marks.length){ hideSeatNote(); return; }
     let html='<div class="hb-role">'+(i+1)+' · '+(E(pname(i))||'')+'</div>';
     { const _vi=vroleInfo(rid); if(_vi) html+='<div class="hb-ab"><span style="color:'+_vi.color+'">【'+(_vi.team?TEAMLABEL[_vi.team]:'阵营')+'】</span> '+_vi.name+'</div>'; }   /* v2.66.0：阵营标签在悬停框显示为【阵营】xx */
@@ -5921,7 +5932,17 @@ load(); render();
     box.style.width=Math.round(Math.min(SW*0.22,260))+'px'; box.classList.add('on');
   }
   function hideSeatNote(){ const b=document.getElementById('hoverBox'); if(b) b.classList.remove('on'); }
-  function ensureS(){ const n=(pub&&pub.count)||0; if(!S) S={seats:[],v:1}; if(!S.seats) S.seats=[]; for(let i=0;i<n;i++){ if(!S.seats[i]) S.seats[i]={role:'',status:[],note:''}; if(!S.seats[i].status) S.seats[i].status=[]; } }
+  function ensureS(){ const n=(pub&&pub.count)||0; if(!S) S={seats:[],v:1}; if(!S.seats) S.seats=[]; for(let i=0;i<n;i++){ if(!S.seats[i]) S.seats[i]={role:'',status:[],note:''}; if(!S.seats[i].status) S.seats[i].status=[]; }
+    /* v2.67.0 标记分页：第1页=老结构(S.seats 的 role/status + S.crossed)，第2~5页在 S.pages.p2~p5（字符串键，避免 firebase 把数字键对象转成数组）；座位备注只存在 S.seats[i].note，跨页共享 */
+    if(!(S.pg>=1&&S.pg<=5)) S.pg=1;
+    if(!S.pages||typeof S.pages!=='object') S.pages={};
+    for(let p=2;p<=5;p++){ const k='p'+p; if(!S.pages[k]||typeof S.pages[k]!=='object') S.pages[k]={seats:[],crossed:[]}; const ps=S.pages[k]; if(!ps.seats) ps.seats=[]; if(!Array.isArray(ps.crossed)) ps.crossed=[];
+      for(let i=0;i<n;i++){ if(!ps.seats[i]) ps.seats[i]={role:'',status:[]}; if(!ps.seats[i].status) ps.seats[i].status=[]; } } }
+  /* v2.67.0 当前标记页的读取口：任何读写「座位身份/阵营/状态标记、划掉状态」的地方一律走这三个口，别直接摸 S.seats/S.crossed */
+  function _pgMark(i){ ensureS(); const pg=(S.pg>=1&&S.pg<=5)?S.pg:1; return pg===1?S.seats[i]:S.pages['p'+pg].seats[i]; }
+  function _pgMarkArr(){ ensureS(); const pg=(S.pg>=1&&S.pg<=5)?S.pg:1; return pg===1?S.seats:S.pages['p'+pg].seats; }
+  function _pgCrossed(){ ensureS(); const pg=(S.pg>=1&&S.pg<=5)?S.pg:1; if(pg===1){ if(!Array.isArray(S.crossed)) S.crossed=[]; return S.crossed; } return S.pages['p'+pg].crossed; }
+  window._nbPg=function(n){ ensureS(); n=+n; if(!(n>=1&&n<=5)||S.pg===n) return; S.pg=n; saveNotes(); renderNotes(); drawSeats(); };
   function saveNotes(){ if(notesRef&&S) notesRef.update(S).catch(e=>toast('保存失败：'+(e.code||''))); }   // 用 update：不覆盖说书人写入的 role 字段
 
   /* ---------- 说书人：从本地状态构建公开数据 ---------- */
