@@ -1418,6 +1418,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.65.3', d:'2026-08-29', items:[
+    '修复宣告胜负后点「结束本局」，裁决提醒又弹出来一次的问题：结束本局后已回到配置期，但场上还留着这局的死亡状态，系统误以为又检测到了胜负条件。现在配置期不再做胜负检测，提醒只在对局进行中出现。',
+  ]},
   {v:'v2.65.2', d:'2026-08-29', items:[
     '修复对局记录（永久战绩）丢失的 bug：说书人宣告胜负时战绩会正常写入，但随后点「结束本局」准备下一局时，会被误当成「撤回误判」而从记录里删掉——所以每局打完记录都会消失（8 月 22 日晚的四局就是这么丢的，已删的记录无法找回）。现在「结束本局」会封存已写入的战绩：宣告即入档，只有在结束本局前主动撤回宣告（或改判/复活导致胜负条件消失）才会删除对应记录。「重置角色」同样修正。',
   ]},
@@ -2778,7 +2781,7 @@ function checkWin(){
 function winSig(w){ return w ? (w.w+'|'+w.r) : ''; }
 const _WJ_ICON='<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#e9c46a" stroke-width="2.2" stroke-linecap="round"><path d="M13 16 H51"/><path d="M32 16 V40"/><path d="M22 40 H42"/><path d="M13 16 V23"/><path d="M51 16 V23"/><path d="M7 25 A 6 6 0 0 0 19 25" fill="rgba(233,196,106,.16)"/><path d="M45 25 A 6 6 0 0 0 57 25" fill="rgba(233,196,106,.16)"/></g><circle cx="32" cy="13" r="2.8" fill="#e9c46a"/><text x="32" y="58" text-anchor="middle" font-family="system-ui,sans-serif" font-size="15" font-weight="700" fill="#e9c46a">裁决</text></svg>';
 function renderWin(){
-  const wi=document.getElementById("winIcon"); const win=checkWin(); const sig=winSig(win);
+  const wi=document.getElementById("winIcon"); const win=window.__gameOn?checkWin():null; const sig=winSig(win);   /* v2.65.3：配置期（结束本局后）不再检测胜负——否则场上残留的死亡状态会让 checkWin 继续成立，__winPending 被重置、「稍后」去重又被 stEndGame 清空，裁决提醒会再弹一次 */
   if(!win){                                    // 条件不再满足（改判/复活）→ 撤回已宣告的结果
     window.__winPending=null;
     if(window.__winApproved){ window.__winApproved=''; try{ save(); }catch(e){} }
