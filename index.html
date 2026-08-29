@@ -1312,6 +1312,10 @@ const SCRIPTS={
 window.__scriptId='tb';
 function scriptRoles(sid){ const sc=SCRIPTS[sid]||SCRIPTS.tb; const set=new Set(sc.roles); return ROLES.filter(r=>set.has(r.id)); }
 function curRoles(){ return scriptRoles(window.__scriptId||'tb'); }
+/* v2.68.2 大厅/主横幅标题=当前剧本名：说书人按 __scriptId，玩家/未登录按 pub 镜像 __pubScript（bindPub 里维护） */
+function scriptTitle(){ let sid=window.__scriptId||'tb';
+  try{ const r=window.__botcRole||''; if(r!=='st' && window.__pubScript) sid=window.__pubScript; }catch(e){}
+  return (SCRIPTS[sid]||SCRIPTS.tb).name; }
 /* 概览页角色详尽介绍：功能/何时行动/中毒醉酒/与间谍陌客交互/推荐玩法 */
 const ROLE_DETAIL={
  washerwoman:{fn:"首个夜晚，说书人告诉你：某两名玩家中有一个是某个特定的镇民角色。你由此拿到一条真实的好人线索。",act:"仅首夜行动一次，之后不再获得新信息。",sick:"若你中毒/醉酒（或你其实是酒鬼），这条信息可能是假的——指的人或角色都可能被说书人改错。",sri:"间谍可能被说书人「注册成镇民」展示给你（看着像好人，实为爪牙）；陌客不会作为镇民出现在你的信息里。",tip:"记住这两人里必有一个是被告知的镇民角色；结合他人信息缩小范围，公开时机要谨慎，别过早成为恶魔目标。"},
@@ -1529,6 +1533,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.68.2', d:'2026-08-29', items:[
+    '大厅主标题跟随当前剧本：切到黯月初升后，说书人端与玩家端的大厅横幅都显示「黯月初升」，切回则显示「暗流涌动」。魔典/玩家笔记/日志等页面的专属标题不变。',
+  ]},
   {v:'v2.68.1', d:'2026-08-29', items:[
     '界面精简：角色设置页剧本切换那排去掉「📜 剧本」标题和「夜间为手动模式」提示，只留两个剧本按钮；玩家笔记概览「本局配置」里的剧本名去掉 📜 图标。',
   ]},
@@ -3702,7 +3709,7 @@ function onStepCheck(sid,on){ nightChecks[night+":"+sid]=on; if(sid[0]==="_") re
 function applyView(){
   const stage=document.getElementById("stage");
   stage.classList.toggle("grim", view==="grim");
-  document.getElementById("bannerTitle").textContent = view==="grim" ? (gtab==="log" ? "说书人日志" : "说书人魔典") : "暗流涌动";
+  document.getElementById("bannerTitle").textContent = view==="grim" ? (gtab==="log" ? "说书人日志" : "说书人魔典") : scriptTitle();   /* v2.68.2 标题=当前剧本名 */
   const vt=document.getElementById("viewToggle");
   vt.innerHTML = '<img src="assets/'+(view==="grim"?"book-open.png":"book-closed.png")+'" alt="">';
   vt.title = view==="grim" ? "返回座位图（合上魔典）" : "打开说书人魔典";
@@ -4444,7 +4451,7 @@ load(); render();
       if(role==='player'){ if(vt) vt.style.display='none'; try{ updateRoleCard(curGid, window.__myRole||''); }catch(e){} }   // 玩家：右上角改为本局角色卡（无卡则空），不再显示魔典图标
       else { if(vt){ vt.style.display=''; vt.innerHTML='<img src="assets/book-closed.png" alt="魔典">'; } try{ if(window._clearRoleCard) _clearRoleCard(); }catch(e){} }
       const stg=document.getElementById('stage'); if(stg) stg.classList.remove('grim');   // 访客(大厅/玩家)始终用酒馆背景，绝不用魔典暗背景
-      const bt=document.getElementById('bannerTitle'); if(bt) bt.textContent=(m==='notes'?'玩家笔记':'暗流涌动');
+      const bt=document.getElementById('bannerTitle'); if(bt) bt.textContent=(m==='notes'?'玩家笔记':scriptTitle());
       renderView(); }
   }
   window._gotoHall=function(){ setMode('hall'); };
@@ -4961,7 +4968,7 @@ load(); render();
   window._sfxStopWin=function(){ try{ if(_sfxWinEl){ _sfxWinEl.pause(); _sfxWinEl=null; } }catch(e){} };
 
   /* 说书人重置角色：清空当前局所有玩家的 role（玩家卡片淡出；开新局再下发重现） */
-  window._histReset=function(){ _histOn=false; document.body.classList.remove('hist-view'); const bt=document.getElementById('bannerTitle'); if(bt&&role==='st') bt.textContent='暗流涌动'; };
+  window._histReset=function(){ _histOn=false; document.body.classList.remove('hist-view'); const bt=document.getElementById('bannerTitle'); if(bt&&role==='st') bt.textContent=scriptTitle(); };
   window._stClearPlayerRoles=function(){ if(role!=='st'||!curGid) return;
     db.ref('games/'+curGid+'/players').once('value').then(s=>{ const v=s.val()||{}; const up={};
       Object.keys(v).forEach(uid=>{ up['games/'+curGid+'/players/'+uid+'/role']=null; up['games/'+curGid+'/players/'+uid+'/master']=null; up['games/'+curGid+'/players/'+uid+'/masterSoft']=null; });
@@ -4989,7 +4996,7 @@ load(); render();
   let _histOn=false, _histTabCur='list';
   window._toggleHist=function(){ if(role!=='st') return; _histOn=!_histOn;
     document.body.classList.toggle('hist-view', _histOn);
-    const bt=document.getElementById('bannerTitle'); if(bt) bt.textContent=_histOn?'旧局记录':'暗流涌动';
+    const bt=document.getElementById('bannerTitle'); if(bt) bt.textContent=_histOn?'旧局记录':scriptTitle();
     if(_histOn){ _renderHist(); try{ if(window._sfx) _sfx('inkwell'); }catch(e){} }   // 进入旧局记录：沙沙声
     else { try{ if(window._sfx) _sfx('pen-return'); }catch(e){} } };   // 回到大厅主界面：收笔声
   window._histTab=function(t){ _histTabCur=t; ['list','stats','score'].forEach(x=>{ const el=document.getElementById('ht-'+x); if(el) el.classList.toggle('on',x===t); }); _renderHist(); };
@@ -5069,6 +5076,8 @@ load(); render();
       window.__pubHasGame=!!(pub&&pub.count); window.__pubCount=(pub&&pub.count)||0;
       try{ document.body.classList.toggle('ph-night', !!(pub&&pub.count) && !(pub&&pub.phase==='day')); }catch(e){}   // ⑨ 昼夜背景：开局后按 phase 切换玩家端酒馆背景
       window.__stLogShared=!!(pub&&pub.stLog&&pub.stLog.h);   // ⑧ 说书人是否已分享日志
+      window.__pubScript=(pub&&pub.script)||'tb';   // v2.68.2 玩家端剧本镜像：大厅标题等按本局剧本显示
+      try{ if(role==='player'&&mode==='hall'){ const _bt=document.getElementById('bannerTitle'); if(_bt) _bt.textContent=scriptTitle(); } }catch(e){}
       window.__winJudgeHTML=(pub&&pub.winJudge&&pub.winJudge.h)||'';   // 说书人宣告后同步过来的裁决面板（玩家端只读）
       window.__winJudgeShared=!!window.__winJudgeHTML;
       try{ window._updateSeatViewFab(); window._updateStLogFab(); if(window._updateWinFab) window._updateWinFab(); }catch(e){}
