@@ -1274,8 +1274,44 @@ const ROLES=[
  {id:"scarletwoman",name:"红唇女郎",team:"min",ab:"存活≥5且恶魔死→你变恶魔。"},
  {id:"baron",name:"男爵",team:"min",ab:"配置多2外来者（外+2、镇-2）。"},
  {id:"imp",name:"小恶魔",team:"dem",ab:"每夜*选1人杀；自杀则1爪牙变小恶魔。"},
+ /* ===== 黯月初升 Bad Moon Rising（v2.68.0 数据换板；夜间为手动模式，无自动化） ===== */
+ {id:"grandmother",name:"祖母",team:"tf",ab:"首夜：得知一名孙辈及其角色；恶魔杀死孙辈→你也死。"},
+ {id:"sailor",name:"水手",team:"tf",ab:"每夜选1人：你或他喝醉到明晚；你清醒时不会死。"},
+ {id:"chambermaid",name:"侍女",team:"tf",ab:"每夜选2名存活玩家，得知其中今夜醒来的人数。"},
+ {id:"exorcist",name:"驱魔人",team:"tf",ab:"每夜*选1人；若是恶魔，恶魔今夜不醒、不行动。"},
+ {id:"innkeeper",name:"旅店老板",team:"tf",ab:"每夜*选2人：今夜不死，但其中1人喝醉到明晚。"},
+ {id:"gambler",name:"赌徒",team:"tf",ab:"每夜*选1人并猜其角色；猜错则你死。"},
+ {id:"gossip",name:"造谣者",team:"tf",ab:"每个白天可公开宣言一句；若为真，当晚有1人死。"},
+ {id:"courtier",name:"侍臣",team:"tf",ab:"每局1次，夜里选1个角色：其喝醉3天3夜。"},
+ {id:"professor",name:"教授",team:"tf",ab:"每局1次，夜里*选1名死者：若是镇民则复活。"},
+ {id:"minstrel",name:"吟游诗人",team:"tf",ab:"爪牙被处决后：次日其他所有人喝醉到黄昏。"},
+ {id:"tealady",name:"茶艺师",team:"tf",ab:"两侧存活邻座若都是好人：他们不会死。"},
+ {id:"pacifist",name:"和平主义者",team:"tf",ab:"好人被处决时可能不死（说书人裁定）。"},
+ {id:"fool",name:"弄臣",team:"tf",ab:"第一次将死时不死（每局1次）。"},
+ {id:"goon",name:"打手",team:"out",ab:"每夜第一个用能力选中你的玩家喝醉到明晚，你临时加入其阵营。"},
+ {id:"lunatic",name:"疯子",team:"out",ab:"自以为是恶魔；真恶魔知道你是谁并看你每晚的选择。"},
+ {id:"tinker",name:"修补匠",team:"out",ab:"你随时可能死亡（由说书人裁定）。"},
+ {id:"moonchild",name:"月之子",team:"out",ab:"得知自己死亡时选1人：若是好人，当晚死亡。"},
+ {id:"godfather",name:"教父",team:"min",ab:"首夜得知在场外来者；外来者白天死亡→当晚你额外杀1人。配置：外来者±1。"},
+ {id:"devilsadvocate",name:"魔鬼代言人",team:"min",ab:"每夜选1名存活玩家（不可连选）：其明天被处决不死。"},
+ {id:"assassin",name:"刺客",team:"min",ab:"每局1次，夜里*杀1人，无视一切保护。"},
+ {id:"mastermind",name:"主谋",team:"min",ab:"恶魔被处决后游戏多进行1天；若该天处决了人，被处决者阵营落败。"},
+ {id:"zombuul",name:"僵怖",team:"dem",ab:"每夜*若昨日无人死才醒来杀人；你第一次死亡时假死（看似死了，实际存活）。"},
+ {id:"pukka",name:"普卡",team:"dem",ab:"每夜选1人使其中毒；你上一个下毒的人此刻死去并恢复健康。"},
+ {id:"shabaloth",name:"沙巴洛斯",team:"dem",ab:"每夜*选2人杀死；可能反刍复活一名前晚被它杀的人。"},
+ {id:"po",name:"波",team:"dem",ab:"每夜*可选1人杀或不杀；若前夜没杀，本夜连杀3人。"},
 ];
 const RMAP={}; ROLES.forEach(r=>RMAP[r.id]=r);
+/* ===== 剧本（板子）层 v2.68.0：ROLES/RMAP 是全角色池，列表类 UI 一律经 curRoles()/scriptRoles() 过滤当前剧本 =====
+   说书人端剧本 = window.__scriptId（随 save/存档持久化）；玩家端剧本 = pub.script（buildPublic/openGame 同步）。
+   黯月初升目前只有「数据层」：角色/夜序/详情齐全，夜间面板走手动勾选（无自动化、无卡图，缺图走占位兜底）。 */
+const SCRIPTS={
+ tb:{name:"暗流涌动", roles:["washerwoman","librarian","investigator","chef","empath","fortuneteller","undertaker","monk","ravenkeeper","virgin","slayer","soldier","mayor","butler","drunk","recluse","saint","poisoner","spy","scarletwoman","baron","imp"]},
+ bmr:{name:"黯月初升", roles:["grandmother","sailor","chambermaid","exorcist","innkeeper","gambler","gossip","courtier","professor","minstrel","tealady","pacifist","fool","goon","lunatic","tinker","moonchild","godfather","devilsadvocate","assassin","mastermind","zombuul","pukka","shabaloth","po"]},
+};
+window.__scriptId='tb';
+function scriptRoles(sid){ const sc=SCRIPTS[sid]||SCRIPTS.tb; const set=new Set(sc.roles); return ROLES.filter(r=>set.has(r.id)); }
+function curRoles(){ return scriptRoles(window.__scriptId||'tb'); }
 /* 概览页角色详尽介绍：功能/何时行动/中毒醉酒/与间谍陌客交互/推荐玩法 */
 const ROLE_DETAIL={
  washerwoman:{fn:"首个夜晚，说书人告诉你：某两名玩家中有一个是某个特定的镇民角色。你由此拿到一条真实的好人线索。",act:"仅首夜行动一次，之后不再获得新信息。",sick:"若你中毒/醉酒（或你其实是酒鬼），这条信息可能是假的——指的人或角色都可能被说书人改错。",sri:"间谍可能被说书人「注册成镇民」展示给你（看着像好人，实为爪牙）；陌客不会作为镇民出现在你的信息里。",tip:"记住这两人里必有一个是被告知的镇民角色；结合他人信息缩小范围，公开时机要谨慎，别过早成为恶魔目标。"},
@@ -1299,7 +1335,33 @@ const ROLE_DETAIL={
  spy:{fn:"每个夜晚你可以查看说书人的「魔典」（几乎知道所有人身份）；而且你可能被各种能力「注册成好人」，甚至当作镇民或外来者。",act:"每夜可看魔典；注册效果被动触发。",sick:"你是邪恶，通常不会被中毒。",sri:"对调查员你可能作为爪牙出现、也可能被注册成好人而隐身；对洗衣妇可注册成镇民、对图管可注册成外来者、对占卜师不会显示为恶魔。",tip:"你掌握海量信息，关键是「用而不露」——伪装成某个好人角色、适度放料误导好人，别因知道太多而露馅。"},
  scarletwoman:{fn:"当场上存活人数 ≥5、且恶魔死亡的那一刻，你立即变成新的小恶魔。",act:"恶魔死亡瞬间触发（需满足人数条件）。",sick:"中毒/醉酒时不会接任。",sri:"与间谍/陌客无直接交互。",tip:"你是恶魔的「保险」。前期藏好、别过早被处决；一旦接任，就切换到恶魔的生存与击杀思路。"},
  baron:{fn:"你的存在改变配置：外来者比常规多 2、镇民少 2（更多外来者=更多酒鬼/圣徒等干扰）。",act:"配置生效，无夜间能力。",sick:"无主动能力。",sri:"无直接交互。",tip:"你让好人混入更多「半废」的外来者（尤其酒鬼）间接帮邪恶。自身没能力，藏好身份、混入好人讨论即可。"},
- imp:{fn:"每夜*选 1 人杀死；若你选择杀自己（自杀），则由说书人指定一名爪牙变成新的小恶魔（星传）。",act:"从第二个夜晚起每夜击杀（首夜不杀）。",sick:"中毒/醉酒时你的击杀无效，当晚无人因你而死。",sri:"士兵杀不动、被僧侣守护的目标杀不动；镇长可能让别人代你选中的目标而死。",tip:"你是邪恶核心。先杀威胁大的好人；必要时用自杀星传把身份转移给爪牙，躲避处决/猎手。小心被占卜、守鸦人锁定。"}
+ imp:{fn:"每夜*选 1 人杀死；若你选择杀自己（自杀），则由说书人指定一名爪牙变成新的小恶魔（星传）。",act:"从第二个夜晚起每夜击杀（首夜不杀）。",sick:"中毒/醉酒时你的击杀无效，当晚无人因你而死。",sri:"士兵杀不动、被僧侣守护的目标杀不动；镇长可能让别人代你选中的目标而死。",tip:"你是邪恶核心。先杀威胁大的好人；必要时用自杀星传把身份转移给爪牙，躲避处决/猎手。小心被占卜、守鸦人锁定。"},
+ /* ===== 黯月初升（v2.68.0）。sri 字段在非暗流涌动角色上显示为「特殊交互」 ===== */
+ grandmother:{fn:"首夜得知一名好人玩家（孙辈）及其真实角色。若恶魔在夜里杀死了孙辈，你也随之死亡。",act:"首夜获知孙辈；之后每当孙辈被恶魔杀死时一同死亡。",sick:"中毒/醉酒时得知的孙辈信息可能是假的；孙辈被杀时你可能不死（说书人裁定）。",sri:"「祖孙同亡」本身就是强信息：两人同夜死亡强烈暗示恶魔刀了孙辈。",tip:"孙辈是你可以完全信任的人。但公开孙辈会给恶魔递刀——一刀双杀。何时公开是你最大的抉择。"},
+ sailor:{fn:"每夜选 1 名玩家：你或他其中一人喝醉到明晚（说书人决定谁醉）。你清醒时不会死亡。",act:"每夜（含首夜）。",sick:"你自己喝醉/中毒时「不会死」的保护失效。",sri:"「清醒时不死」意味着恶魔想杀你得先让你醉——你夜里点到恶魔时，说书人常让恶魔那侧醉。",tip:"你近乎不死，适合冲在前面吸引处决试探。但你可能随时是醉的，自己的见闻别太当真。"},
+ chambermaid:{fn:"每夜选 2 名存活玩家，得知其中今夜因自身能力醒来的人数（0/1/2）。",act:"每夜（含首夜），在夜序最后行动。",sick:"中毒/醉酒时数字可能是假的。",sri:"恶魔每夜必醒、多数爪牙不常醒——「醒来数」能高效区分身份类型。",tip:"本板最强信息角色之一。围绕可疑目标反复测「醒没醒」，配合夜序表能卡出身份范围。"},
+ exorcist:{fn:"每夜*选 1 名玩家：若他是恶魔，恶魔今夜不醒、不能行动（今夜不刀人）。",act:"第二夜起每夜。",sick:"中毒/醉酒时驱魔无效，恶魔照常行动。",sri:"点中恶魔的那夜无人死亡——「空夜」是你的确认信号；但旅店老板/茶艺师类保护也会造成空夜，别急着下结论。",tip:"轮流压制嫌疑人，观察哪晚无人死。点中时恶魔知道自己被驱魔，你会立刻成为刀下目标。"},
+ innkeeper:{fn:"每夜*选 2 名玩家：他们今夜不会死，但其中 1 人喝醉到明晚（说书人决定谁醉）。",act:"第二夜起每夜。",sick:"中毒/醉酒时保护失效（醉酒是否照发由说书人裁定）。",sri:"保护造成的「空夜」会与驱魔人的效果混淆，推理时注意区分来源。",tip:"保人神器，但每晚必然制造一个醉汉——被你保护的信息角色当晚信息不可信，选人要权衡。"},
+ gambler:{fn:"每夜*选 1 名玩家并猜测其角色：猜错你立即死亡，猜对无事发生。",act:"第二夜起每夜。",sick:"中毒/醉酒时即使猜对也可能死、猜错也可能不死（说书人裁定）。",sri:"你的死活本身是全场信息：赌徒暴毙 = 他昨晚猜错了那个人的身份。",tip:"高风险验证器。用来验最关键的身份宣称；也可以故意赌一个你确信的好人角色来自证。"},
+ gossip:{fn:"每个白天你可以公开做一次宣言；若宣言为真，当晚有 1 名玩家死亡（说书人选择）。",act:"白天公开宣言，当夜结算。",sick:"中毒/醉酒时宣言即使为真也不触发死亡。",sri:"你造成的额外死亡会和恶魔刀混在一起——夜里死两人常意味着造谣者说中了。",tip:"把宣言当真假检测器：内容选你想验证的事。代价是死人，尽量设计成为真时对好人损失最小。"},
+ courtier:{fn:"每局 1 次，夜里指定 1 个角色（报角色名，不是选人）：该角色喝醉 3 天 3 夜。",act:"任意一夜发动，一局一次。",sick:"发动当刻中毒/醉酒则无效（说书人裁定是否耗掉次数）。",sri:"灌醉恶魔 = 恶魔连续 3 夜杀人无效——本板好人最强的单点爆发之一。",tip:"憋到基本锁定恶魔是什么再放。报的是角色不是人，所以要推的是「场上有什么」。"},
+ professor:{fn:"每局 1 次，夜里*选 1 名死亡玩家：若他是镇民，复活他。",act:"第二夜起任意一夜，一局一次。",sick:"发动当刻中毒/醉酒则复活失败（说书人裁定是否耗掉次数）。",sri:"复活的镇民保留身份与能力，等于把恶魔的一刀作废并带回一份存活证词。",tip:"复活已验明正身的强镇民（比如侍女）收益最大；选到外来者/邪恶不会复活，本身也是一次验证。"},
+ minstrel:{fn:"当爪牙被处决后：次日所有其他玩家喝醉，直到黄昏。",act:"被动触发，无需操作。",sick:"你自己中毒/醉酒时不触发。",sri:"全场宿醉那天的一切信息都不可信——包括信息角色当天/当晚的所得。",tip:"处决爪牙前全场要有预期：第二天信息全废。邪恶也会故意送爪牙上断头台来洗信息。"},
+ tealady:{fn:"你两侧的存活邻座若都是好人：他们俩不会死亡（处决也杀不死）。",act:"持续被动。",sick:"中毒/醉酒时保护失效。",sri:"「处决没死」是极强的公开信号：几乎锁定茶艺师邻座且两侧全好。",tip:"你自己不受保护。邻座一直杀不死可以公开做局势证明；邪恶则会想办法换座或杀你破坏条件。"},
+ pacifist:{fn:"好人玩家被处决时，可能不死（是否生效由说书人每次裁定）。",act:"持续被动。",sick:"中毒/醉酒时不生效。",sri:"「处决好人没死」与茶艺师、魔鬼代言人的效果外观相同，注意区分来源。",tip:"你给好人阵营加了容错：嫌疑人敢上断头台自证。但生效不稳定，别把命押在必然免死上。"},
+ fool:{fn:"你第一次将要死亡时不死（每局仅 1 次，处决/夜杀都算）。",act:"被动触发一次。",sick:"触发当刻中毒/醉酒则照死。",sri:"「挨刀没死/处决没死」之后你的免死已用完，之后与常人无异。",tip:"第一条命用来大胆自证或吸刀；用掉之后立刻改打法——没有第二次了。"},
+ goon:{fn:"每夜第一个用能力选中你的玩家喝醉到明晚，且你临时加入他的阵营直到黄昏。",act:"被动触发。",sick:"你中毒/醉酒时不触发。",sri:"恶魔点你刀会失效且自己醉、投毒者点你把自己灌醉——你是全场夜间能力的「陷阱」。",tip:"你会频繁误伤好人能力（僧侣类守你=他醉）。「谁的能力莫名失灵」这条线索往往指向你的位置。"},
+ lunatic:{fn:"你以为自己是恶魔并每夜「刀人」，但你其实是好人外来者；真恶魔知道你是谁，并能看到你的选择。",act:"每夜按恶魔流程行动（无实际效果）。",sick:"你本就没有真实能力。",sri:"真恶魔可以跟随你的选择下刀，让你的「击杀」看似生效；你收到的爪牙与伪装信息全是编的。",tip:"如果你的「击杀」时灵时不灵、爪牙对不上号，要怀疑自己是疯子，尽快向好人坦白换信任。"},
+ tinker:{fn:"你随时可能死亡（时机由说书人决定，白天黑夜都可能）。",act:"无主动操作。",sick:"中毒/醉酒时通常不会死于此能力（说书人裁定）。",sri:"你的死不需要凶手——恶魔可以借你的暴毙掩护真实刀口，好人也无法从你的死推凶。",tip:"你的死亡没有信息量，活着时多做贡献，心态放平。"},
+ moonchild:{fn:"当你得知自己死亡时，选择 1 名玩家：若他是好人，他当晚死亡。",act:"死亡时触发一次。",sick:"死亡当刻中毒/醉酒则不触发。",sri:"你是好人阵营的「地雷」：被处决时乱指会带走一个好人；指中邪恶则无事发生，也算一次死后验证。",tip:"死前想清楚指谁——指你最确信的邪恶玩家。好人处决你之前应该先商量好这一指。"},
+ godfather:{fn:"首夜得知在场的外来者角色；每当外来者在白天死亡，当晚你额外杀死 1 人。你在场时配置的外来者数量 +1 或 -1。",act:"首夜看外来者；外来者白天死亡的当晚出刀。",sick:"中毒/醉酒时额外击杀无效。",sri:"你知道全部外来者——可以精准冒充外来者宣称，或引导好人处决外来者换额外刀。",tip:"推动白天处决外来者（疯子/修补匠常被好人自己处决掉），每换一个你多一刀，节奏碾压。"},
+ devilsadvocate:{fn:"每夜选 1 名存活玩家（不能连续两晚同一人）：他明天被处决时不死。",act:"每夜（含首夜）。",sick:"中毒/醉酒时保护无效。",sri:"「处决没死」有三种来源：你、茶艺师、和平主义者——可故意给恶魔上保险并嫁祸给好人角色。",tip:"给恶魔或高嫌疑爪牙上保险，让处决扑空浪费一整天；偶尔保好人制造混乱也值。"},
+ assassin:{fn:"每局 1 次，夜里*杀死 1 名玩家，无视一切保护。",act:"第二夜起任意一夜，一局一次。",sick:"发动当刻中毒/醉酒则失败（说书人裁定是否耗掉次数）。",sri:"「不可能死的人死了」= 刺客出手——这也是你暴露存在的时刻，但目标已经带不走这条信息。",tip:"留给杀不死的关键目标：被保护的强镇民、水手、茶艺师邻座。一局一次别浪费。"},
+ mastermind:{fn:"若恶魔被处决而游戏本应结束，改为再多进行 1 天：若该天有人被处决，被处决者所在阵营落败。",act:"恶魔死后被动触发。",sick:"中毒/醉酒时不触发。",sri:"恶魔被处决后游戏没有立刻结算，就是主谋在场的信号——好人此刻处决任何好人都会直接输。",tip:"恶魔倒台后你还有翻盘机会：怂恿好人在加时日处决「最后的嫌疑人」，杀错即胜。"},
+ zombuul:{fn:"每夜*若昨天白天无人死亡，你才醒来杀 1 人。你第一次死亡时假死：全场以为你死了，你实际还活着。",act:"第二夜起，仅在前一日无人死亡时行动。",sick:"中毒/醉酒时击杀无效；假死状态由说书人维持。",sri:"「僵怖被处决之后夜里还在死人」是好人最重要的警报；假死后你仍按条件每晚醒来。",tip:"活用假死：被处决后装死躺平，让好人以为已经赢了。好人反制你的办法是控制每天都死人，让你永远不醒。"},
+ pukka:{fn:"每夜选 1 人使其中毒；你上一夜下毒的那个人此刻死去并恢复健康（死亡延迟一晚）。",act:"每夜（含首夜——首夜只下毒，第二夜起才开始死人）。",sick:"你中毒/醉酒的当晚不下新毒（延迟链由说书人裁定）。",sri:"你的受害者死前中毒一整天——那天他的能力和信息全是假的，死后才「恢复健康」。",tip:"毒着的人说的话是假的、死了才被信——用这一点污染关键信息角色的证词。好人要记住：普卡局里死者生前最后一天的话不可信。"},
+ shabaloth:{fn:"每夜*选 2 名玩家杀死；你可能在之后的夜里反刍复活一名前晚被你杀死的玩家。",act:"第二夜起每夜双杀。",sick:"中毒/醉酒时击杀无效。",sri:"被反刍复活的玩家真实存活、保留身份——「死而复生」既可能洗白他，也可能是你在演戏。",tip:"一晚双刀节奏极快，好人时间紧迫。反刍可以复活疯子/打手这类复活了也帮你的目标制造混乱。"},
+ po:{fn:"每夜*你可以选 1 人杀死，或选择不杀；若前一夜你没有杀人，本夜你连杀 3 人。",act:"第二夜起每夜。",sick:"中毒/醉酒时击杀无效（憋刀计数由说书人裁定）。",sri:"「昨夜无人死」之后就是三连杀高危夜，好人的保护能力应该全押这一晚。",tip:"憋刀换爆发：空一晚骗掉保护，再三连杀撕开局面。但好人数尸体就能读出你的节奏，别憋得太有规律。"}
 };
 window._openRoleInfo=function(id){
   var r=RMAP[id]; if(!r) return; var d=ROLE_DETAIL[id]||null;
@@ -1312,7 +1374,8 @@ window._openRoleInfo=function(id){
   var tName=TEAMLABEL[r.team], tCol=TEAMC[r.team];
   var html='<div class="ri-head"><div><b style="color:'+tCol+'">'+_e(r.name)+'</b><span class="ri-team" style="background:'+tCol+'">'+_e(tName)+'</span></div><span class="ri-x" onclick="window._closeRoleInfo()">✕</span></div><div class="ri-body">';
   if(!d){ html+='<div class="ri-sec"><div class="rc">'+_e(r.ab||'')+'</div></div>'; }
-  else { [['功能',d.fn],['何时行动',d.act],['中毒 / 醉酒时',d.sick],['与间谍 / 陌客的交互',d.sri],['推荐玩法',d.tip]].forEach(function(s){ if(!s[1]) return; html+='<div class="ri-sec"><div class="rt">'+s[0]+'</div><div class="rc">'+_e(s[1])+'</div></div>'; }); }
+  else { var sriLabel=(SCRIPTS.tb.roles.indexOf(id)>=0)?'与间谍 / 陌客的交互':'特殊交互';   /* v2.68.0：非暗流涌动角色没有间谍/陌客，标签改「特殊交互」 */
+    [['功能',d.fn],['何时行动',d.act],['中毒 / 醉酒时',d.sick],[sriLabel,d.sri],['推荐玩法',d.tip]].forEach(function(s){ if(!s[1]) return; html+='<div class="ri-sec"><div class="rt">'+s[0]+'</div><div class="rc">'+_e(s[1])+'</div></div>'; }); }
   html+='</div>'; box.innerHTML=html; mask.classList.add('on');
 };
 window._closeRoleInfo=function(){ var m=document.getElementById('roleInfoMask'); if(m) m.classList.remove('on'); };
@@ -1353,12 +1416,50 @@ const NIGHT={
   {id:"spy",note:"可查看魔典。"},
  ]
 };
+/* 黯月初升夜序（v2.68.0，参考官方夜单；全部手动步骤——勾选即完成，结算由说书人自行裁定） */
+const NIGHT_BMR={
+ first:[
+  {id:"_minion",name:"爪牙相认",note:"唤醒爪牙，互认身份并认识恶魔。",special:"min"},
+  {id:"lunatic",note:"给疯子一套假的「恶魔信息」（假爪牙、假伪装）。"},
+  {id:"_demon",name:"恶魔信息",note:"唤醒恶魔，认识爪牙，告知疯子是谁与3个不在场的好人伪装。",special:"dem"},
+  {id:"sailor",note:"选1人：他或水手喝醉到明晚。"},
+  {id:"courtier",note:"（可发动）选1个角色：醉3天3夜。"},
+  {id:"godfather",note:"告知在场的外来者是哪些角色。"},
+  {id:"devilsadvocate",note:"选1名存活玩家：其明天被处决不死。"},
+  {id:"pukka",note:"选1人中毒（延迟刀：明晚才死）。"},
+  {id:"grandmother",note:"告知孙辈是谁及其角色。"},
+  {id:"chambermaid",note:"选2名存活玩家，告知其中今夜醒来的人数。"},
+ ],
+ other:[
+  {id:"sailor",note:"选1人：他或水手喝醉到明晚。"},
+  {id:"innkeeper",note:"选2人：今夜不死，其中1人喝醉到明晚。"},
+  {id:"courtier",note:"（若未用过，可发动）选1个角色：醉3天3夜。"},
+  {id:"devilsadvocate",note:"选1名存活玩家（不可连选同一人）：其明天被处决不死。"},
+  {id:"gambler",note:"选1人并猜其角色：猜错赌徒死。"},
+  {id:"exorcist",note:"选1人：若是恶魔，恶魔今夜不醒、不行动。"},
+  {id:"lunatic",note:"疯子照常「刀人」：记下他的选择，供恶魔参考。"},
+  {id:"zombuul",note:"（若昨日无人死）选1人杀。"},
+  {id:"pukka",note:"选1人中毒；上一个中毒者此刻死去并恢复健康。"},
+  {id:"shabaloth",note:"选2人杀死；可反刍复活一名前晚被它杀的人。"},
+  {id:"po",note:"选1人杀或不杀；若前夜没杀→本夜连杀3人。"},
+  {id:"assassin",note:"（一局一次）杀1人，无视一切保护。"},
+  {id:"godfather",note:"（若今日白天有外来者死亡）额外杀1人。"},
+  {id:"professor",note:"（一局一次）选1名死者：若是镇民则复活。"},
+  {id:"moonchild",note:"（今日得知自己死亡时）选1人：若是好人，当晚死亡。"},
+  {id:"grandmother",note:"（孙辈被恶魔杀死时）祖母一同死亡。"},
+  {id:"tinker",note:"修补匠随时可能死亡（可在此裁定）。"},
+  {id:"gossip",note:"（若白天的宣言为真）今晚死1人。"},
+  {id:"chambermaid",note:"选2名存活玩家，告知其中今夜醒来的人数。"},
+ ]
+};
+const NIGHTS={tb:NIGHT, bmr:NIGHT_BMR};
+function curNIGHT(){ return NIGHTS[window.__scriptId]||NIGHT; }
 
 function blankMeta(){return {role:null,poison:false,drunk:false,dead:false,note:"",info:"",hist:{},isDrunk:false};}
 function ensureMeta(){ while(meta.length<N) meta.push(blankMeta()); meta.length=N; }
 
 function save(){ if(window.__stApplyingRemote) return;   // 正在应用远端同步时不重复写/上传，避免回声循环
-  try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,nightFlow,dayFlow,spySent,impKills,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,sickAns,redHerring,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist,gameOn:!!window.__gameOn,winApproved:(window.__winApproved||''),setupSnap:(window.__setupSnap||null),ts:Date.now()})); }catch(e){}
+  try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,nightFlow,dayFlow,spySent,impKills,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,sickAns,redHerring,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist,gameOn:!!window.__gameOn,winApproved:(window.__winApproved||''),setupSnap:(window.__setupSnap||null),script:(window.__scriptId||'tb'),ts:Date.now()})); }catch(e){}
   try{ if(window._stCloudPush) window._stCloudPush(); }catch(e){} }   // 说书人存档实时云同步（防抖上传）
 function load(){
   try{ const d=JSON.parse(localStorage.getItem(KEY)||"{}");
@@ -1380,6 +1481,7 @@ function load(){
     window.__gameOn = (typeof d.gameOn==='boolean') ? d.gameOn : !!(Array.isArray(d.meta)&&d.meta.some(m=>m&&m.role));   // ⑬ 老存档没有 gameOn：已发牌即视为游戏期，避免升级后夜/昼页突然清空
     window.__winApproved = (typeof d.winApproved==='string') ? d.winApproved : '';
     window.__setupSnap = (d.setupSnap&&typeof d.setupSnap==='object') ? d.setupSnap : null;
+    window.__scriptId = (d.script&&SCRIPTS[d.script]) ? d.script : 'tb';   // v2.68.0 剧本随本地状态恢复；老数据=暗流涌动
     if(d.impKills&&typeof d.impKills==="object") impKills=d.impKills;
     if(d.poisonPicks&&typeof d.poisonPicks==="object") poisonPicks=d.poisonPicks;
     if(d.monkPicks&&typeof d.monkPicks==="object") monkPicks=d.monkPicks;
@@ -1427,6 +1529,11 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.68.0', d:'2026-08-29', items:[
+    '新增剧本（换板子）：角色设置页顶部可以在「暗流涌动」和「黯月初升」之间切换。黯月初升 25 个角色全部就位——名字、阵营、能力简介、官方夜间顺序、以及概览页每个角色的详尽介绍（功能/何时行动/中毒醉酒/特殊交互/推荐玩法）。切换剧本会清空已分配的角色与相关设置（座位和玩家保留），游戏进行中不能切换。',
+    '黯月初升目前是「手动模式」：夜晚面板会按官方夜序逐步列出该唤醒谁、做什么（爪牙相认与恶魔信息两步仍是自动发送+玩家确认），但击杀、保护、醉酒等结算由说书人自行裁定，信息用私聊发给玩家。夜间自动化后续按角色逐个接入。',
+    '配套跟进：随机发牌、恶魔伪装、锁定角色、玩家笔记的「标记/概览」页都只显示当前剧本的角色；概览页「本局配置」显示剧本名；剧本随魔典状态和「保存本局」存档一起保存与恢复，老存档一律按暗流涌动读取。黯月初升角色暂无卡图，角色卡显示占位底图。',
+  ]},
   {v:'v2.67.2', d:'2026-08-29', items:[
     '阵营标记分成两行：善良/邪恶一行，镇民/外来者/爪牙/恶魔单独一行。',
   ]},
@@ -1837,7 +1944,7 @@ async function dealRoles(){
   Object.keys(nightFlow).forEach(k=>delete nightFlow[k]);       // 清空夜晚信息流程
   Object.keys(dayFlow).forEach(k=>delete dayFlow[k]);           // 清空昼夜推进状态
   Object.keys(spySent).forEach(k=>delete spySent[k]);          // 清空间谍魔典发送记录
-  const pick=(team,k)=>{ const pool=ROLES.filter(r=>r.team===team&&!lockedRoles.has(r.id)).map(r=>r.id);
+  const pick=(team,k)=>{ const pool=curRoles().filter(r=>r.team===team&&!lockedRoles.has(r.id)).map(r=>r.id);
     for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
     return pool.slice(0,Math.max(0,k)); };
   // 先定爪牙/恶魔，再按设置期能力（男爵）调整好人构成
@@ -1851,11 +1958,11 @@ async function dealRoles(){
   // 酒鬼：把「酒鬼」这张牌换成「自以为是的某镇民」，并打上永久受损标记
   const dSeat=meta.findIndex(m=>m.role==="drunk");
   if(dSeat>=0){ const used=new Set(meta.map(m=>m.role).filter(Boolean));
-    const pool=ROLES.filter(r=>r.team==="tf"&&!used.has(r.id)&&!lockedRoles.has(r.id)).map(r=>r.id);
+    const pool=curRoles().filter(r=>r.team==="tf"&&!used.has(r.id)&&!lockedRoles.has(r.id)).map(r=>r.id);
     meta[dSeat].role = pool.length ? pool[Math.floor(Math.random()*pool.length)] : null; meta[dSeat].isDrunk=true; meta[dSeat].drunk=true; }
   // 给恶魔随机 3 个伪装（不在场的好人角色）；酒鬼的真身是"酒鬼"，其自以为的镇民并不在场，可作伪装
   const inSet=new Set(meta.map(m=> m && (m.isDrunk?'drunk':m.role)).filter(Boolean));
-  const goodPool=ROLES.filter(r=>(r.team==="tf"||r.team==="out")&&!inSet.has(r.id)&&!lockedRoles.has(r.id)).map(r=>r.id);
+  const goodPool=curRoles().filter(r=>(r.team==="tf"||r.team==="out")&&!inSet.has(r.id)&&!lockedRoles.has(r.id)).map(r=>r.id);
   for(let i=goodPool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[goodPool[i],goodPool[j]]=[goodPool[j],goodPool[i]];}
   bluffs=[goodPool[0]||"", goodPool[1]||"", goodPool[2]||""];
   // 本局速览混淆镇民：男爵 +2；恶魔伪装里每含 1 个外来者再 +1，避免一眼看出伪装含外来者
@@ -1877,6 +1984,18 @@ async function resetRoles(){ if(gateCfg()) return; if(!await uiConfirm("重置�
   render();
   try{ if(window._stClearPlayerRoles) _stClearPlayerRoles(); }catch(e){} try{ if(window._stClearPlayerNotes) _stClearPlayerNotes(); }catch(e){} try{ if(window._stResetPublic) _stResetPublic(); }catch(e){} }   // 重置角色：清空玩家角色卡 + 局内信息/座位备注/标记 + 公开状态（大厅/笔记的死亡/处决/胜负等一并清零）；胜负另记一条
 function setBluff(k,v){ if(gateCfg()) return; bluffs[k]=v; refreshOverviewDecoys(); render(); }
+/* v2.68.0 切换剧本（仅配置期）：角色相关设置全清（等同重置角色 + 换角色池），座位与玩家保留 */
+window.setScript=async function(sid){ if(gateCfg()) return; if(!SCRIPTS[sid]||sid===(window.__scriptId||'tb')) return;
+  if(!await uiConfirm('切换剧本到「'+SCRIPTS[sid].name+'」？\n\n座位上已分配的角色、伪装、红鲱鱼、误判、锁定角色与阵营数量会被清空（座位与玩家保留）。'+(sid==='bmr'?'\n\n提示：黯月初升目前为手动模式——夜晚面板按官方夜序逐步提示，但结算与信息发送由说书人自行完成。':''),{title:'切换剧本',ok:'切换',cancel:'取消'})) return;
+  window.__scriptId=sid;
+  meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1;
+  Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); Object.keys(dayFlow).forEach(k=>delete dayFlow[k]); Object.keys(spySent).forEach(k=>delete spySent[k]); overviewDecoys=[]; lockedRoles=new Set(); customDist=null; tokens.forEach(t=>t.dead=false);
+  window.__gameOn=false; window.__winApproved=''; window.__winPending=null; window.__winDismissed=''; window.__setupSnap=null;
+  try{ if(window._histNewRound) _histNewRound(); }catch(e){}
+  try{ save(); }catch(e){} render();
+  try{ if(window._stClearPlayerRoles) _stClearPlayerRoles(); }catch(e){} try{ if(window._stClearPlayerNotes) _stClearPlayerNotes(); }catch(e){} try{ if(window._stResetPublic) _stResetPublic(); }catch(e){}
+  _gt('已切换到「'+SCRIPTS[sid].name+'」');
+};
 
 /* ---------- 夜晚信息自动计算 ---------- */
 function seatAlive(i){ const t=seatToken(i), m=meta[i]||{}; return !(t?t.dead:m.dead); }
@@ -2357,7 +2476,7 @@ function nightPanel(id, active){
   if(id==='ravenkeeper' && stage==='ravensick'){   // 中毒/醉酒守鸦人：说书人先设定要告知的（可假）角色再发送
     const rec=ravenPicks[night]||{}; const actual=(rec.t!=null&&meta[rec.t]&&meta[rec.t].role)?meta[rec.t].role:null;
     let rOpt='<option value="">选择要告知的角色</option>';
-    ROLES.filter(r=>!lockedRoles.has(r.id)).forEach(function(r){ rOpt+='<option value="'+r.id+'"'+(rec.role===r.id?' selected':'')+'>'+r.name+(r.id===actual?'（真实）':'')+'</option>'; });
+    curRoles().filter(r=>!lockedRoles.has(r.id)).forEach(function(r){ rOpt+='<option value="'+r.id+'"'+(rec.role===r.id?' selected':'')+'>'+r.name+(r.id===actual?'（真实）':'')+'</option>'; });
     h+='<div class="nf-status">守鸦人中毒/醉酒——请设定要告知的角色（可给假信息），再发送。真实是「'+(actual&&RMAP[actual]?RMAP[actual].name:'（未知）')+'」</div>';
     h+='<div class="nf-imp">查看 <b>'+(rec.t!=null?nameAt(rec.t):'—')+'</b> → 告知角色：<select onchange="ravenSet(\'role\',this.value)">'+rOpt+'</select></div>';
     h+='<div class="nf-status" style="opacity:.85">将发送：'+ravenPlayerResult()+'</div>';
@@ -2516,13 +2635,13 @@ function undertakerUI(){
   if(healthy(ut)){
     if(!_isRegRole(ex)) return "";                    // 健康且死者非间谍/陌客：真身自动显示
     let rOpt='<option value="">真身（默认）</option>';   // 间谍/陌客：可选按注册身份展示（真）
-    ROLES.filter(r=>!lockedRoles.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(undertakerPicks[night]===r.id?' selected':'')+'>'+r.name+'</option>'; });
+    curRoles().filter(r=>!lockedRoles.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(undertakerPicks[night]===r.id?' selected':'')+'>'+r.name+'</option>'; });
     let h='<div class="impkill" style="color:#2e6b52">'+RMAP[meta[ex].role].name+' 按注册身份展示：<select onchange="undertakerSet(this.value)">'+rOpt+'</select></div>';
     const r=undertakerResult(); if(r) h+='<div class="impkill done">'+r.text+'</div>';
     return h;
   }
   let rOpt='<option value="">告知的角色</option>';
-  ROLES.filter(r=>!lockedRoles.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(undertakerPicks[night]===r.id?' selected':'')+'>'+r.name+'</option>'; });
+  curRoles().filter(r=>!lockedRoles.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(undertakerPicks[night]===r.id?' selected':'')+'>'+r.name+'</option>'; });
   let h='<div class="impkill warn">中毒·告知的假身份：<select onchange="undertakerSet(this.value)">'+rOpt+'</select></div>';
   const r=undertakerResult(); if(r) h+='<div class="impkill '+(r.truth?'done':'warn')+'">'+r.text+'</div>';
   return h;
@@ -2550,11 +2669,11 @@ function ravenUI(){
   let h='<div class="impkill warn">守鸦人已死·查看：<select onchange="ravenSet(\'t\',this.value)">'+opts+'</select></div>';
   if(sick){
     let rOpt='<option value="">告知的角色</option>';
-    ROLES.filter(r=>!lockedRoles.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(rec.role===r.id?' selected':'')+'>'+r.name+'</option>'; });
+    curRoles().filter(r=>!lockedRoles.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(rec.role===r.id?' selected':'')+'>'+r.name+'</option>'; });
     h+='<div class="impkill warn">中毒·告知的假身份：<select onchange="ravenSet(\'role\',this.value)">'+rOpt+'</select></div>';
   } else if(rec.t!=null && _isRegRole(rec.t)){       // 健康 + 查到间谍/陌客：可选按注册身份展示（真）
     let rOpt='<option value="">真身（默认）</option>';
-    ROLES.filter(r=>!lockedRoles.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(rec.role===r.id?' selected':'')+'>'+r.name+'</option>'; });
+    curRoles().filter(r=>!lockedRoles.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(rec.role===r.id?' selected':'')+'>'+r.name+'</option>'; });
     h+='<div class="impkill" style="color:#2e6b52">'+RMAP[meta[rec.t].role].name+' 按注册身份展示：<select onchange="ravenSet(\'role\',this.value)">'+rOpt+'</select></div>';
   }
   const r=ravenResult(); if(r) h+='<div class="impkill '+(r.truth?'done':'warn')+'">'+r.text+'</div>';
@@ -2639,7 +2758,7 @@ function refreshOverviewDecoys(){
   let keep=(overviewDecoys||[]).filter(valid).slice(0,need);
   if(keep.length<need){
     const used=new Set([...inPlay, ...bluffSet, ...keep]);
-    const pool=ROLES.filter(r=>r.team==="tf"&&!used.has(r.id)&&!lockedRoles.has(r.id)).map(r=>r.id);
+    const pool=curRoles().filter(r=>r.team==="tf"&&!used.has(r.id)&&!lockedRoles.has(r.id)).map(r=>r.id);
     for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
     keep=keep.concat(pool.slice(0,need-keep.length));
   }
@@ -2648,7 +2767,7 @@ function refreshOverviewDecoys(){
 /* 本局速览角色集合：在场镇民 + 恶魔伪装 + 全部外来者/爪牙/恶魔 + 混淆镇民 */
 function gameOverviewSet(){
   const s=new Set();
-  ROLES.forEach(r=>{ if(r.team!=="tf" && !lockedRoles.has(r.id)) s.add(r.id); });
+  curRoles().forEach(r=>{ if(r.team!=="tf" && !lockedRoles.has(r.id)) s.add(r.id); });
   meta.forEach(m=>{ if(m.role && RMAP[m.role].team==="tf") s.add(m.role); });
   bluffs.forEach(b=>{ if(b) s.add(b); });
   (overviewDecoys||[]).forEach(id=>s.add(id));
@@ -2726,7 +2845,7 @@ function pingUI(roleId){
       +'<select onchange="pingSet(\''+roleId+'\',\'b\',this.value)">'+pOpt(rec.b)+'</select></div>';
     let rOpt='<option value="">角色</option>';
     if(roleId==="librarian") rOpt+='<option value="__none"'+(rec.role==="__none"?' selected':'')+'>（无外来者）</option>';
-    ROLES.filter(r=>r.team===team && !lockedRoles.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(rec.role===r.id?' selected':'')+'>'+r.name+'</option>'; });
+    curRoles().filter(r=>r.team===team && !lockedRoles.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(rec.role===r.id?' selected':'')+'>'+r.name+'</option>'; });
     h+='<div class="impkill warn">中毒·自定信息：<select onchange="pingSet(\''+roleId+'\',\'role\',this.value)">'+rOpt+'</select></div>';
   } else {                                          // 健康：第一个只列该阵营，第二个列其余任意人
     const _regC=_regCandFor(team);
@@ -2739,7 +2858,7 @@ function pingUI(roleId){
       +'另一人：<select onchange="pingSet(\''+roleId+'\',\'b\',this.value)">'+o2+'</select></div>';
     if(rec.a!=null && _regC.indexOf(rec.a)>=0){       // 选中间谍/陌客 → 指定注册成该阵营的哪个角色（真展示）
       let rOpt='<option value="">注册为…</option>';
-      ROLES.filter(r=>r.team===team && !lockedRoles.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(rec.regRole===r.id?' selected':'')+'>'+r.name+'</option>'; });
+      curRoles().filter(r=>r.team===team && !lockedRoles.has(r.id)).forEach(r=>{ rOpt+='<option value="'+r.id+'"'+(rec.regRole===r.id?' selected':'')+'>'+r.name+'</option>'; });
       h+='<div class="impkill" style="color:#2e6b52">'+RMAP[meta[rec.a].role].name+' 按注册身份展示：<select onchange="pingSet(\''+roleId+'\',\'regRole\',this.value)">'+rOpt+'</select></div>';
     }
   }
@@ -3684,7 +3803,7 @@ function stLogHTML(){ if(!isGameOn()) return _notStartedHTML();   // 未开局�
     h+=setupSnapHTML();   // 🎴 开局：本局板子（角色 + 误判设置 + 红鲱鱼 + 恶魔伪装 + 阵营配置）
     for(let n=1;n<=maxN;n++){
       h+='<div class="gsec" style="color:#43286b">🌙 第 '+n+' 夜</div>'; let any=false;
-      const order=NIGHT[n===1?"first":"other"];
+      const order=curNIGHT()[n===1?"first":"other"];
       /* ① 排序键按「这条记录属于哪一个夜间步骤」算，而不是按座位角色算——
          例如投毒者的「爪牙互认」属于 _minion 步（第 0 步），不能跟着 poisoner 步（第 2 步）走。 */
       const _oi=id=>{ const k=order.findIndex(s=>s.id===id); return k>=0?k:-1; };
@@ -3776,7 +3895,7 @@ function bluffSel(k){
   meta.forEach(m=>{ if(!m) return; if(m.isDrunk){ occ.add('drunk'); if(m.role) occ.add(m.role); } else if(m.role) occ.add(m.role); });
   (bluffs||[]).forEach((b,j)=>{ if(b && j!==k) occ.add(b); });
   let o='<option value="">伪装'+(k+1)+'</option>';
-  ROLES.filter(r=>(r.team==="tf"||r.team==="out")&&!occ.has(r.id)).forEach(r=>{
+  curRoles().filter(r=>(r.team==="tf"||r.team==="out")&&!occ.has(r.id)).forEach(r=>{
     o+='<option value="'+r.id+'"'+(bluffs[k]===r.id?' selected':'')+'>'+r.name+'</option>'; });
   return '<select onchange="setBluff('+k+',this.value)">'+o+'</select>';
 }
@@ -3790,6 +3909,10 @@ function renderGrim(){
     const _setupIssues=setupIssues(); const ready=_setupIssues.length===0;
     if(isGameOn()) h+=gateBanner('游戏进行中：座位数量 / 玩家位置 / 角色分配与角色设置已锁定，点下方「结束本局」可回到配置期');
     const _cl=cfgLocked(); if(_cl) h+='<div class="gatelock">';   // ⑥ 角色/阵营/误判/红鲱鱼/伪装 一并只读；下方「牌局」区在遮罩之外仍可点
+    /* v2.68.0 剧本选择（配置期）：切板清空角色相关设置，座位与玩家保留 */
+    h+='<div class="gsec" style="color:#43286b;display:flex;align-items:center;gap:8px"><span>📜 剧本</span>'
+      +Object.keys(SCRIPTS).map(sid=>'<span class="regbtn'+(sid===(window.__scriptId||'tb')?' on':'')+'" onclick="setScript(\''+sid+'\')">'+SCRIPTS[sid].name+'</span>').join('')
+      +((window.__scriptId==='bmr')?'<span style="font-weight:400;font-size:calc(.88 * var(--sw) / 100);color:#8a5f28">夜间为手动模式（无自动结算）</span>':'')+'</div>';
     const _usedSet=new Set(); meta.forEach(m=>{ if(!m) return; if(m.isDrunk){ _usedSet.add('drunk'); if(m.role) _usedSet.add(m.role); } else if(m.role) _usedSet.add(m.role); });   // 酒鬼占用「酒鬼」牌+其自以为的镇民牌（都半透明）
     (bluffs||[]).forEach(b=>{ if(b) _usedSet.add(b); });   // 恶魔伪装选中的身份也占用（半透明）
     ORDER.forEach((team,idx)=>{
@@ -3797,7 +3920,7 @@ function renderGrim(){
         +'<span>'+TEAMLABEL[team]+'</span>'
         +'<span style="font-weight:700;white-space:nowrap"><span class="dstep" onclick="setDistCount('+idx+',-1)">−</span>'+cd[idx]+'<span class="dstep" onclick="setDistCount('+idx+',1)">＋</span></span></div>';
       h+='<div class="rlist">';
-      ROLES.filter(r=>r.team===team).forEach(r=>{
+      curRoles().filter(r=>r.team===team).forEach(r=>{
         const used=_usedSet.has(r.id), locked=lockedRoles.has(r.id);
         h+='<div class="rchip'+(used?' used':'')+(locked?' locked':'')+'" data-role="'+r.id+'" data-drag="role:'+r.id+'" title="单击锁定/解锁 · '+esc(r.ab)+
            '" style="border-color:'+TEAMC[r.team]+';color:'+TEAMC[r.team]+'">'+r.name+'</div>';
@@ -3809,6 +3932,7 @@ function renderGrim(){
     /* ===== 设置（原“设置”标签内容并入，置于阵营合计下方）===== */
     h+='<div class="gsec" style="color:#43286b;margin-top:12px;border-top:1px solid rgba(122,83,32,.25);padding-top:8px">⚙ 设置</div>';
     if(meta.some(m=>m.role==="baron")) h+='<div class="rrow" style="border:none;color:#8a5f28">🜲 男爵在场：外来者应比常规多 2、镇民少 2</div>';
+    if(meta.some(m=>m.role==="godfather")) h+='<div class="rrow" style="border:none;color:#8a5f28">🜲 教父在场：外来者应比常规多 1 或少 1（用上方阵营数量手动调整）</div>';
     const regRoles=[]; meta.forEach((mm,j)=>{ if(mm.role==="spy"||mm.role==="recluse") regRoles.push(j); });
     if(regRoles.length){
       h+='<div class="gsec">误判设置（影响他人信息）</div>';
@@ -3825,7 +3949,7 @@ function renderGrim(){
       h+='<div class="gsec" style="display:flex;align-items:center;gap:8px">红鲱鱼<select onchange="setRedHerring(this.value)" style="flex:1;min-width:0;font-weight:400;font-size:clamp(9px,.9vw,12px);padding:3px;border:1px solid rgba(122,83,32,.5);border-radius:5px;background:rgba(255,252,244,.85);color:#3a2a12;font-family:inherit">'+o+'</select></div>';
     }
     if(meta.some(m=>m&&m.isDrunk)){ const dSel=meta.findIndex(m=>m&&m.isDrunk); let o='<option value="">（未定身份）</option>';
-      ROLES.filter(r=>r.team==="tf" && !lockedRoles.has(r.id)).forEach(r=>{
+      curRoles().filter(r=>r.team==="tf" && !lockedRoles.has(r.id)).forEach(r=>{
         const takenElsewhere=meta.some((m,i)=>i!==dSel && m && m.role===r.id);   // 该镇民已被别的座位占用 → 不列（避免重复；除非正是当前酒鬼所选）
         if(takenElsewhere && meta[dSel].role!==r.id) return;
         o+='<option value="'+r.id+'"'+(meta[dSel].role===r.id?' selected':'')+'>'+r.name+'</option>'; });
@@ -3917,7 +4041,7 @@ function renderGrim(){
   {
     const inplay=new Set(meta.map(m=>m.role).filter(Boolean));
     const hasTeam=t=>meta.some(m=>m.role&&RMAP[m.role].team===t);
-    const steps=NIGHT[night===1?"first":"other"].filter(s=> s.special ? hasTeam(s.special) : inplay.has(s.id));
+    const steps=curNIGHT()[night===1?"first":"other"].filter(s=> s.special ? hasTeam(s.special) : inplay.has(s.id));
     if(!steps.length) h='<div class="rrow" style="opacity:.6">（发牌后按在场角色自动生成顺序）</div>';
     const firstUndone = steps.findIndex(s=>!stepDone(s));
     steps.forEach((s,si)=>{ let name,color,info="";
@@ -4102,7 +4226,7 @@ function openEditor(i){
 function buildRoleSelect(sel){
   sel.innerHTML='<option value="">（未分配）</option>';
   ORDER.forEach(t=>{ const g=document.createElement("optgroup"); g.label=TEAMLABEL[t];
-    ROLES.filter(r=>r.team===t).forEach(r=>{ const o=document.createElement("option"); o.value=r.id; o.textContent=r.name; g.appendChild(o); });
+    curRoles().filter(r=>r.team===t).forEach(r=>{ const o=document.createElement("option"); o.value=r.id; o.textContent=r.name; g.appendChild(o); });
     sel.appendChild(g); });
 }
 function updAlign(){ const id=document.getElementById("mRole").value; const box=document.getElementById("mAlign");
@@ -4853,7 +4977,7 @@ load(); render();
     try{ _lastResultSig=null; }catch(e){}
     try{ const p=(typeof buildPublic==='function')?buildPublic():null;
       const upd={ result:null, vote:null, exec:null, phase:'night', nomStarted:false, clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null} };   // 重置角色→回第一夜，私聊冻结、提名未开
-      if(p){ upd.seats=p.seats; upd.noms=(p.noms&&p.noms.length)?p.noms:null; upd.day=p.day; upd.count=p.count; }
+      if(p){ upd.seats=p.seats; upd.noms=(p.noms&&p.noms.length)?p.noms:null; upd.day=p.day; upd.count=p.count; upd.script=p.script; }
       upd.chats=null; upd.chatInv=null; upd.chatNote=null; upd.chatDisband=null; upd.virginPop=null; upd.winJudge=null;   // 私聊分组/解散通知、贞洁者公告、胜负裁决面板一并清零
       upd.stLog=null; window.__stLogShared=false; try{ if(window._updateStLogFab) window._updateStLogFab(); if(window._closeStLog) window._closeStLog(); }catch(e){}   // ⑧ 新一局：撤回上一局分享的说书人日志
       db.ref('games/'+curGid+'/public').update(upd).catch(()=>{});
@@ -5243,7 +5367,7 @@ load(); render();
     try{ const p=buildPublic(); db.ref('games/'+curGid+'/public/noms').set(p.noms).catch(()=>{}); }catch(e){} };
   /* 说书人：把座位（含出局/死因图标）实时推给大厅与玩家笔记（处决/射杀等白天死亡即时可见） */
   window._syncSeats=function(){ if(role!=='st'||!curGid) return;
-    try{ const p=buildPublic(); db.ref('games/'+curGid+'/public').update({seats:p.seats,count:p.count,day:p.day}).catch(()=>{}); }catch(e){} };
+    try{ const p=buildPublic(); db.ref('games/'+curGid+'/public').update({seats:p.seats,count:p.count,day:p.day,script:p.script}).catch(()=>{}); }catch(e){} };
   /* 说书人：发布处决动画事件（idx=随机视频序号，full=是否恶魔→播完整），所有端同步播放 */
   window._pubExec=function(idx,full){ if(role!=='st'||!curGid) return;
     db.ref('games/'+curGid+'/public/exec').set({idx:idx|0, full:!!full, ts:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); };
@@ -5851,7 +5975,7 @@ load(); render();
     h+='<div>'+['T:good','T:evil'].map(_vt).join('')+'</div>';                    /* v2.67.2：善良/邪恶一行 */
     h+='<div>'+['T:tf','T:out','T:min','T:dem'].map(_vt).join('')+'</div>';       /* v2.67.2：镇民/外来者/爪牙/恶魔单独一行 */
     h+='<div class="nb-sec">在场角色 · 拖到座位上记录猜测；单击划掉</div><div>';
-    const locked=new Set(pub.locked||[]); const rs=ROLES.filter(r=>!locked.has(r.id)).map(r=>r.id);
+    const locked=new Set(pub.locked||[]); const rs=scriptRoles((pub&&pub.script)||'tb').filter(r=>!locked.has(r.id)).map(r=>r.id);   /* v2.68.0：按本局剧本过滤 */
     h+=rs.map(id=>{ const r=RMAP[id]; if(!r) return '';
       return '<span class="nbtok'+(crossed.has('role:'+id)?' crossed':'')+'" data-drag="prole:'+id+'" onclick="_nbCross(\'role:'+id+'\')" style="border-color:'+TEAMC[r.team]+';color:'+TEAMC[r.team]+'">'+r.name+'</span>'; }).join('')+'</div>';
     h+='<button class="nb-clearall" onclick="_nbClearAll(this)">清除本页标记</button>';
@@ -5868,9 +5992,9 @@ load(); render();
     return h;
   }
   function refHTML(){ const locked=new Set(pub.locked||[]); const d=pub.dist||DIST[pub.count]||[0,0,0,0];
-    let h='<div class="nb-role"><b style="color:#43286b">本局配置</b><br><span style="color:#43286b">'+pub.count+'人</span> · <span style="color:'+TEAMC.tf+'">镇民'+d[0]+'</span> <span style="color:'+TEAMC.out+'">外来者'+d[1]+'</span> <span style="color:'+TEAMC.min+'">爪牙'+d[2]+'</span> <span style="color:'+TEAMC.dem+'">恶魔'+d[3]+'</span></div>';
+    let h='<div class="nb-role"><b style="color:#43286b">本局配置</b><br><span style="color:#43286b">📜 '+((SCRIPTS[(pub&&pub.script)||'tb']||SCRIPTS.tb).name)+' · '+pub.count+'人</span> · <span style="color:'+TEAMC.tf+'">镇民'+d[0]+'</span> <span style="color:'+TEAMC.out+'">外来者'+d[1]+'</span> <span style="color:'+TEAMC.min+'">爪牙'+d[2]+'</span> <span style="color:'+TEAMC.dem+'">恶魔'+d[3]+'</span></div>';
     h+='<div class="nb-sec">剧本角色（灰色为本局未启用）</div>';
-    ORDER.forEach(t=>{ const list=ROLES.filter(r=>r.team===t); if(!list.length) return;
+    ORDER.forEach(t=>{ const list=scriptRoles((pub&&pub.script)||'tb').filter(r=>r.team===t); if(!list.length) return;   /* v2.68.0：参考页按本局剧本 */
       h+='<div style="font-weight:800;color:'+TEAMC[t]+';margin:8px 0 3px">'+TEAMLABEL[t]+'</div>';
       list.forEach(r=>{ const off=locked.has(r.id);
         h+='<div class="nb-role nb-role-click" style="'+(off?'opacity:.4;':'')+'" onclick="window._openRoleInfo&&_openRoleInfo(\''+r.id+'\')"><b style="color:'+TEAMC[t]+'">'+r.name+(off?' · 未启用':'')+'</b><span class="nb-more">详情›</span><div style="color:#1c150e;margin-top:2px">'+E(r.ab||'')+'</div></div>'; }); });
@@ -5959,9 +6083,9 @@ load(); render();
       const dead=!!(t&&t.dead); if(dead&&!cause) cause='claw';
       seats.push({ name:(t&&t.name)?t.name:'', dead:dead, cause:cause });
     }
-    const gs=gameOverviewSet(), roleset=[]; ORDER.forEach(tm=>{ ROLES.filter(r=>r.team===tm&&gs.has(r.id)).forEach(r=>roleset.push(r.id)); });
+    const gs=gameOverviewSet(), roleset=[]; ORDER.forEach(tm=>{ curRoles().filter(r=>r.team===tm&&gs.has(r.id)).forEach(r=>roleset.push(r.id)); });
     const noms=[]; Object.keys(nominations).forEach(dd=>{ (nominations[dd]||[]).forEach(nm=>{ noms.push({day:+dd,by:nm.nominator,to:nm.nominee,voters:(nm.voters||[]).slice(),ghost:(nm.ghostVoters||[]).slice(),tallied:!!nm.tallied,exec:executions[dd]===nm.nominee}); }); });
-    return { name:(window.__botcGameName||'本局'), count:N, day:night, seats:seats, roleset:roleset, dist:(customDist||DIST[N]||[0,0,0,0]), noms:noms };
+    return { name:(window.__botcGameName||'本局'), count:N, day:night, seats:seats, roleset:roleset, dist:(customDist||DIST[N]||[0,0,0,0]), noms:noms, script:(window.__scriptId||'tb') };
   }
   window.stNewGame=async function(){ if(role!=='st'){ toast('请先以说书人登录（点📖）'); return; }
     let nm='本局'; try{ nm=await uiPrompt('给这局起个名字（玩家会看到）：','本局',{title:'开始新的一局'}); if(nm===null) return; }catch(e){}
@@ -5979,7 +6103,7 @@ load(); render();
     }catch(e){}
     const gid='t'+Date.now();
     const seats=[]; for(let i=0;i<N;i++){ const t=seatToken(i); seats.push({name:(t&&t.name)?t.name:'', dead:false, cause:''}); }
-    const g={ name:window.__botcGameName, count:N, day:night, seats:seats, locked:[...lockedRoles], dist:(customDist||DIST[N]||[0,0,0,0]), noms:[], clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null}, result:null, vote:null, virginPop:null, winJudge:null, phase:'night', nomStarted:false };   /* 开局=第一夜，私聊冻结，提名未开 */
+    const g={ name:window.__botcGameName, count:N, day:night, seats:seats, locked:[...lockedRoles], dist:(customDist||DIST[N]||[0,0,0,0]), noms:[], script:(window.__scriptId||'tb'), clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null}, result:null, vote:null, virginPop:null, winJudge:null, phase:'night', nomStarted:false };   /* 开局=第一夜，私聊冻结，提名未开 */
     try{ await db.ref('storytellerUid').set({uid:me.uid, sid:_stSid, name:(me&&me.displayName)||'', ts:firebase.database.ServerValue.TIMESTAMP}); try{ db.ref('storytellerUid').onDisconnect().remove(); }catch(e){} await db.ref('games/'+gid+'/public').set(g);
       /* 私密下发每位已登录玩家本局的角色（仅本人与说书人可读；酒鬼下发其自以为的镇民牌） */
       try{ const accSnap=await db.ref('accounts').once('value'); const accs=accSnap.val()||{}; const ru={};
@@ -5998,14 +6122,14 @@ load(); render();
     }
     catch(e){ toast('开局失败：'+(e.code||e.message||'')); } };
   window.stSyncSeats=async function(){ if(role!=='st'){ toast('请先登录说书人'); return; } if(!curGid){ toast('先点开新局'); return; }
-    const p=buildPublic(); try{ await db.ref('games/'+curGid+'/public').update({seats:p.seats,count:p.count,roleset:p.roleset,dist:p.dist,day:p.day}); toast('↻ 座位/名单已同步'); }
+    const p=buildPublic(); try{ await db.ref('games/'+curGid+'/public').update({seats:p.seats,count:p.count,roleset:p.roleset,dist:p.dist,day:p.day,script:p.script}); toast('↻ 座位/名单已同步'); }
     catch(e){ toast('同步失败：'+(e.code||'')); } };
   window.stPublish=async function(){ if(role!=='st'){ toast('请先登录说书人'); return; } if(!curGid){ toast('先点开新局'); return; }
-    const p=buildPublic(); try{ await db.ref('games/'+curGid+'/public').update({seats:p.seats,noms:p.noms,day:p.day,count:p.count}); toast('📣 已公布第 '+p.day+' 天'); }
+    const p=buildPublic(); try{ await db.ref('games/'+curGid+'/public').update({seats:p.seats,noms:p.noms,day:p.day,count:p.count,script:p.script}); toast('📣 已公布第 '+p.day+' 天'); }
     catch(e){ toast('公布失败：'+(e.code||'')); } };
   window.stDawn=async function(){ if(role!=='st'){ toast('请先登录说书人'); return; } if(!curGid){ toast('先点开新局'); return; }
     window.__nomStarted=false;   // 天亮：提名先锁住（灰），私聊开放；须点左下角「解散私聊」按钮后才开提名（乐观置位，pub 回传再确认）
-    const p=buildPublic(); try{ await db.ref('games/'+curGid+'/public').update({seats:p.seats,noms:p.noms,day:p.day,count:p.count,
+    const p=buildPublic(); try{ await db.ref('games/'+curGid+'/public').update({seats:p.seats,noms:p.noms,day:p.day,count:p.count,script:p.script,
         phase:'day',   /* 天亮→白天：玩家端私聊功能解冻（左下角图标可点、座位圈加入/退出按钮出现） */
         nomStarted:false,   /* 天亮先锁提名：说书人点「解散私聊」后才解锁 */
         vote:null, virginPop:null, clock:{dayStart:firebase.database.ServerValue.TIMESTAMP, nom:null}}); toast('天亮了'); }
@@ -6044,6 +6168,7 @@ load(); render();
       herringRole:(typeof herringRoleId==='function'?herringRoleId():null),                   // 红鲱鱼记「角色」（跟着角色走，不跟座位）
       herring:(typeof redHerring==='number'&&redHerring>=0)?redHerring:-1,                    // 兼容：老版本按座位读
       locked:(typeof lockedRoles!=='undefined')?[...lockedRoles]:[],                          // 锁定的角色
+      script:(window.__scriptId||'tb'),                                                       // v2.68.0 剧本随存档保存
       ts:Date.now() };
     const a=_cfgLoadAll(); a.unshift(cfg); _cfgSaveAll(a); toast('已保存：'+cfg.name+'（含角色设置）');
   };
@@ -6062,6 +6187,7 @@ load(); render();
         else if(typeof c.herring==='number'&&c.herring>=0) tips.push('红鲱鱼 '+(c.herring+1)+'号');
         const regs=c.roles.map((x,k)=>(x&&(x.g==='good'||x.g==='evil'))?((k+1)+'号判'+(x.g==='good'?'善':'恶')):null).filter(Boolean);
         if(regs.length) tips.push(regs.join('、'));
+        if(c.script&&c.script!=='tb'&&SCRIPTS[c.script]) tips.push('剧本 '+SCRIPTS[c.script].name);
         if((c.locked||[]).length) tips.push('锁定 '+c.locked.length+' 个角色');
         if(tips.length) extra='<div class="sub" style="opacity:.72">⚙ '+E(tips.join(' · '))+'</div>';
       }
@@ -6072,6 +6198,7 @@ load(); render();
   window._cfgLoad=async function(i){ const a=_cfgLoadAll(), c=a[i]; if(!c) return;
     if(typeof gateCfg==='function' && gateCfg()) return;   // v2.63.0 游戏进行中不许覆盖角色与设置
     try{ if(!await uiConfirm('载入「'+c.name+'」会覆盖当前的座位角色，以及恶魔伪装、红鲱鱼、间谍/陌客善恶误判、角色锁定等全部角色设置。',{title:'载入存档',ok:'载入',cancel:'取消'})) return; }catch(e){}
+    window.__scriptId=(c.script&&SCRIPTS[c.script])?c.script:'tb';   // v2.68.0：剧本随存档恢复（老存档=暗流涌动）
     if(c.roles){ const rs=c.roles; N=Math.max(5,Math.min(15, c.n||rs.length));
       if(typeof tokens!=='undefined') tokens.forEach(t=>{ if(t.seat!==null&&t.seat>=N) t.seat=null; });
       if(typeof ensureMeta==='function') ensureMeta();
