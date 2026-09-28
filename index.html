@@ -201,6 +201,9 @@
   #setModal #rpForm input, #setModal #rpForm select, #setModal #stCodeSec input{width:100%; padding:8px; border-radius:8px; border:1px solid #3a2d4e; background:#2c2340; color:#efe6d2; font-size:14px; font-family:inherit;}
   #setModal #stCodeSec input{margin-bottom:8px;}
   #setModal .rp-err{font-size:12px; color:#f0a89e; min-height:14px;}
+  #setModal #nickSec{margin-bottom:12px;}
+  #setModal .nick-id{font-size:13px; color:#d8cee8; margin-bottom:7px;} #setModal .nick-id b{color:#ffe9b8;} #setModal .nick-id span{color:#9a8fb3; font-size:12px;}
+  #setModal .nick-row{display:flex; gap:7px; margin-bottom:4px;} #setModal .nick-row input{flex:1; min-width:0; padding:8px; border-radius:8px; border:1px solid #3a2d4e; background:#2c2340; color:#efe6d2; font-size:14px; font-family:inherit;} #setModal .nick-row .rp-go{flex:0 0 64px;}
   #setModal .rp-go{padding:9px 0; border-radius:10px; border:none; background:var(--gold); color:#fff; font-weight:800; cursor:pointer;}
   #setModal .set-log{font-size:12.5px; line-height:1.55; color:#d8cee8;}
   #setModal .cl-item{margin-bottom:9px;}
@@ -253,6 +256,8 @@
   .ptag.active{opacity:.4; cursor:default;}
   .ptag.reg{border-style:solid; border-color:rgba(122,31,143,.55);}
   .ptag .regdot{color:#7a1f8f; font-size:.75em; vertical-align:middle;}
+  .ptag .pid{opacity:.55; font-size:.78em;}   /* v2.72.0 有昵称时附带显示登录 ID */
+  .ptag .ren{opacity:.55; font-size:.85em; cursor:pointer; padding:0 1px;} .ptag .ren:hover{opacity:1; color:#ffd76b;}
   .ptag.active:hover{background:rgba(255,250,235,.4); color:#6b4a1e;}
   .ptag .del{margin-left:4px; color:#a5744a;} .ptag .del:hover{color:#b0402e;}
 
@@ -1509,6 +1514,17 @@ function load(){
 }
 function esc(s){return String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 function seatToken(i){ return tokens.find(t=>t.seat===i); }
+/* v2.72.0 固定 ID + 可改显示名称：系统内部（名册/座位/public.seats/战绩/账号）一律存「登录 ID」，界面显示时才换成昵称。
+   昵称存 firebase nicks/{idKey}（全员可读，本人或说书人可写），镜像到 window.__nicks；没有昵称就显示 ID 本身。 */
+window.__nicks=window.__nicks||{};
+function idKey(s){ return (s||'').toString().trim().toLowerCase().replace(/[.#$\[\]\/]/g,'_'); }
+function nickOf(id){ if(!id) return ''; const v=(window.__nicks||{})[idKey(id)]; return (v&&typeof v==='string'&&v.trim())?v.trim():''; }
+function dispName(id){ return nickOf(id)||(id==null?'':String(id)); }
+/* 说书人手输的名字 → 登录 ID：先认已有客人的 ID，其次认某人的昵称，都不是则原样（=新客人 ID） */
+function idFromTyped(s){ s=(s||'').trim(); if(!s) return s; const k=idKey(s);
+  const g1=guests.find(g=>idKey(g)===k); if(g1) return g1;
+  const nk=window.__nicks||{}; for(const key in nk){ if(typeof nk[key]==='string'&&idKey(nk[key])===k){ return guests.find(g=>idKey(g)===key)||key; } }
+  return s; }
 
 function toggleFull(){
   const el=document.documentElement;
@@ -1534,6 +1550,17 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.72.0', d:'2026-09-28', items:[
+    '玩家可以修改自己的显示名称：左上角 ⚙ 设置 →「账号」里能看到自己固定不变的登录 ID，并可随时改显示名称（留空=直接显示 ID）。登录仍然用 ID。',
+    '显示名称不许重名：不能和别人的昵称相同，也不能和别人的登录 ID 相同（不分大小写）。',
+    '说书人可在「过往客人名册」里点名字旁的 ✎ 替玩家改显示名称；有昵称的客人会在名字后附带 (登录 ID)。说书人添加客人或在座位编辑里输入玩家的显示名称，会自动认成对应的 ID。',
+    '座位圈、大厅名单、聊天室、投票与夜间选人、说书人日志、旧局记录都显示玩家当下的名字；旧局战绩与统计/积分榜按登录 ID 追踪合并，改名后以前的对局也会显示新名字。',
+  ]},
+  {v:'v2.71.0', d:'2026-08-29', items:[
+    '黯月初升进入半自动：夜晚面板的大部分角色改用与暗流涌动相同的「发送给玩家 → 玩家底部弹窗选人/确认 → 说书人审核」流程，说书人不用再靠私聊打字。接入的角色：水手、驱魔人、魔鬼代言人、赌徒、教授、疯子（首夜收假恶魔信息、其余夜照常「刀人」，回执一律显示为恶魔口吻不泄露真身）、四个恶魔（僵怖/普卡/沙巴洛斯选双目标/波）、刺客、旅店老板（选两人）、侍女（选两人后说书人回发醒来人数）、祖母与教父（首夜信息，祖母模板需说书人填空、教父自动列出在场外来者）。',
+    '半自动的关键原则：审核通过只把选择写进魔典日志和玩家局内信息，不做任何结算——死亡仍走「本夜死亡记录」、中毒/醉酒/守护仍在座位编辑器标记，全部由说书人裁定。代确认/代选、跳过、撤销重做与暗流涌动一致。细节：教授的可选目标只列公开已知的死者（不泄露本夜新死）；魔鬼代言人自动排除昨晚保过的人；僵怖假死（公开已出局）后其夜间步骤不会被锁死，仍可正常发送。',
+    '仍为手动提醒的步骤：侍臣（报角色不选人）、月之子/祖母其余夜/造谣者/修补匠等被动或触发类，以及主谋、吟游诗人、茶艺师、和平主义者、弄臣、打手这些无夜间主动操作的角色。',
+  ]},
   {v:'v2.70.0', d:'2026-08-29', items:[
     '玩家笔记「概览」页新增「夜间顺序」：在本局配置下方按官方夜单列出首夜与其余夜晚的角色行动次序（含爪牙相认、恶魔信息），角色名按阵营配色，本局未启用的显示为灰色。两个剧本都有，帮助玩家理解谁先谁后行动。',
   ]},
@@ -1925,13 +1952,14 @@ window.openSettings=function(){ document.getElementById('setVer').textContent=AP
   log.innerHTML='<div class="cl-item"><span class="cl-v">'+c.v+'</span><span class="cl-d">'+c.d+'</span><ul>'+c.items.map(i=>'<li>'+i+'</li>').join('')+'</ul></div>';
   _platSync(); try{ if(window._volSync) _volSync(); }catch(e){}
   try{ const isSt=!!(document.getElementById('stBadge')&&document.getElementById('stBadge').classList.contains('on')); const a=document.getElementById('stCodeSec'); if(a) a.style.display=(isSt?'block':'none'); }catch(e){}   // 说书人口令仅说书人可见（用角标判断，跨脚本块可靠）
+  try{ if(window._nickSync) _nickSync(); }catch(e){}   // v2.72.0 显示名称区
   const rf=document.getElementById('rpForm'); if(rf) rf.style.display='none'; document.getElementById('setModal').classList.add('on'); };
 window.closeSettings=function(){ document.getElementById('setModal').classList.remove('on'); };
 try{ applyPlatform(_platCur()); }catch(e){}
 
 /* ---------- seat-view guest ops ---------- */
 function addGuest(){
-  const inp=document.getElementById("nameInput"); const name=inp.value.trim(); if(!name) return;
+  const inp=document.getElementById("nameInput"); const name=idFromTyped(inp.value.trim()); if(!name) return;   // v2.72.0 输入昵称也认成对应 ID
   if(!guests.includes(name)) guests.push(name);
   if(!tokens.some(t=>t.name===name)) tokens.push({id:++uid,name,seat:null,dead:false});
   inp.value=""; inp.focus(); render();
@@ -2100,7 +2128,7 @@ function _isRegRole(i){ return !!(meta[i] && (meta[i].role==='spy'||meta[i].role
 function _regCandFor(team){ const r=[]; meta.forEach((m,i)=>{ if(!m||!m.role) return;
   if((team==='tf'||team==='out') && m.role==='spy') r.push(i);   // 间谍可注册为镇民(洗衣妇)/外来者(图管)
   else if(team==='min' && m.role==='recluse') r.push(i); }); return r; }   // 陌客可注册为爪牙(调查员)；间谍本就是真爪牙无需覆盖
-function nameAt(i){ const t=seatToken(i); return t?esc(t.name):('座位'+(i+1)); }
+function nameAt(i){ const t=seatToken(i); return t?esc(dispName(t.name)):('座位'+(i+1)); }   // v2.72.0 显示昵称
 function nearestLiving(i,dir){ for(let s=1;s<N;s++){ const j=((i+dir*s)%N+N)%N; if(j===i) break; if(seatAlive(j)) return j; } return -1; }
 function computeNightInfo(id){
   const seats=[]; meta.forEach((m,i)=>{ if(m.role===id) seats.push(i); }); if(!seats.length) return "";
@@ -2179,7 +2207,20 @@ const NIGHT_AUTO_INFO=new Set(['_minion','_demon','chef','empath','undertaker','
 const NIGHT_AUTO_PICK1=new Set(['poisoner','imp','monk','butler']);
 const NIGHT_AUTO_PICK2=new Set(['fortuneteller']);
 const NIGHT_AUTO_PICK1INFO=new Set(['ravenkeeper']);   // 选1人 + 回结果（守鸦人：得知其角色）
-function stepKind(id){ if(NIGHT_AUTO_INFO.has(id)) return 'info'; if(NIGHT_AUTO_PICK1.has(id)) return 'pick1'; if(NIGHT_AUTO_PICK2.has(id)) return 'pick2info'; if(NIGHT_AUTO_PICK1INFO.has(id)) return 'pick1info'; return null; }
+/* ==================== v2.71.0 半自动（黯月初升）====================
+   走 TB 现成的「发送 → 玩家弹窗选人/确认 → 说书人审核」交互，但审核只记录（魔典日志 + 双方局内信息回执），
+   **不做任何结算**——死亡走「本夜死亡记录」、中毒/醉酒/守护在座位编辑器标，均由说书人手动。 */
+const NIGHT_SEMI_PICK1=new Set(['sailor','exorcist','devilsadvocate','gambler','professor','lunatic','pukka','zombuul','po','assassin']);
+const NIGHT_SEMI_PICK2=new Set(['innkeeper','shabaloth','chambermaid']);
+const NIGHT_SEMI_INFO=new Set(['grandmother','godfather']);   // 首夜信息步；其余夜=手动提醒
+const NIGHT_SEMI_RESULT=new Set(['chambermaid']);             // 审核后需回发结果文本（说书人编辑）
+function _isSemi(id){ return NIGHT_SEMI_PICK1.has(id)||NIGHT_SEMI_PICK2.has(id)||NIGHT_SEMI_INFO.has(id); }
+function stepKind(id){ if(NIGHT_AUTO_INFO.has(id)) return 'info'; if(NIGHT_AUTO_PICK1.has(id)) return 'pick1'; if(NIGHT_AUTO_PICK2.has(id)) return 'pick2info'; if(NIGHT_AUTO_PICK1INFO.has(id)) return 'pick1info';
+  if(NIGHT_SEMI_INFO.has(id)) return night===1?'info':null;      // 祖母/教父：首夜告知；其余夜的条目是提醒，走手动勾选
+  if(id==='lunatic') return night===1?'info':'pick1';            // 疯子：首夜收（假）恶魔信息；其余夜照常「刀人」
+  if(NIGHT_SEMI_PICK1.has(id)) return 'pick1';
+  if(NIGHT_SEMI_PICK2.has(id)) return 'pick2info';               // 复用 count=2 的发送/重选路径；审核走半自动分支
+  return null; }
 function stepAutomated(s){ const id=s.id; if(id==='imp') return night>=2; return !!stepKind(id); }   // 首夜恶魔是「恶魔信息(_demon)」而非击杀
 function nfKey(id){ return night+':'+id; }
 function nfGet(id){ const k=nfKey(id); return nightFlow[k]||(nightFlow[k]={stage:'idle'}); }
@@ -2192,7 +2233,12 @@ function deadBeforeNight(i){ if(!isDeadSeat(i)) return false; if(histIsDayNow())
   const hh=meta[i]&&meta[i].hist, e=hh&&hh[night]; if(e&&typeof e==='object'&&e.death&&!(e._d&&e._d.death)) return false; return true; }
 function nightSeatOptions(exclude){ const a=[]; for(let i=0;i<N;i++){ if(exclude!=null && i===exclude) continue; a.push({seat:i, name:(i+1)+'号 '+nameAt(i)+(deadBeforeNight(i)?'（已出局）':'')}); } return a; }
 /* 僧侣/管家不能选自己：从玩家的可选目标里排除该角色自身座位 */
-function _pickOptionsFor(id){ const ex=(id==='monk'||id==='butler'||id==='ravenkeeper')?((nightSendSeats(id)||[])[0]):null; return nightSeatOptions(ex==null?undefined:ex); }
+function _pickOptionsFor(id){
+  if(id==='professor'){ const a=[]; for(let i=0;i<N;i++){ if(deadBeforeNight(i)) a.push({seat:i, name:(i+1)+'号 '+nameAt(i)+'（已出局）'}); } return a; }   // v2.71.0 教授：只列公开已知的死者（不含本夜新死，防泄露）
+  if(id==='devilsadvocate'){ const pf=nightFlow[(night-1)+':devilsadvocate']; const prev=(pf&&pf.pick&&pf.pick.length)?+pf.pick[0]:null;
+    return nightSeatOptions(undefined).filter(o=>o.seat!==prev); }   // v2.71.0 魔鬼代言人：排除昨晚已保的人（官方：不能连选）
+  const ex=(id==='monk'||id==='butler'||id==='ravenkeeper'||id==='sailor'||id==='exorcist'||id==='gambler')?((nightSendSeats(id)||[])[0]):null;
+  return nightSeatOptions(ex==null?undefined:ex); }
 /* 守鸦人本夜是否触发（被恶魔杀死）+ 给玩家看的结果文本 */
 function ravenActive(){ const rk=meta.findIndex(m=>m&&m.role==='ravenkeeper'); if(rk<0||!isDeadSeat(rk)) return false;
   const rec=impKills[night]; return !!(rec && rec.type==='normal' && rec.death===rk); }
@@ -2201,7 +2247,8 @@ function ravenPlayerResult(){ const rec=ravenPicks[night]||{}; if(rec.t==null) r
   const actual=infoRole(rec.t); const shown=((sick||_isRegRole(rec.t))&&rec.role)?rec.role:actual;   // #3 酒鬼真身=酒鬼；健康+间谍/陌客可按注册身份展示（与送葬者一致）
   const rn=(shown&&RMAP[shown])?RMAP[shown].name:'（未知）';
   return '【守鸦人】你得知 '+nameAt(rec.t)+' 的真实角色是：'+rn+'。'; }
-function _resultDefaultText(id){ return id==='ravenkeeper'?ravenPlayerResult():ftResultText(); }   // 结果类步骤的默认文本（占卜/守鸦人）
+function _resultDefaultText(id){ if(typeof _isSemi==='function'&&_isSemi(id)) return _semiResultDefault(id);   // v2.71.0 半自动结果步默认文本
+  return id==='ravenkeeper'?ravenPlayerResult():ftResultText(); }   // 结果类步骤的默认文本（占卜/守鸦人）
 function nightAutoText(id){
   if(id==='_minion'){ const d=_demSeat(); const dn=d>=0?((d+1)+'号 '+nameAt(d)):'（未定）'; const ms=_minSeats().map(i=>(i+1)+'号 '+nameAt(i)); return '【爪牙信息】你的恶魔是：'+dn+'。同伙爪牙：'+(ms.join('、')||'无其他爪牙')+'。'; }
   if(id==='_demon'){ const ms=_minSeats().map(i=>(i+1)+'号 '+nameAt(i)); const bl=(bluffs||[]).filter(Boolean).map(x=>RMAP[x]?RMAP[x].name:x); return '【恶魔信息】你的爪牙：'+(ms.join('、')||'无')+'。可伪装的身份（不在场好人）：'+(bl.join('、')||'（说书人未设置）')+'。'; }
@@ -2211,6 +2258,25 @@ function nightAutoText(id){
   if(id==='butler') return '【管家】请选择今晚的主人（仅当你的主人投票时，你才能投票；不能选自己）。';
   if(id==='ravenkeeper') return '【守鸦人】你今夜死亡——请选择一名玩家，你将得知其真实角色。';
   if(id==='fortuneteller') return '【占卜师】请选择今晚要占卜的两名玩家。';
+  /* ===== v2.71.0 黯月初升半自动文案 ===== */
+  if(id==='sailor') return '【水手】请选择一名玩家：你或他其中一人喝醉到明晚（由说书人决定谁醉）。';
+  if(id==='exorcist') return '【驱魔人】请选择一名玩家：若他是恶魔，恶魔今夜不醒、无法行动。';
+  if(id==='devilsadvocate') return '【魔鬼代言人】请选择一名存活玩家（不能与昨晚相同）：他明天被处决时不会死。';
+  if(id==='gambler') return '【赌徒】请选择你要赌的玩家；选好后请把你猜的角色私聊发给说书人（或口头告知）——猜错你会立即死亡。';
+  if(id==='professor') return '【教授】（一局一次）请选择一名已出局的玩家：若他是镇民，他将复活。若本夜不使用能力，请告知说书人跳过。';
+  if(id==='lunatic') return night===1
+    ? '【恶魔信息】你的爪牙：＿号 ＿＿。可伪装的身份（不在场好人）：＿＿、＿＿、＿＿。'
+    : '【恶魔】请选择今晚要击杀的目标。';   // ⚠ 疯子自以为是恶魔——发出的任何文案都不能出现「疯子/假」字样（首夜模板由说书人把＿编成假信息后发送，提示只能写在这行注释里）
+  if(id==='pukka') return '【恶魔】请选择今晚要下毒的目标（他明晚死去并恢复健康）。';
+  if(id==='zombuul') return '【恶魔】昨天白天无人死亡，你醒来了：请选择今晚要击杀的目标。';
+  if(id==='po') return '【恶魔】请选择今晚要击杀的目标；若想憋刀不杀，请告知说书人跳过（前夜没杀，下一夜可连杀三人）。';
+  if(id==='assassin') return '【刺客】（一局一次）请选择要暗杀的玩家（无视一切保护）；若本夜不使用，请告知说书人跳过。';
+  if(id==='innkeeper') return '【旅店老板】请选择两名玩家：他们今夜不会死，但其中一人喝醉到明晚。';
+  if(id==='shabaloth') return '【恶魔】请选择今晚要击杀的两名玩家。';
+  if(id==='chambermaid') return '【侍女】请选择两名存活玩家，你将得知其中今夜因自身能力醒来的人数。';
+  if(id==='grandmother') return '【祖母】你的孙辈是：＿号 ＿＿，其角色为「＿＿」。（说书人：发送前请把下划线改成实际内容）';
+  if(id==='godfather'){ const _os=[]; meta.forEach(m=>{ if(m&&m.role&&RMAP[m.role]&&RMAP[m.role].team==='out') _os.push(RMAP[m.role].name); });
+    return '【教父】在场的外来者角色：'+(_os.join('、')||'无')+'。'; }
   if(id==='chef'){ const s=meta.findIndex(m=>m&&m.role==='chef'); const sick=s>=0&&!healthy(s); const sv=sickAns[night+':chef'];   // 中毒/醉酒且已设假值→用假值，否则真值
     if(sick&&(sv==null||sv==='')) return '';   // #4 中毒未设答案 → 不自动发真值，逼说书人先设（发送被 info 门控拦住并提示）
     const c=(sick&&sv!=null&&sv!=='')?sv:chefPairs(); return '【厨师】相邻而坐的邪恶玩家共有 '+c+' 对。'; }
@@ -2267,7 +2333,26 @@ function nightApprove(id){ const f=nfGet(id); if(!f.pick||!f.pick.length){ try{w
     if(rk>=0 && !healthy(rk)){ f.stage='ravensick'; save(); render(); return; }   // 中毒/醉酒：先让说书人设定要告知的（可假）角色再发送
     const rtext=(f.resultText!=null&&f.resultText!=='')?f.resultText:ravenPlayerResult(); f.resultText=rtext; f.stage='result'; f.phase='result'; f.sid=(f.sid||0)+1;
     const seats=nightSendSeats(id); if(window.stNightSend) window.stNightSend(id,'result',rtext,null,seats,f.sid); }
+  else if(_isSemi(id)){ _semiApprove(id); return; }   // v2.71.0 半自动：只记录，不结算
   save(); render(); }
+/* ===== v2.71.0 半自动审核/回发（黯月初升）：记录选择（魔典日志 + 玩家局内信息回执），不做任何结算 ===== */
+function _semiNames(pk){ return (pk||[]).map(s=>((+s)+1)+'号 '+nameAt(+s)).join('、'); }
+function _semiChoiceLabel(id){ if(id==='lunatic') return '恶魔'; return (RMAP[id]&&RMAP[id].name)||id; }   // ⚠ 疯子的回执必须显示「恶魔」，不能泄露真身
+function _semiApprove(id){ const f=nfGet(id);
+  const seat=(nightSendSeats(id)||[])[0];
+  if(seat!=null&&seat>=0){ try{ histSet(seat,'info','选择：'+_semiNames(f.pick)+'（半自动·未结算，由说书人裁定）'); }catch(e){} }
+  if(NIGHT_SEMI_RESULT.has(id)){ f.stage='semiresult'; f.phase='semiresult'; if(f.resultText==null||f.resultText==='') f.resultText=_semiResultDefault(id); save(); render(); return; }
+  nfDone(id); save(); render(); }
+function _semiResultDefault(id){ if(id==='chambermaid') return '【侍女】你选择的两人中，今夜因自身能力醒来的有 ＿ 人。（说书人：请把＿改成数字后发送）'; return ''; }
+function nightSendSemiResult(id){ const f=nfGet(id); const rtext=(f.resultText!=null&&f.resultText!=='')?f.resultText:_semiResultDefault(id);
+  f.resultText=rtext; f.stage='result'; f.phase='result'; f.sid=(f.sid||0)+1;
+  const seats=nightSendSeats(id); if(window.stNightSend) window.stNightSend(id,'result',rtext,null,seats,f.sid); save(); render(); }
+function semiPickSet(id,k,v){ const f=nfGet(id); if(!Array.isArray(f.pick)) f.pick=[]; f.pick[k]=(v==='')?null:+v; save(); render(); }
+function semiManualUI(id){ const cnt=(stepKind(id)==='pick2info')?2:1; const f=nfGet(id); const cur=f.pick||[];
+  let h=''; for(let k=0;k<cnt;k++){ let o='<option value="">选择玩家…</option>';
+    _pickOptionsFor(id).forEach(op=>{ o+='<option value="'+op.seat+'"'+(cur[k]===op.seat?' selected':'')+'>'+op.name+'</option>'; });
+    h+='<select onchange="semiPickSet(\''+id+'\','+k+',this.value)" style="margin-right:6px">'+o+'</select>'; }
+  return h; }
 function nightImpReviewDone(id){ const rec=impKills[night]||{};
   if(rec.type==='starpass' && rec.newImp==null && _minSeats().some(i=>!isDeadSeat(i))){ try{window._toast&&_toast('恶魔自杀：请先指定一名存活爪牙继任为新恶魔');}catch(e){} return; }
   _impDone(id); }
@@ -2320,6 +2405,7 @@ function _nightUndoApply(id){
   /* 2) 玩家端：清掉本夜这一步写入的局内信息（key 里带 sid，按前缀清） */
   const pfs=['info:'+night+':'+id+':'];
   if(_UNDO_CHOICE_KEY[id]) pfs.push(_UNDO_CHOICE_KEY[id]+night);
+  if(_isSemi(id)) pfs.push('choice:'+id+':n'+night);   // v2.71.0 半自动的选择回执
   if(id==='imp') pfs.push('info:'+night+':_newimp:');
   targets.forEach(function(x){ try{ if(window.stRemoveGameInfoPrefix && x>=0) window.stRemoveGameInfoPrefix(x, pfs); }catch(e){} });
   /* 3) 间谍：删掉已下发的当夜魔典快照，否则重发会被 transaction 挡住 */
@@ -2335,6 +2421,7 @@ function _nightUndoApply(id){
   else if(id==='undertaker'){ delete undertakerPicks[night]; delete sickAns[night+':undertaker']; }
   else if(id==='chef'||id==='empath'){ delete sickAns[night+':'+id]; }
   else if(id==='washerwoman'||id==='librarian'||id==='investigator'){ delete pingPicks[id]; }
+  else if(_isSemi(id)){ const s=(nightSendSeats(id)||[])[0]; if(s!=null&&s>=0){ try{ histSet(s,'info',null); }catch(e){} } }   // v2.71.0 半自动：清掉「选择：…」魔典记录（无结算可退）
   /* 5) 流程状态归零 → 回到「未开始」 */
   delete nightChecks[nfKey(id)];
   delete nightFlow[nfKey(id)];
@@ -2351,7 +2438,11 @@ window.nightUndoStep=async function(id){
 };
 /* 跳过：这一步「没有发生」→ 不记入玩家局内信息、不记魔典，仅标记完成以放行「结束本夜」 */
 function nightSkipStep(id){ nfDone(id,true); save(); render(); }
-function nightManualDone(id){ if(id==='imp'){ const rec=impKills[night]||{}; if(rec.type==='starpass' && rec.newImp==null && _minSeats().some(i=>!isDeadSeat(i))){ try{window._toast&&_toast('恶魔自杀：请先在下方指定继任爪牙');}catch(e){} return; }
+function nightManualDone(id){
+  if(_isSemi(id)){ const f=nfGet(id); const need=(stepKind(id)==='pick2info')?2:1; const pk=(f.pick||[]).filter(x=>x!=null);
+    if(pk.length<need){ try{window._toast&&_toast('请先选满 '+need+' 个目标');}catch(e){} return; }
+    f.pick=pk.map(Number); _semiApprove(id); return; }   // v2.71.0 半自动代选：与审核同一条路（记录+可选回发结果），不结算
+  if(id==='imp'){ const rec=impKills[night]||{}; if(rec.type==='starpass' && rec.newImp==null && _minSeats().some(i=>!isDeadSeat(i))){ try{window._toast&&_toast('恶魔自杀：请先在下方指定继任爪牙');}catch(e){} return; }
     _impDone(id); return; }
   if(id==='fortuneteller'){ try{ if(typeof recordFt==='function') recordFt(); }catch(e){}   // 代占卜：把结果记入魔典日志
     try{ const cur=ftPicks[night]; if(window.stRecordGameInfo && cur && cur[0]!=null && cur[1]!=null){ const seat=(nightSendSeats('fortuneteller')||[])[0]; if(seat!=null&&seat>=0) window.stRecordGameInfo(seat,'info:'+night+':fortuneteller:result:1',ftResultText(),night,2); } }catch(e){}   // 代占卜也把结果记入占卜师局内信息（否则只有选择没有结果）
@@ -2384,6 +2475,9 @@ function _nfRecordChoice(id){ if(!window.stRecordGameInfo) return;
   if(id==='ravenkeeper'){ const rec=ravenPicks[night]||{}; if(rec.t==null) return;
     const seat=(nightSendSeats('ravenkeeper')||[])[0]; if(seat==null) return;
     window.stRecordGameInfo(seat,'choice:raven:n'+night,'【守鸦人】你选择查看 '+(rec.t+1)+'号 '+nameAt(rec.t)+'。',night,1); return; }
+  if(_isSemi(id)){ const f=nightFlow[nfKey(id)]; const pk=f&&f.pick; if(!pk||!pk.length||pk[0]==null) return;   // v2.71.0 半自动：通用选择回执
+    const seat=(nightSendSeats(id)||[])[0]; if(seat==null||seat<0) return;
+    window.stRecordGameInfo(seat,'choice:'+id+':n'+night,'【'+_semiChoiceLabel(id)+'】你选择了 '+_semiNames(pk)+'。',night,1); return; }
 }
 /* 传位通知文本 & 排序权重：ord=3 让它排在新恶魔当晚的爪牙行动（如投毒 ord=1）之后——夜晚顺序里投毒在先、恶魔自刀传位在后 */
 const NEWIMP_TEXT='【恶魔】原小恶魔自杀传位，你已成为新的小恶魔（恶魔阵营）。从此刻起你的身份是小恶魔，之后每晚由你选择击杀目标。';
@@ -2427,7 +2521,7 @@ function stepDone(s){ if(s.id==='ravenkeeper' && stepAutomated(s) && !ravenActiv
 function _stepRoleDead(id){ if(id==='ravenkeeper') return false; const seats=nightSendSeats(id); if(!seats||!seats.length) return false; return seats.every(function(i){ return isDeadSeat(i); }); }   // 守鸦人正是死亡才行动，不按「出局变灰」处理
 function nightPanel(id, active){
   const kind=stepKind(id); const f=nfGet(id); const stage=f.stage||'idle';
-  const dead=_stepRoleDead(id);                     // 角色已出局：除「跳过」外其余操作变灰
+  const dead=_stepRoleDead(id) && id!=='zombuul';   // 角色已出局：除「跳过」外其余操作变灰。⚠ 僵怖例外：假死后（公开已出局）仍会醒来行动
   const lock = (active&&!dead)?'' : ' disabled';    // 发送等操作在非激活或已出局时禁用
   let h='<div class="nflow">';
   if(stage==='done'){ return h+'<div class="nf-done">✓ 已完成</div>'
@@ -2465,8 +2559,18 @@ function nightPanel(id, active){
       +'<button class="nf-undo" onclick="nightUndoStep('+_q(id)+')" title="撤销这一步并重新执行">撤销</button></div>';
     return h+'</div>';
   }
+  if(stage==='semiresult'){   // v2.71.0 半自动·回发结果（如侍女的醒来人数）：说书人编辑文本后发送
+    const _srt=(f.resultText!=null&&f.resultText!=='')?f.resultText:_semiResultDefault(id);
+    h+='<div class="nf-status">玩家已选择：<b>'+_nfEscA(_semiNames(f.pick))+'</b>——请编辑要告知的结果后发送：</div>';
+    h+='<textarea class="nf-ta" oninput="nightEditResult(\''+id+'\',this.value)">'+_nfEscA(_srt)+'</textarea>';
+    h+='<div class="nf-btns"><button class="nf-ok" onclick="nightSendSemiResult(\''+id+'\')">发送结果</button>'
+      +'<button class="nf-re" onclick="nightRetract(\''+id+'\')">退回重选</button>'
+      +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button>'
+      +'<button class="nf-undo" onclick="nightUndoStep('+_q(id)+')" title="撤销这一步并重新执行">撤销</button></div>';
+    return h+'</div>';
+  }
   if(stage==='manual'){   // 代玩家操作：说书人手动选目标（复用现有选择器）
-    let w=''; if(id==='poisoner') w=poisonUI(); else if(id==='fortuneteller') w=ftUI(); else if(id==='imp') w=impKillUI(); else if(id==='monk') w=monkUI(); else if(id==='butler') w=butlerUI(); else if(id==='ravenkeeper') w=ravenUI();
+    let w=''; if(id==='poisoner') w=poisonUI(); else if(id==='fortuneteller') w=ftUI(); else if(id==='imp') w=impKillUI(); else if(id==='monk') w=monkUI(); else if(id==='butler') w=butlerUI(); else if(id==='ravenkeeper') w=ravenUI(); else if(_isSemi(id)) w=semiManualUI(id);
     h+='<div class="nf-status">代玩家操作：请在下方手动选择目标。</div>';
     h+='<div class="nf-imp">'+w+'</div>';
     h+='<div class="nf-btns"><button class="nf-ok" onclick="nightManualDone(\''+id+'\')">✓ 完成本步</button>'
@@ -3787,9 +3891,11 @@ function renderLedger(){
     const active=tokens.some(t=>t.name===name);
     const reg=!!(window._isRegistered&&window._isRegistered(name));
     const el=document.createElement("span"); el.className="ptag"+(active?" active":"")+(reg?" reg":"");
-    el.innerHTML=(reg?'<span class="regdot" title="已注册账号">●</span> ':'')+esc(name)+' <span class="del" title="'+(reg?'删除账号（停用+清空笔记）':'从名单删除')+'">✕</span>';
-    el.addEventListener("click",async e=>{ if(e.target.classList.contains("del")){ e.stopPropagation();
-        if(reg){ let ok=true; try{ ok=await uiConfirm('删除账号「'+name+'」？该玩家将无法再登录，其本局笔记也会被清空。'); }catch(e){} if(!ok) return; }
+    const _nk=nickOf(name); el.title='ID：'+name+(_nk?('\n显示名称：'+_nk):'');
+    el.innerHTML=(reg?'<span class="regdot" title="已注册账号">●</span> ':'')+esc(dispName(name))+(_nk?' <span class="pid">('+esc(name)+')</span>':'')+' <span class="ren" title="改显示名称">✎</span> <span class="del" title="'+(reg?'删除账号（停用+清空笔记）':'从名单删除')+'">✕</span>';
+    el.addEventListener("click",async e=>{ if(e.target.classList.contains("ren")){ e.stopPropagation(); try{ if(window._stRenameGuest) window._stRenameGuest(name); }catch(_){} return; }
+      if(e.target.classList.contains("del")){ e.stopPropagation();
+        if(reg){ let ok=true; try{ ok=await uiConfirm('删除账号「'+dispName(name)+'」（ID：'+name+'）？该玩家将无法再登录，其本局笔记也会被清空。'); }catch(e){} if(!ok) return; }
         forgetGuest(name); return; } reAdd(name); });
     past.appendChild(el);
   });
@@ -3820,7 +3926,7 @@ function setupSnapHTML(){
     if(o.reg==='evil') tags.push('判定为邪恶');
     if(o.herring) tags.push('红鲱鱼');
     const tagHtml=tags.length?' <span style="color:#b0402e;font-size:.88em">['+tags.join('/')+']</span>':'';
-    h+='<div class="rrow">'+(i+1)+' '+(o.n||'（空座）')+'：'+roleHtml+tagHtml+'</div>';
+    h+='<div class="rrow">'+(i+1)+' '+(o.n?esc(dispName(o.n)):'（空座）')+'：'+roleHtml+tagHtml+'</div>';
   });
   const bl=(sn.bluffs||[]).filter(Boolean).map(function(x){ return RMAP[x]?RMAP[x].name:x; });
   h+='<div class="rrow">恶魔伪装：'+(bl.join('、')||'（未设）')+'</div>';
@@ -3922,10 +4028,10 @@ window._stLogShare=function(){
     try{ if(window._updateStLogFab) window._updateStLogFab(); }catch(e){} try{ if(window._stLogPanelRefresh) window._stLogPanelRefresh(); }catch(e){}
     try{ if(window._toast) window._toast('已分享说书人日志给所有玩家'); }catch(e){} render(); }); };
 function chipEl(t){
-  const d=document.createElement("div");
+  const d=document.createElement("div"); d.title="ID："+t.name;
   d.className="chip"+(selected===t.id?" sel":"")+(t.seat!==null?" seated":"");
   const _online=!!(window._acctOnline && window._acctOnline(t.name));   // 已登录且在线 → 绿点
-  d.innerHTML=(_online?'<span class="odot" title="已登录（在线）">●</span> ':'')+esc(t.name)+' <span class="x" title="移出">✕</span>'; d.setAttribute('data-drag', t.id);   // 拖拽由统一指针系统处理（data-drag）
+  d.innerHTML=(_online?'<span class="odot" title="已登录（在线）">●</span> ':'')+esc(dispName(t.name))+' <span class="x" title="移出">✕</span>'; d.setAttribute('data-drag', t.id);   // 拖拽由统一指针系统处理（data-drag）
   d.addEventListener("click",e=>{ if(e.target.classList.contains("x")){e.stopPropagation();removeToken(t.id);return;}
     e.stopPropagation(); selected=(selected===t.id?null:t.id); render(); });
   return d;
@@ -4157,7 +4263,7 @@ function renderSeats(){
     const t=seatToken(i);
     let html='<div class="num" style="width:'+numD+'px;height:'+numD+'px;font-size:'+numF+'px">'+(i+1)+'</div>';
     if(view==="seat"){
-      if(t){ html+='<div class="nm" style="font-size:'+nmF+'px">'+esc(t.name)+'</div>';
+      if(t){ html+='<div class="nm" style="font-size:'+nmF+'px">'+esc(dispName(t.name))+'</div>';
         s.classList.add("filled"); if(t.dead){ s.classList.add("dead","hascause"); const isClaw=deathCauseLabel(i)==='夜晚死亡';
           const pos=isClaw?'calc(50% + 6px) center':'center', sz=isClaw?'80%':'62%';
           s.style.background="url('"+deathCauseIcon(i)+"') "+pos+" / "+sz+" no-repeat, radial-gradient(circle at 50% 35%, rgba(48,34,58,.9), rgba(22,15,30,.95))"; } }
@@ -4168,7 +4274,7 @@ function renderSeats(){
       if(role) s.classList.add(isEvil(role.team)?"evil":"good");
       const dead = t ? !!t.dead : !!m.dead;
       if(dead) s.classList.add("dead");
-      html+='<div class="nm" style="font-size:'+nmF+'px">'+(t?esc(t.name):'<span style="opacity:.5">空</span>')+'</div>';
+      html+='<div class="nm" style="font-size:'+nmF+'px">'+(t?esc(dispName(t.name)):'<span style="opacity:.5">空</span>')+'</div>';
       if(role){ const label=role.name+(m.isDrunk?'-酒鬼':'');
         const rfz=Math.min(rF, Math.floor(0.8*seatD/label.length));
         html+='<div class="role" style="font-size:'+rfz+'px;color:'+(m.isDrunk?TEAMC.out:TEAMC[role.team])+'">'+label+'</div>'; }
@@ -4245,7 +4351,7 @@ function renderBubbles(){
       else    { cls="bt"; b.style.top=(p.y-p.d/2-g)+"px"; b.style.left=p.x+"px"; b.style.transform="translate(-50%,-100%)"; }
     }
     b.className="bubble "+cls;
-    const t=seatToken(i); const nm=t?esc(t.name):('座位'+(i+1));
+    const t=seatToken(i); const nm=t?esc(dispName(t.name)):('座位'+(i+1));
     b.innerHTML='<textarea placeholder="在此记录你自己的备注…"></textarea>';
     const ta=b.querySelector("textarea"); ta.value=meta[i]?(meta[i].info||""):"";
     ta.addEventListener("input",()=>{ ensureMeta(); meta[i].info=ta.value; save(); });
@@ -4285,7 +4391,7 @@ function updAlign(){ const id=document.getElementById("mRole").value; const box=
   if(!id){ box.innerHTML=""; return; } const t=RMAP[id].team;
   box.innerHTML='<span class="align-badge '+(isEvil(t)?"evil":"good")+'">'+(isEvil(t)?"邪恶":"善良")+" · "+TEAMLABEL[t]+"</span>"; }
 function applyEditor(){
-  if(sel<0) return; const i=sel; const m=meta[i]; const name=document.getElementById("mName").value.trim();
+  if(sel<0) return; const i=sel; const m=meta[i]; const name=idFromTyped(document.getElementById("mName").value.trim());   // v2.72.0 输入昵称也认成对应 ID
   let t=seatToken(i);
   if(name && !cfgLocked()){ if(t){ t.name=name; } else { t={id:++uid,name,seat:i,dead:false}; tokens.push(t); } if(!guests.includes(name)) guests.push(name); }   // ⑬ 游戏期不改名字/入座
   if(!cfgLocked()) m.role=document.getElementById("mRole").value||null;   // ⑬ 游戏期不改角色
@@ -4392,6 +4498,12 @@ load(); render();
   <div class="vol-row"><label>背景音乐</label><input type="range" id="volBgm" min="0" max="100" step="1" oninput="setVol('bgm',this.value)"><span class="vol-n" id="volBgmN">25%</span></div>
   <div class="set-hint">分别控制事件音效、处决/射杀等动画视频、背景音乐的音量。左上角静音按钮会临时静音全部声音。</div>
   <div class="set-sec">账号</div>
+  <div id="nickSec" style="display:none">
+    <div class="nick-id">登录 ID：<b id="nickId">—</b><span>（固定不变，登录用）</span></div>
+    <div class="nick-row"><input id="nickInput" type="text" maxlength="16" placeholder="显示名称（留空=直接显示 ID）" autocomplete="off" onkeydown="if(event.key==='Enter')_saveMyNick()"><button class="rp-go" onclick="_saveMyNick()">保存</button></div>
+    <div class="rp-err" id="nickErr"></div>
+    <div class="set-hint">显示名称是其他人在座位圈、聊天和旧局记录里看到的名字，可以随时改；旧局战绩按登录 ID 记录，改名后会自动显示新名字。</div>
+  </div>
   <button class="rp-open" onclick="_openResetPw()">重置我的密码</button>
   <div id="rpForm" style="display:none">
     <input id="rpId" type="text" placeholder="你的 ID" autocomplete="off">
@@ -4479,7 +4591,7 @@ load(); render();
   function E(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
   function show(id,on){ const el=document.getElementById(id); if(el) el.classList.toggle('on',on); }
   window._closeGate=function(id){ show(id,false); };
-  function pname(i){ return (pub&&pub.seats&&pub.seats[i]&&pub.seats[i].name)?pub.seats[i].name:('玩家'+(i+1)); }
+  function pname(i){ return (pub&&pub.seats&&pub.seats[i]&&pub.seats[i].name)?dispName(pub.seats[i].name):('玩家'+(i+1)); }   // v2.72.0 显示昵称
 
   /* ---------- 模式切换 ---------- */
   function setMode(m){ mode=m;
@@ -4659,7 +4771,7 @@ load(); render();
       _stateTransition(()=>{ if((user.email||'').endsWith(ST_DOM)){ role='st'; window.__botcRole='st'; enterSt(); } else { role='player'; window.__botcRole='player'; enterPlayer(); } }); })();
   }));
   function _storedId(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
-  function _enterStUI(){ document.getElementById('stBadge').classList.add('on'); document.body.classList.remove('pl'); document.getElementById('stName').textContent=(me&&me.displayName)||_storedId('botc_stid'); bindStPlayers(); bindStAccounts(); setMode('st'); try{ if(window._stCloudLoad) _stCloudLoad(); }catch(e){} try{ _presenceStart(); }catch(e){} try{ _stSessStart(); }catch(e){} }
+  function _enterStUI(){ document.getElementById('stBadge').classList.add('on'); document.body.classList.remove('pl'); document.getElementById('stName').textContent=dispName((me&&me.displayName)||_storedId('botc_stid')); bindStPlayers(); bindStAccounts(); setMode('st'); try{ if(window._stCloudLoad) _stCloudLoad(); }catch(e){} try{ _presenceStart(); }catch(e){} try{ _stSessStart(); }catch(e){} }
   function enterSt(){ _enterStUI(); }   // 说书人登录始终成功；顶号逻辑见 _stSessStart（新登录顶掉旧页面）
   /* ===== 说书人整局存档：全体说书人「共用一套魔典」的实时双向同步（本地 localStorage ↔ 云端共享节点 stState/shared，以 ts 取新，带回声保护） ===== */
   var ST_SHARED='stState/shared';   // 单一共享节点：任意说书人、任意设备登录都读写同一份魔典
@@ -4726,7 +4838,7 @@ load(); render();
     try{ const ref=db.ref('accounts/'+rkey(nm)+'/online'); _onlineRef=ref; ref.onDisconnect().remove(); ref.set(true).catch(function(){}); }catch(e){} }
   function _playerOnlineStop(){ try{ if(_onlineRef){ try{ _onlineRef.onDisconnect().cancel(); }catch(e){} _onlineRef.remove().catch(function(){}); _onlineRef=null; } }catch(e){} }
   window._acctOnline=function(name){ try{ const a=window.__accounts||{}; const acc=a[rkey(name)]; return !!(acc&&acc.online); }catch(e){ return false; } };
-  function enterPlayer(){ document.getElementById('stBadge').classList.remove('on'); document.body.classList.add('pl'); document.getElementById('pbName').textContent=((me&&me.displayName)||_storedId('botc_pid')||'玩家'); _nbSeatPage=false; const _np=document.getElementById('notesPanel'); if(_np) _np.classList.remove('seatpage'); bindNotes(); setMode('notes'); try{ _presenceStart(); }catch(e){} try{ _playerOnlineStart(); }catch(e){} }
+  function enterPlayer(){ document.getElementById('stBadge').classList.remove('on'); document.body.classList.add('pl'); document.getElementById('pbName').textContent=(dispName((me&&me.displayName)||_storedId('botc_pid'))||'玩家'); _nbSeatPage=false; const _np=document.getElementById('notesPanel'); if(_np) _np.classList.remove('seatpage'); bindNotes(); setMode('notes'); try{ _presenceStart(); }catch(e){} try{ _playerOnlineStart(); }catch(e){} }
   function bindNotes(){ if(notesRef){ notesRef.off(); notesRef=null; } if(role==='player'&&me&&curGid){ notesRef=db.ref('games/'+curGid+'/players/'+me.uid); notesRef.on('value',s=>{ S=s.val(); ensureS(); window.__myRole=(S&&S.role)||''; try{ updateRoleCard(curGid, window.__myRole); }catch(e){} try{ updateSpyGrim(); }catch(e){} try{ updateSlayerGun(); }catch(e){} if(mode==='notes') renderView(); }); } }
 
   /* ===== 玩家本局角色卡（右上角卡背 + 入场/翻开动画） ===== */
@@ -4847,7 +4959,7 @@ load(); render();
     if(lst){ let h='<div class="spyg-lrow spyg-lhead"><span class="c1">玩家</span><span class="c2">身份</span><span class="c3">状态</span></div>';
       (snap.seats||[]).forEach(function(o){
         const stArr=[]; if(o.dead)stArr.push('出局'); if(o.bGhost)stArr.push('已投鬼票'); if(o.bPoison)stArr.push('中毒'); if(o.bDrunk)stArr.push('醉酒'); if(o.bShield)stArr.push('守护'); if(o.bShot)stArr.push('已开枪'); if(o.master)stArr.push('主人'); if(o.herring)stArr.push('红鲱鱼');
-        const nm=o.name?_nbEsc(o.name):'空';
+        const nm=o.name?_nbEsc(dispName(o.name)):'空';
         const role=o.label?('<b style="color:'+(o.col||'#43286b')+'">'+_nbEsc(o.label)+'</b>'):'<span style="opacity:.5">—</span>';
         h+='<div class="spyg-lrow'+(o.dead?' dead':'')+'"><span class="c1">'+(o.i+1)+'　'+nm+'</span><span class="c2">'+role+'</span><span class="c3">'+(stArr.length?_nbEsc(stArr.join('·')):'—')+'</span></div>'; });
       lst.innerHTML=h; lst.scrollTop=0; }
@@ -4866,7 +4978,7 @@ load(); render();
       const s=document.createElement('div'); s.className='seat'+(o.good?' good':(o.evil?' evil':''))+(o.dead?' dead':'');
       s.style.left=x+'px'; s.style.top=y+'px'; s.style.width=seatD+'px'; s.style.height=seatD+'px';
       let html='<div class="num" style="width:'+numD+'px;height:'+numD+'px;font-size:'+numF+'px">'+(o.i+1)+'</div>';
-      html+='<div class="nm" style="font-size:'+nmF+'px">'+(o.name?_nbEsc(o.name):'<span style="opacity:.5">空</span>')+'</div>';
+      html+='<div class="nm" style="font-size:'+nmF+'px">'+(o.name?_nbEsc(dispName(o.name)):'<span style="opacity:.5">空</span>')+'</div>';
       if(o.label){ const rfz=Math.min(rF, Math.floor(0.8*seatD/Math.max(o.label.length,1)));
         html+='<div class="role" style="font-size:'+rfz+'px;color:'+(o.col||'#43286b')+'">'+_nbEsc(o.label)+'</div>'; }
       if(o.dead && o.deadIcon){ s.classList.add('hascause'); const isClaw=!!o.claw; const pos=isClaw?'calc(50% + 6px) center':'center', sz=isClaw?'80%':'62%';
@@ -5049,7 +5161,7 @@ load(); render();
   /* 旧局记录里的名字大小写统一：小写键 -> 展示用原始大小写。名册（说书人登记）优先，历史记录里出现过的大写写法作补充；
      这样早期存成小写「cooler」的记录，在对局列表/统计/积分榜里都显示为「Cooler」，且与「Cooler」合并计分（同一人） */
   let _histNameMap={};
-  function _dn(nm){ if(!nm) return nm; const k=norm(nm); return _histNameMap[k]||nm; }
+  function _dn(nm){ if(!nm) return nm; const nk=nickOf(nm); if(nk) return nk; const k=norm(nm); return _histNameMap[k]||nm; }   // v2.72.0 旧局记录按 ID 追踪，显示玩家「当下」的昵称
   function _buildNameMap(games, roster){ const m={}; const hasUpper=s=>/[A-Z]/.test(s);
     const consider=nm=>{ if(!nm) return; const k=norm(nm); if(!k) return; const cur=m[k];
       if(cur===undefined){ m[k]=nm; return; } if(!hasUpper(cur)&&hasUpper(nm)) m[k]=nm; };   // 用「含大写」的写法替换「全小写」的
@@ -5073,17 +5185,17 @@ load(); render();
       clearTimeout(btn._t); btn._t=setTimeout(()=>{ if(!btn) return; btn.dataset.armed=''; btn.textContent='删除'; btn.classList.remove('armed'); },3000); return; }
     db.ref('history/'+key).remove().then(()=>{ try{ if(window._sfx) _sfx('pen-return'); }catch(e){} _renderHist(); }).catch(()=>{}); };
   function _aggregate(games){ const P={}; const get=n=>P[n]||(P[n]={tf:{n:0,w:0},out:{n:0,w:0},min:{n:0,w:0},dem:{n:0,w:0},stN:0,stG:0,stE:0});
-    games.forEach(g=>{ const res=g.result; (g.seats||[]).forEach(s=>{ if(!s.name||!s.team||!_TEAMLBL[s.team]) return; const p=get(_dn(s.name)); p[s.team].n++; if(_ALIGN(s.team)===res) p[s.team].w++; });
-      if(g.st){ const p=get(_dn(g.st)); p.stN++; if(res==='good')p.stG++; else if(res==='evil')p.stE++; } });
+    games.forEach(g=>{ const res=g.result; (g.seats||[]).forEach(s=>{ if(!s.name||!s.team||!_TEAMLBL[s.team]) return; const p=get(norm(s.name)); p[s.team].n++; if(_ALIGN(s.team)===res) p[s.team].w++; });
+      if(g.st){ const p=get(norm(g.st)); p.stN++; if(res==='good')p.stG++; else if(res==='evil')p.stE++; } });
     return P; }
   function _pct(w,n){ return n?Math.round(w*100/n)+'%':'—'; }
   function _histStatsHTML(games){ if(!games.length) return '<div style="padding:8px;color:#8a6b3a;font-size:12px">还没有对局记录。</div>';
-    const P=_aggregate(games); const names=Object.keys(P).sort();
+    const P=_aggregate(games); const names=Object.keys(P).sort((a,b)=>String(_dn(a)).localeCompare(String(_dn(b))));
     let h='<table class="htbl"><thead><tr><th class="l">玩家</th><th class="c-tf">镇民</th><th class="c-out">外来者</th><th class="c-min">爪牙</th><th class="c-dem">恶魔</th><th class="c-st">说书人</th></tr></thead><tbody>';
     const cell=(o,cls)=>o.n?('<span class="'+cls+'">'+o.w+'/'+o.n+'<br>'+_pct(o.w,o.n)+'</span>'):'—';
     names.forEach(nm=>{ const p=P[nm];
       const st=p.stN?('<span class="c-st">'+p.stN+'</span><br><span class="c-good">'+_pct(p.stG,p.stN)+'</span>/<span class="c-evil">'+_pct(p.stE,p.stN)+'</span>'):'—';
-      h+='<tr><td class="l">'+E(nm)+'</td><td>'+cell(p.tf,'c-tf')+'</td><td>'+cell(p.out,'c-out')+'</td><td>'+cell(p.min,'c-min')+'</td><td>'+cell(p.dem,'c-dem')+'</td><td>'+st+'</td></tr>'; });
+      h+='<tr><td class="l">'+E(_dn(nm))+'</td><td>'+cell(p.tf,'c-tf')+'</td><td>'+cell(p.out,'c-out')+'</td><td>'+cell(p.min,'c-min')+'</td><td>'+cell(p.dem,'c-dem')+'</td><td>'+st+'</td></tr>'; });
     h+='</tbody></table><div style="font-size:calc(.72*var(--sw)/100);color:#8a6b3a;margin-top:4px">阵营格式：胜/局 · 胜率 ｜ 说书人：局数 · 好人胜率/恶魔胜率</div>';
     return h; }
   function _crown(rank){ if(rank<1||rank>3) return ''; return '<img class="crown" src="assets/crown-'+rank+'.png" alt="">'; }
@@ -5092,7 +5204,7 @@ load(); render();
     rows.sort((a,b)=>b.total-a.total || b.evil-a.evil);
     let h='<table class="htbl"><thead><tr><th class="l">玩家</th><th class="c-good">好人分</th><th class="c-evil">恶魔分</th><th class="c-st">说书人分</th><th class="c-total">总分</th></tr></thead><tbody>';
     rows.forEach((r,i)=>{ const cr=i<3?_crown(i+1):'';
-      h+='<tr><td class="l">'+E(r.nm)+cr+'</td><td class="c-good">'+r.good+'</td><td class="c-evil">'+r.evil+'</td><td class="c-st">'+r.st+'</td><td class="c-total"><b>'+r.total+'</b></td></tr>'; });
+      h+='<tr><td class="l">'+E(_dn(r.nm))+cr+'</td><td class="c-good">'+r.good+'</td><td class="c-evil">'+r.evil+'</td><td class="c-st">'+r.st+'</td><td class="c-total"><b>'+r.total+'</b></td></tr>'; });
     h+='</tbody></table><div style="font-size:calc(.72*var(--sw)/100);color:#8a6b3a;margin-top:4px">好人胜+1 · 恶魔胜+2 · 说书人+1</div>';
     return h; }
 
@@ -5217,6 +5329,49 @@ load(); render();
   function findSeatByName(nm){ nm=norm(nm); if(!nm||!pub||!pub.seats) return -1;
     for(let i=0;i<pub.seats.length;i++){ if(pub.seats[i]&&norm(pub.seats[i].name)===nm) return i; } return -1; }
   function myVoteSeat(){ if(role!=='player'||!me) return -1; return findSeatByName(me.displayName||''); }
+  /* ===== v2.72.0 固定 ID + 可改显示名称（nicks/{idKey}=昵称；全员可读，本人/说书人可写） ===== */
+  function _myId(){ return (me&&me.displayName)||_storedId(role==='st'?'botc_stid':'botc_pid')||''; }
+  function _updNameBadges(){ try{ const id=_myId(); if(!id) return;
+      const pb=document.getElementById('pbName'), sn=document.getElementById('stName');
+      if(role==='player'&&pb) pb.textContent=dispName(id); if(role==='st'&&sn) sn.textContent=dispName(id); }catch(e){} }
+  function _nickRefresh(){ _updNameBadges();
+    try{ if(mode==='st'){ if(typeof render==='function') render(); } else renderView(); }catch(e){}
+    try{ if(window.__crOpen&&window._crOnPubChange) _crOnPubChange(); }catch(e){}
+    try{ if(_histOn) _renderHist(); }catch(e){} }
+  try{ db.ref('nicks').on('value', function(s){ window.__nicks=s.val()||{}; _nickRefresh(); }, function(){ /* 规则未部署：保持空表，一律显示 ID */ }); }catch(e){}
+  /* 重名检查：新昵称不能等于其他人的登录 ID，也不能等于其他人的昵称（不分大小写） */
+  async function _nickConflict(id, nick){ const k=idKey(nick), mine=idKey(id); if(k===mine) return '';
+    let roster={}; try{ roster=(await db.ref('roster').once('value')).val()||{}; }catch(e){}
+    const nk=window.__nicks||{}, accs=window.__accounts||{};
+    const ids=new Set([].concat(Object.keys(roster), Object.keys(nk), Object.keys(accs), (typeof guests!=='undefined'?guests:[]).map(idKey)));
+    for(const x of ids){ if(!x||x===mine) continue;
+      if(x===k) return '「'+nick+'」是其他玩家的登录 ID，换一个吧';
+      if(typeof nk[x]==='string'&&idKey(nk[x])===k) return '已经有人叫「'+nk[x]+'」了，换一个吧'; }
+    return ''; }
+  /* 设置昵称：返回 '' 表示成功，否则为错误提示。nick 为空或与 ID 完全相同 = 清除昵称（显示 ID） */
+  window._setNick=async function(id, nick){ id=String(id||'').trim(); nick=String(nick==null?'':nick).trim().replace(/\s+/g,' ');
+    if(!id) return '还没有登录';
+    if(role!=='st' && idKey(id)!==idKey(_myId())) return '只能修改自己的显示名称';
+    if(nick.length>16) return '显示名称最多 16 个字';
+    if(/[<>"]/.test(nick)) return '显示名称不能包含 < > "';
+    const k=idKey(id), clear=(!nick||nick===id);
+    if(!clear){ const c=await _nickConflict(id,nick); if(c) return c; }
+    try{ if(role==='player' && me && me.uid){ try{ await db.ref('accounts/'+k+'/uid').set(me.uid); }catch(e){} }   // 规则靠 accounts/{id}/uid 认出本人
+      await db.ref('nicks/'+k).set(clear?null:nick);
+      const m=Object.assign({}, window.__nicks||{}); if(clear) delete m[k]; else m[k]=nick; window.__nicks=m; _nickRefresh();
+      return ''; }
+    catch(e){ const c=String((e&&(e.code||e.message))||''); return /permission/i.test(c)?'没有写入权限（需要先在 Firebase 部署 nicks 规则）':('保存失败：'+c); } };
+  window._nickSync=function(){ const sec=document.getElementById('nickSec'); if(!sec) return; const id=(role==='st'||role==='player')?_myId():'';
+    sec.style.display=id?'block':'none'; if(!id) return;
+    document.getElementById('nickId').textContent=id; document.getElementById('nickInput').value=nickOf(id); document.getElementById('nickErr').textContent=''; };
+  window._saveMyNick=async function(){ const inp=document.getElementById('nickInput'), err=document.getElementById('nickErr'); if(!inp) return;
+    err.textContent='保存中…'; const r=await window._setNick(_myId(), inp.value); err.textContent=r;
+    if(!r){ inp.value=nickOf(_myId()); try{ toast(inp.value?('✅ 显示名称已改为「'+inp.value+'」'):'✅ 已恢复显示登录 ID'); }catch(e){} } };
+  /* 说书人：在过往客人名册里点 ✎ 替玩家改显示名称 */
+  window._stRenameGuest=async function(id){ if(role!=='st'||!id) return;
+    let v=null; try{ v=await uiPrompt('给「'+id+'」设置显示名称（登录 ID 不变；留空=直接显示 ID）', nickOf(id), {title:'修改显示名称', ok:'保存'}); }catch(e){}
+    if(v==null) return; const r=await window._setNick(id, v);
+    try{ toast(r||(String(v).trim()?('✅ 「'+id+'」现在显示为「'+String(v).trim()+'」'):'✅ 已恢复显示登录 ID')); }catch(e){} };
   function voteArmed(){ const v=pub&&pub.vote; if(!v) return false;
     const now=Date.now()+((window.CLK&&CLK.offset)||0); return (now-(v.ts||0))>=VOTE_ARM_MS; }
   /* 鬼票是否已用（从公开提名记录判断：座位出现在任一提名的 ghost 里即已用） */
@@ -5737,7 +5892,7 @@ load(); render();
   function _crRenderPeers(){ const box=document.getElementById('crPeers'); if(!box||!_crIsSt()) return;
     const seats=(pub&&pub.seats)||[], threads=window.__crStThreads||{}, rd=window.__crRead||{}; let h='';
     for(let i=0;i<seats.length;i++){ if(!seats[i]||!seats[i].name) continue; const unread=_crMaxKey(threads[i],function(m){return m.f!==-1;}) > (rd['p'+i]||'');
-      h+='<button class="'+(i===_crPeer?'on':'')+(unread?' unread':'')+'" onclick="_crPickPeer('+i+')">'+_nbEsc(seats[i].name)+'<span class="pd"></span></button>'; }
+      h+='<button class="'+(i===_crPeer?'on':'')+(unread?' unread':'')+'" onclick="_crPickPeer('+i+')">'+_nbEsc(dispName(seats[i].name))+'<span class="pd"></span></button>'; }
     box.innerHTML=h||'<span style="color:#8a7cb0;font-size:12.5px;padding:5px 2px">暂无玩家</span>'; }
   window._crPickPeer=function(seat){ _crPeer=seat; _crApplyLock(); _crRenderActive(); _crRenderPeers(); };
   /* 说书人房间选择行（旁观）：每个私聊一个色块，成员名+未读点 */
@@ -5808,7 +5963,7 @@ load(); render();
   function _cAdd(cid,seat){ const c=__chat.chats[cid]; if(c&&c.members.indexOf(seat)<0){ c.members.push(seat); if(!c.joinTs) c.joinTs={}; c.joinTs[seat]=_cNow(); } }   // 记录本次加入时间（再次加入会覆盖为新时间）
   function _cLeaveSeat(seat){ const cid=_cChatOf(seat); if(!cid) return; const c=__chat.chats[cid]; c.members=c.members.filter(s=>s!==seat); if(c.joinTs) delete c.joinTs[seat]; if(c.anchor===seat) c.anchor=(c.members[0]!=null?c.members[0]:seat); }
   function _cDisband(){ for(const cid in __chat.chats) if(__chat.chats[cid].members.length<2) delete __chat.chats[cid]; }
-  function _cName(seat){ return (pub&&pub.seats&&pub.seats[seat]&&pub.seats[seat].name)||('玩家'+(seat+1)); }
+  function _cName(seat){ const _n=(pub&&pub.seats&&pub.seats[seat]&&pub.seats[seat].name)||''; return _n?dispName(_n):('玩家'+(seat+1)); }
   function _cNote(to,text){ __chat.notes.push({id:'n'+(++__chat.nseq),to:to,text:text,ts:Date.now()}); }
   /* 某座位是否正处理某个私聊邀请（涉及且未了结）→ 一次只处理一个：忙则不能被邀请/不能发起 */
   function _cBusy(seat){ for(const iid in __chat.inv){ const v=__chat.inv[iid];
@@ -5941,7 +6096,7 @@ load(); render();
       const _csel=(window._chatSelMode&&window._chatSel&&_chatSel.has(i));
       const s=document.createElement('div'); s.className='seat filled'+(dead?' dead hascause':'')+(_csel?' chatsel':''); s.dataset.seat=i; s.style.cssText='left:'+x+'px;top:'+y+'px;width:'+seatD+'px;height:'+seatD+'px';
       let h='<div class="num" style="width:'+numD+'px;height:'+numD+'px;font-size:'+numF+'px">'+(i+1)+'</div>';
-      h+='<div class="nm" style="font-size:'+nmF+'px">'+(E(ps.name)||'<span style=\"opacity:.5\">空</span>')+'</div>';
+      h+='<div class="nm" style="font-size:'+nmF+'px">'+(E(dispName(ps.name))||'<span style=\"opacity:.5\">空</span>')+'</div>';
       const rid=mine&&mine.role; const _vi=vroleInfo(rid); if(_vi) h+='<div class="vrole" style="font-size:'+rF+'px;color:'+_vi.color+'">'+_vi.name+'</div>';   /* v2.66.0：身份或阵营标签统一经 vroleInfo 渲染 */
       s.innerHTML=h;
       if(dead&&ps.cause&&CAUSE[ps.cause]) s.style.background="url('"+CAUSE[ps.cause].img+"') center / 70% no-repeat, radial-gradient(circle at 50% 35%, rgba(48,34,58,.9), rgba(22,15,30,.95))";
@@ -5984,7 +6139,7 @@ load(); render();
     if(!pub||!pub.count){ nl.innerHTML='<div style="color:#9a7c4a;font-size:12px;padding:6px">🕯️ 说书人还没开局</div>'; if(lg) lg.innerHTML=''; return; }
     const seats=pub.seats||[];   // 客人名单：仅显示座号+名字，不随状态变化、无结算横幅
     const _clk=(role==='anon');   // 未登录大厅：点客人名字=弹出该玩家登录框（同点墨水瓶，并预填 ID）
-    nl.innerHTML=seats.map((s,i)=>'<div class="nameitem'+((_clk&&s.name)?' clickable':'')+'" data-si="'+i+'"><span class="no">'+(i+1)+'</span>'+(E(s.name)||'—')+'</div>').join('');
+    nl.innerHTML=seats.map((s,i)=>'<div class="nameitem'+((_clk&&s.name)?' clickable':'')+'" data-si="'+i+'"><span class="no">'+(i+1)+'</span>'+(E(dispName(s.name))||'—')+'</div>').join('');
     if(_clk){ nl.querySelectorAll('.nameitem.clickable').forEach(function(el){ el.addEventListener('click',function(){ const si=+el.getAttribute('data-si'); const nm=(seats[si]&&seats[si].name)||''; if(nm) window._hallNameClick(nm); }); }); }
     if(lg) lg.innerHTML=nomLogHTML();
   }
