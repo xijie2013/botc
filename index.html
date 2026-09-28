@@ -202,6 +202,15 @@
   #setModal #stCodeSec input{margin-bottom:8px;}
   #setModal .rp-err{font-size:12px; color:#f0a89e; min-height:14px;}
   #setModal #nickSec{margin-bottom:12px;}
+  .gchoice-mask{position:fixed; inset:0; z-index:330; display:flex; align-items:center; justify-content:center; background:rgba(10,6,20,.55); backdrop-filter:blur(3px);}   /* v2.73.0 名册 ✎ 选择框 */
+  .gchoice-box{width:min(86vw,320px); padding:18px 18px 14px; border-radius:14px; background:linear-gradient(180deg,#2c2340,#1d1630); border:1px solid rgba(233,196,106,.55); box-shadow:0 12px 40px rgba(0,0,0,.55); color:#efe6d2; font-size:14px;}
+  .gchoice-box .gc-t{font-weight:800; color:#e9c46a; font-size:16px; margin-bottom:12px; text-align:center; letter-spacing:1px;}
+  .gchoice-box .gc-m{font-size:13px; color:#d8cee8; margin-bottom:10px; text-align:center;}
+  .gchoice-box .gc-b{display:flex; flex-direction:column; gap:8px;}
+  .gchoice-box button{padding:10px 0; border-radius:10px; border:1px solid rgba(233,196,106,.45); background:rgba(233,196,106,.14); color:#ffe9b8; font-weight:700; font-size:14px; cursor:pointer; font-family:inherit;}
+  .gchoice-box button:hover{background:rgba(233,196,106,.26);}
+  .gchoice-box button.danger{border-color:rgba(214,90,70,.7); background:rgba(176,64,46,.3); color:#ffcdc4;} .gchoice-box button.danger:hover{background:rgba(176,64,46,.5);}
+  .gchoice-box button.ghost{border-color:transparent; background:transparent; color:#9a8fb3;}
   #setModal .nick-id{font-size:13px; color:#d8cee8; margin-bottom:7px;} #setModal .nick-id b{color:#ffe9b8;} #setModal .nick-id span{color:#9a8fb3; font-size:12px;}
   #setModal .nick-row{display:flex; gap:7px; margin-bottom:4px;} #setModal .nick-row input{flex:1; min-width:0; padding:8px; border-radius:8px; border:1px solid #3a2d4e; background:#2c2340; color:#efe6d2; font-size:14px; font-family:inherit;} #setModal .nick-row .rp-go{flex:0 0 64px;}
   #setModal .rp-go{padding:9px 0; border-radius:10px; border:none; background:var(--gold); color:#fff; font-weight:800; cursor:pointer;}
@@ -1514,17 +1523,24 @@ function load(){
 }
 function esc(s){return String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 function seatToken(i){ return tokens.find(t=>t.seat===i); }
-/* v2.72.0 固定 ID + 可改显示名称：系统内部（名册/座位/public.seats/战绩/账号）一律存「登录 ID」，界面显示时才换成昵称。
-   昵称存 firebase nicks/{idKey}（全员可读，本人或说书人可写），镜像到 window.__nicks；没有昵称就显示 ID 本身。 */
-window.__nicks=window.__nicks||{};
+/* v2.73.0 玩家编号 + 玩家名称：每个玩家有固定的数字编号（1001 起），系统内部（名册/座位/public.seats/战绩/账号）一律存编号，
+   界面只显示「玩家名称」；名称可随时改、全员唯一，也是登录时输入的名字。
+   数据：firebase users/{编号} = {n:名称, ek:登录邮箱键, lk?:旧 ID（v2.72 以前的登录 ID，用于解析旧记录）, del?:true}；镜像到 window.__users。 */
+window.__users=window.__users||{};
 function idKey(s){ return (s||'').toString().trim().toLowerCase().replace(/[.#$\[\]\/]/g,'_'); }
-function nickOf(id){ if(!id) return ''; const v=(window.__nicks||{})[idKey(id)]; return (v&&typeof v==='string'&&v.trim())?v.trim():''; }
-function dispName(id){ return nickOf(id)||(id==null?'':String(id)); }
-/* 说书人手输的名字 → 登录 ID：先认已有客人的 ID，其次认某人的昵称，都不是则原样（=新客人 ID） */
-function idFromTyped(s){ s=(s||'').trim(); if(!s) return s; const k=idKey(s);
-  const g1=guests.find(g=>idKey(g)===k); if(g1) return g1;
-  const nk=window.__nicks||{}; for(const key in nk){ if(typeof nk[key]==='string'&&idKey(nk[key])===k){ return guests.find(g=>idKey(g)===key)||key; } }
-  return s; }
+function userOf(id){ if(id==null||id==='') return null; const u=(window.__users||{})[String(id)]; return (u&&typeof u==='object')?u:null; }
+function legacyToId(s){ const k=idKey(s); if(!k) return ''; const us=window.__users||{}; for(const id in us){ const u=us[id]; if(u&&u.lk&&idKey(u.lk)===k) return id; } return ''; }
+/* 任意写法（编号 / 旧 ID）→ 编号；解析不了返回 '' */
+function resolveId(s){ if(s==null||s==='') return ''; s=String(s); if(/^\d+$/.test(s)&&userOf(s)) return s; return legacyToId(s); }
+/* 显示名：编号或旧 ID → 玩家当下的名称（已删除的玩家保留最后的名称）；解析不了就原样显示 */
+function dispName(s){ const id=resolveId(s); const u=id?userOf(id):null; return (u&&u.n)?String(u.n):(s==null?'':String(s)); }
+/* 名称 → 编号（不分大小写）；默认只认未删除的玩家 */
+function nameToId(name, withDeleted){ const k=idKey(name); if(!k) return ''; const us=window.__users||{}; let del='';
+  for(const id in us){ const u=us[id]; if(!u||idKey(u.n)!==k) continue; if(!u.del) return id; if(!del) del=id; }
+  return withDeleted?del:''; }
+/* 说书人手输的名字 → 编号：先认现有玩家名称，再认名册里显示名一致的客人；都不是返回 ''（需新建玩家） */
+function idFromTyped(s){ s=(s||'').trim(); if(!s) return ''; const a=nameToId(s); if(a) return a; const k=idKey(s);
+  const g=guests.find(x=>idKey(dispName(x))===k||idKey(x)===k); return g||''; }
 
 function toggleFull(){
   const el=document.documentElement;
@@ -1550,6 +1566,12 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.73.0', d:'2026-09-28', items:[
+    '每个玩家有一个固定的数字玩家编号（从 1001 起），系统内部（名册、座位、战绩、账号）一律按编号记录；原来的 ID 成为玩家当下的「玩家名称」。',
+    '登录改为输入玩家名称 + 密码；玩家改名后用新名字登录，密码不变。玩家名称全员唯一（不分大小写），不能是纯数字。',
+    '过往客人名册只显示玩家名称。名字旁的 ✎ 合并了改名与删除：点 ✎ 可以「修改玩家名称」或「删除此玩家」（需确认）。删除后该玩家不能再登录，但以往对局记录里仍保留他的名字和战绩。',
+    '旧局记录、统计、积分榜按玩家编号追踪，旧记录会自动对应到同一个人并显示当下的名字。',
+  ]},
   {v:'v2.72.0', d:'2026-09-28', items:[
     '玩家可以修改自己的显示名称：左上角 ⚙ 设置 →「账号」里能看到自己固定不变的登录 ID，并可随时改显示名称（留空=直接显示 ID）。登录仍然用 ID。',
     '显示名称不许重名：不能和别人的昵称相同，也不能和别人的登录 ID 相同（不分大小写）。',
@@ -1958,8 +1980,10 @@ window.closeSettings=function(){ document.getElementById('setModal').classList.r
 try{ applyPlatform(_platCur()); }catch(e){}
 
 /* ---------- seat-view guest ops ---------- */
-function addGuest(){
-  const inp=document.getElementById("nameInput"); const name=idFromTyped(inp.value.trim()); if(!name) return;   // v2.72.0 输入昵称也认成对应 ID
+async function addGuest(){
+  const inp=document.getElementById("nameInput"); const typed=inp.value.trim(); if(!typed) return;
+  let name=idFromTyped(typed);   // v2.73.0 名册存编号：已有玩家直接用其编号，否则新建玩家（分配新编号）
+  if(!name){ try{ name=window._ensureUser?await window._ensureUser(typed):typed; }catch(e){ _gt(String((e&&e.message)||e)); return; } }
   if(!guests.includes(name)) guests.push(name);
   if(!tokens.some(t=>t.name===name)) tokens.push({id:++uid,name,seat:null,dead:false});
   inp.value=""; inp.focus(); render();
@@ -3891,12 +3915,9 @@ function renderLedger(){
     const active=tokens.some(t=>t.name===name);
     const reg=!!(window._isRegistered&&window._isRegistered(name));
     const el=document.createElement("span"); el.className="ptag"+(active?" active":"")+(reg?" reg":"");
-    const _nk=nickOf(name); el.title='ID：'+name+(_nk?('\n显示名称：'+_nk):'');
-    el.innerHTML=(reg?'<span class="regdot" title="已注册账号">●</span> ':'')+esc(dispName(name))+(_nk?' <span class="pid">('+esc(name)+')</span>':'')+' <span class="ren" title="改显示名称">✎</span> <span class="del" title="'+(reg?'删除账号（停用+清空笔记）':'从名单删除')+'">✕</span>';
-    el.addEventListener("click",async e=>{ if(e.target.classList.contains("ren")){ e.stopPropagation(); try{ if(window._stRenameGuest) window._stRenameGuest(name); }catch(_){} return; }
-      if(e.target.classList.contains("del")){ e.stopPropagation();
-        if(reg){ let ok=true; try{ ok=await uiConfirm('删除账号「'+dispName(name)+'」（ID：'+name+'）？该玩家将无法再登录，其本局笔记也会被清空。'); }catch(e){} if(!ok) return; }
-        forgetGuest(name); return; } reAdd(name); });
+    el.innerHTML=(reg?'<span class="regdot" title="已注册账号">●</span> ':'')+esc(dispName(name))+' <span class="ren" title="改名 / 删除">✎</span>';   // v2.73.0 只显示玩家名称；✎ 合并改名与删除
+    el.addEventListener("click",e=>{ if(e.target.classList.contains("ren")){ e.stopPropagation(); try{ if(window._stGuestMenu) window._stGuestMenu(name); }catch(_){} return; }
+        reAdd(name); });
     past.appendChild(el);
   });
 }
@@ -4028,7 +4049,7 @@ window._stLogShare=function(){
     try{ if(window._updateStLogFab) window._updateStLogFab(); }catch(e){} try{ if(window._stLogPanelRefresh) window._stLogPanelRefresh(); }catch(e){}
     try{ if(window._toast) window._toast('已分享说书人日志给所有玩家'); }catch(e){} render(); }); };
 function chipEl(t){
-  const d=document.createElement("div"); d.title="ID："+t.name;
+  const d=document.createElement("div");
   d.className="chip"+(selected===t.id?" sel":"")+(t.seat!==null?" seated":"");
   const _online=!!(window._acctOnline && window._acctOnline(t.name));   // 已登录且在线 → 绿点
   d.innerHTML=(_online?'<span class="odot" title="已登录（在线）">●</span> ':'')+esc(dispName(t.name))+' <span class="x" title="移出">✕</span>'; d.setAttribute('data-drag', t.id);   // 拖拽由统一指针系统处理（data-drag）
@@ -4366,7 +4387,7 @@ function hl(i,on){ const seats=document.querySelectorAll(".seat"); const L=(i-1+
 function openEditor(i){
   sel=i; ensureMeta(); const t=seatToken(i), m=meta[i];
   document.getElementById("mTitle").textContent="座位 "+(i+1);
-  const _mn=document.getElementById("mName"); _mn.value=t?t.name:""; _mn.disabled=cfgLocked();
+  const _mn=document.getElementById("mName"); _mn.value=t?dispName(t.name):""; _mn.disabled=cfgLocked();
   const selEl=document.getElementById("mRole");
   if(!selEl.dataset.built){ buildRoleSelect(selEl); selEl.dataset.built="1"; }
   selEl.value=m.role||""; selEl.disabled=cfgLocked();
@@ -4391,8 +4412,9 @@ function updAlign(){ const id=document.getElementById("mRole").value; const box=
   if(!id){ box.innerHTML=""; return; } const t=RMAP[id].team;
   box.innerHTML='<span class="align-badge '+(isEvil(t)?"evil":"good")+'">'+(isEvil(t)?"邪恶":"善良")+" · "+TEAMLABEL[t]+"</span>"; }
 function applyEditor(){
-  if(sel<0) return; const i=sel; const m=meta[i]; const name=idFromTyped(document.getElementById("mName").value.trim());   // v2.72.0 输入昵称也认成对应 ID
+  if(sel<0) return; const i=sel; const m=meta[i]; const _typed=document.getElementById("mName").value.trim(); const name=idFromTyped(_typed);   // v2.73.0 输入玩家名称 → 编号
   let t=seatToken(i);
+  if(_typed && !name && !cfgLocked() && window._ensureUser){ window._ensureUser(_typed).then(function(nid){ let t2=seatToken(i); if(t2){ t2.name=nid; } else { t2={id:++uid,name:nid,seat:i,dead:false}; tokens.push(t2); } if(!guests.includes(nid)) guests.push(nid); save(); render(); }).catch(function(e){ _gt(String((e&&e.message)||e)); }); }   // 新名字：先建玩家再入座
   if(name && !cfgLocked()){ if(t){ t.name=name; } else { t={id:++uid,name,seat:i,dead:false}; tokens.push(t); } if(!guests.includes(name)) guests.push(name); }   // ⑬ 游戏期不改名字/入座
   if(!cfgLocked()) m.role=document.getElementById("mRole").value||null;   // ⑬ 游戏期不改角色
   if(t) t.dead=document.getElementById("mDead").checked;
@@ -4499,10 +4521,10 @@ load(); render();
   <div class="set-hint">分别控制事件音效、处决/射杀等动画视频、背景音乐的音量。左上角静音按钮会临时静音全部声音。</div>
   <div class="set-sec">账号</div>
   <div id="nickSec" style="display:none">
-    <div class="nick-id">登录 ID：<b id="nickId">—</b><span>（固定不变，登录用）</span></div>
-    <div class="nick-row"><input id="nickInput" type="text" maxlength="16" placeholder="显示名称（留空=直接显示 ID）" autocomplete="off" onkeydown="if(event.key==='Enter')_saveMyNick()"><button class="rp-go" onclick="_saveMyNick()">保存</button></div>
+    <div class="nick-id">玩家编号：<b id="nickId">—</b><span>（固定不变）</span></div>
+    <div class="nick-row"><input id="nickInput" type="text" maxlength="16" placeholder="玩家名称" autocomplete="off" onkeydown="if(event.key==='Enter')_saveMyNick()"><button class="rp-go" onclick="_saveMyNick()">保存</button></div>
     <div class="rp-err" id="nickErr"></div>
-    <div class="set-hint">显示名称是其他人在座位圈、聊天和旧局记录里看到的名字，可以随时改；旧局战绩按登录 ID 记录，改名后会自动显示新名字。</div>
+    <div class="set-hint">玩家名称是大家在座位圈、聊天和旧局记录里看到的名字，也是你登录时输入的名字，可以随时改（不能和别人重名）。旧局战绩按玩家编号记录，改名后会自动显示新名字。</div>
   </div>
   <button class="rp-open" onclick="_openResetPw()">重置我的密码</button>
   <div id="rpForm" style="display:none">
@@ -4536,7 +4558,7 @@ load(); render();
     <h2>说 书 人</h2>
     <div class="sub">只有你能进入魔典与公布信息。</div>
     <div class="err" id="stErr"></div>
-    <input id="stId" type="text" placeholder="说书人 ID（可用中文，如 说书人小明）" maxlength="20" autocomplete="off">
+    <input id="stId" type="text" placeholder="你的玩家名称" maxlength="20" autocomplete="off">
     <input id="stPw" type="password" placeholder="密码（可留空）">
     <input id="stCode" type="password" placeholder="说书人口令（由说书人统一设置）" onkeydown="if(event.key==='Enter')_stLogin()">
     <label style="display:flex;align-items:center;gap:7px;justify-content:center;font-size:12.5px;color:#b3a6c8;margin:2px 0 10px;cursor:pointer">
@@ -4552,9 +4574,9 @@ load(); render();
   <div class="gatebox">
     <svg class="ink" viewBox="0 0 120 120"><ellipse cx="42" cy="102" rx="30" ry="8" fill="#0d0916"/><path d="M20 70 h44 a4 4 0 0 1 4 4 v20 a20 10 0 0 1 -52 0 v-20 a4 4 0 0 1 4 -4 z" fill="#2a2140" stroke="#e9c46a" stroke-width="2.4"/><rect x="26" y="58" width="32" height="16" rx="4" fill="#241a34" stroke="#e9c46a" stroke-width="2.4"/><ellipse cx="42" cy="58" rx="16" ry="5" fill="#3a2d4e" stroke="#e9c46a" stroke-width="2.4"/><g transform="rotate(38 82 44)"><rect x="76" y="8" width="12" height="60" rx="6" fill="#b0472e" stroke="#e9c46a" stroke-width="2.2"/><path d="M76 68 h12 l-6 14 z" fill="#3a2d4e" stroke="#e9c46a" stroke-width="2.2"/></g></svg>
     <h2>玩 家 笔 记</h2>
-    <div class="sub">用你的 ID 和密码进入私人笔记本。<br>第一次登录会自动创建。</div>
+    <div class="sub">用你的玩家名称和密码进入私人笔记本。<br>第一次登录会自动创建。</div>
     <div class="err" id="pErr"></div>
-    <input id="pId" type="text" placeholder="你的 ID（可用中文，如 张三 / alice）" maxlength="20" autocomplete="off">
+    <input id="pId" type="text" placeholder="你的玩家名称" maxlength="20" autocomplete="off">
     <input id="pPw" type="password" placeholder="密码（可留空）" onkeydown="if(event.key==='Enter')_pLogin()">
     <label style="display:flex;align-items:center;gap:7px;justify-content:center;font-size:12.5px;color:#b3a6c8;margin:2px 0 10px;cursor:pointer">
       <input id="pRemember" type="checkbox" style="width:auto;margin:0"> 在本机记住我（下次免敲密码）
@@ -4643,7 +4665,7 @@ load(); render();
   async function _provisionOtherRole(id, fpw, otherDom){ try{ const a=await _provApp(); const em=idToLocal(id)+otherDom;
     try{ const c=await a.auth().createUserWithEmailAndPassword(em,fpw); try{ const nm=await _canonName(id,(auth.currentUser&&auth.currentUser.displayName)||id); await c.user.updateProfile({displayName:nm}); }catch(e){} }catch(e){}   // 已存在则忽略
     try{ await a.auth().signOut(); }catch(e){} }catch(e){} }
-  async function _syncOtherRolePw(id, oldFpw, otherDom, newFpw){ let ok=false; try{ const a=await _provApp(); const em=idToLocal(id)+otherDom;
+  async function _syncOtherRolePw(local, oldFpw, otherDom, newFpw){ let ok=false; try{ const a=await _provApp(); const em=local+otherDom;   // v2.73.0 直接用当前账号的邮箱键
     try{ const c=await a.auth().signInWithEmailAndPassword(em, oldFpw); await c.user.updatePassword(newFpw); ok=true; }catch(e){}
     try{ await a.auth().signOut(); }catch(e){} }catch(e){} return ok; }
 
@@ -4656,25 +4678,36 @@ load(); render();
     try{ const s=await db.ref('roster/'+rkey(id)).once('value'); const v=s.val(); if(v && typeof v==='string' && v.trim()) return v.trim(); }catch(e){}
     return (rawTyped&&String(rawTyped).trim())||id;
   }
-  async function _applyDisplayName(id, rawTyped){ try{ const u=auth.currentUser; if(!u) return; const want=await _canonName(id, rawTyped);
+  async function _applyDisplayName(id, rawTyped){ try{ const u=auth.currentUser; if(!u) return; if(Object.keys(window.__users||{}).length) return; /* v2.73.0 编号启用后显示名由 users 决定 */ const want=await _canonName(id, rawTyped);
     if(want && (u.displayName||'')!==want){ await u.updateProfile({displayName:want}); } }catch(e){} }
-  window._stLogin=async function(){ const rawId=document.getElementById('stId').value.trim(), id=rawId.toLowerCase(), pw=document.getElementById('stPw').value, code=(document.getElementById('stCode')||{}).value||'', err=document.getElementById('stErr');
-    if(!id){ err.textContent='请输入 ID'; return; }
-    if(!/^[\p{L}\p{N}_]+$/u.test(id)){ err.textContent='ID 只能用中文/字母/数字/下划线（不能有空格）'; return; }
+  /* v2.73.0 登录：输入「玩家名称」→ 查 users 得到编号与登录邮箱键 ek。users 还没有数据（编号系统未启用）时沿用旧 ID 登录 */
+  async function _resolveLogin(raw){ const typed=String(raw||'').trim().replace(/\s+/g,' '); if(!typed) return {err:'请输入玩家名称'};
+    let us={}; try{ us=(await db.ref('users').once('value')).val()||{}; window.__users=us; _usersLoaded=true; }catch(e){}
+    const k=idKey(typed), ids=Object.keys(us);
+    if(!ids.length){ if(!/^[\p{L}\p{N}_]+$/u.test(typed)) return {err:'名字只能用中文/字母/数字/下划线（不能有空格）'}; return {ek:typed.toLowerCase(), legacy:true}; }
+    let del=false;
+    for(const id of ids){ const u=us[id]; if(!u||idKey(u.n)!==k) continue; if(u.del){ del=true; continue; } return {id:id, ek:String(u.ek)}; }
+    for(const id of ids){ const u=us[id]; if(!u||!u.lk||idKey(u.lk)!==k) continue; if(u.del){ del=true; continue; } return {id:id, ek:String(u.ek)}; }   // 旧 ID 也认
+    if(del) return {err:'这个玩家已被说书人删除'};
+    if(/^[\p{L}\p{N}_]+$/u.test(typed)) return {ek:typed.toLowerCase(), legacy:true, noCreate:true};   // 名单外的老账号：只允许登录已存在的账号
+    return {err:'名单里没有「'+typed+'」（请让说书人先把你加进客人名册）'}; }
+  window._stLogin=async function(){ const rawId=document.getElementById('stId').value.trim(), pw=document.getElementById('stPw').value, code=(document.getElementById('stCode')||{}).value||'', err=document.getElementById('stErr');
+    if(!rawId){ err.textContent='请输入名称'; return; }
     err.textContent='登录中…';
     try{ const hs=(await db.ref('stPassHash').once('value')).val();   // 已设置说书人口令时，先校验口令（防止玩家偷登说书人）
       if(hs){ const h=await _hashPass(code); if(h!==hs){ err.textContent='说书人口令不正确'; return; } } }catch(e){}
-    try{ localStorage.setItem('botc_stid',id); }catch(e){}
+    const r=await _resolveLogin(rawId); if(r.err){ err.textContent=r.err; return; } const id=r.ek;
+    try{ localStorage.setItem('botc_stid',rawId); localStorage.setItem('botc_stek',id); }catch(e){}
     const rem=!!document.getElementById('stRemember').checked; await _setPersist(rem);
     const email=idToLocal(id)+ST_DOM, fpw=fbPw(pw);
     const done=()=>{ show('stGate',false); document.getElementById('stPw').value=''; try{ document.getElementById('stCode').value=''; }catch(e){}
       try{ if(rem){ localStorage.setItem('botc_stpw',pw); localStorage.setItem('botc_lastrole','st'); } else localStorage.removeItem('botc_stpw'); }catch(e){}
-      try{ _provisionOtherRole(id,fpw,PLAYER_DOM); }catch(e){} };   // 同 ID 玩家账号也用同一密码建好
-    try{ await auth.signInWithEmailAndPassword(email,fpw); await _applyDisplayName(id, rawId); done(); }
+      try{ _provisionOtherRole(id,fpw,PLAYER_DOM); }catch(e){} };   // 同一玩家的玩家账号也用同一密码建好
+    try{ await auth.signInWithEmailAndPassword(email,fpw); if(r.legacy) await _applyDisplayName(id, rawId); done(); }
     catch(e){ if((e.code||'').match(/user-not-found|invalid-credential/)){
-        const allowed=await window._checkRoster(id);
-        if(!allowed){ err.textContent='你不在客人名单里，不能创建账号（请让说书人先把你加进名单）'; return; }
-        try{ await auth.createUserWithEmailAndPassword(email,fpw); await _applyDisplayName(id, rawId); toast('已创建说书人账号'); done(); }
+        if(r.noCreate){ err.textContent='密码不对，或名单里没有这个名字'; return; }
+        if(r.legacy){ const allowed=await window._checkRoster(id); if(!allowed){ err.textContent='你不在客人名单里，不能创建账号（请让说书人先把你加进名单）'; return; } }
+        try{ await auth.createUserWithEmailAndPassword(email,fpw); if(r.legacy) await _applyDisplayName(id, rawId); toast('已创建说书人账号'); done(); }
         catch(e2){ err.textContent=(e2.code||'').includes('email-already-in-use')?'密码不对':authErr(e2); }
       } else err.textContent=authErr(e); } };
   window._setStCode=async function(btn){ if(role!=='st'){ try{ if(typeof toast==='function') toast('请先登录说书人'); }catch(e){} return; }
@@ -4690,18 +4723,19 @@ load(); render();
      中文等非 ASCII 字符编码为 -<码点16进制>- ，'-' 在旧 ID 里不可能出现，故无冲突 */
   function idToLocal(id){ let s=id.replace(/[^a-z0-9_]/g, c=>'-'+c.codePointAt(0).toString(16)+'-');
     if(s.charAt(0)==='-') s='0'+s; if(s.charAt(s.length-1)==='-') s=s+'0'; return s; }
-  window._pLogin=async function(){ const rawId=document.getElementById('pId').value.trim(), id=rawId.toLowerCase(), pw=document.getElementById('pPw').value, err=document.getElementById('pErr');
-    if(!id){ err.textContent='请输入 ID'; return; }
-    if(!/^[\p{L}\p{N}_]+$/u.test(id)){ err.textContent='ID 只能用中文/字母/数字/下划线（不能有空格）'; return; }
-    const email=idToLocal(id)+PLAYER_DOM, fpw=fbPw(pw); err.textContent='登录中…'; try{ localStorage.setItem('botc_pid',id); }catch(e){}
+  window._pLogin=async function(){ const rawId=document.getElementById('pId').value.trim(), pw=document.getElementById('pPw').value, err=document.getElementById('pErr');
+    if(!rawId){ err.textContent='请输入玩家名称'; return; }
+    err.textContent='登录中…';
+    const r=await _resolveLogin(rawId); if(r.err){ err.textContent=r.err; return; } const id=r.ek;
+    const email=idToLocal(id)+PLAYER_DOM, fpw=fbPw(pw); try{ localStorage.setItem('botc_pid',rawId); localStorage.setItem('botc_pek',id); }catch(e){}
     const rem=!!document.getElementById('pRemember').checked; await _setPersist(rem);
-    const done=()=>{ show('pGate',false); try{ if(rem){ localStorage.setItem('botc_ppw',pw); localStorage.setItem('botc_lastrole','player'); } else localStorage.removeItem('botc_ppw'); }catch(e){} document.getElementById('pPw').value=''; try{ window._recordAccount(id); }catch(e){}
-      try{ _provisionOtherRole(id,fpw,ST_DOM); }catch(e){} };   // 同 ID 说书人账号也用同一密码建好
-    try{ await auth.signInWithEmailAndPassword(email,fpw); await _applyDisplayName(id, rawId); done(); }
+    const done=()=>{ show('pGate',false); try{ if(rem){ localStorage.setItem('botc_ppw',pw); localStorage.setItem('botc_lastrole','player'); } else localStorage.removeItem('botc_ppw'); }catch(e){} document.getElementById('pPw').value=''; try{ window._recordAccount(r.id||id); }catch(e){}
+      try{ _provisionOtherRole(id,fpw,ST_DOM); }catch(e){} };   // 同一玩家的说书人账号也用同一密码建好
+    try{ await auth.signInWithEmailAndPassword(email,fpw); if(r.legacy) await _applyDisplayName(id, rawId); done(); }
     catch(e){ if((e.code||'').match(/user-not-found|invalid-credential/)){
-        const allowed=await window._checkRoster(id);
-        if(!allowed){ err.textContent='你不在客人名单里，不能创建账号（请让说书人先把你加进名单）'; return; }
-        try{ await auth.createUserWithEmailAndPassword(email,fpw); await _applyDisplayName(id, rawId); toast('已创建你的笔记本'); done(); }
+        if(r.noCreate){ err.textContent='密码不对，或名单里没有这个名字'; return; }
+        if(r.legacy){ const allowed=await window._checkRoster(id); if(!allowed){ err.textContent='你不在客人名单里，不能创建账号（请让说书人先把你加进名单）'; return; } }
+        try{ await auth.createUserWithEmailAndPassword(email,fpw); if(r.legacy) await _applyDisplayName(id, rawId); toast('已创建你的笔记本'); done(); }
         catch(e2){ err.textContent=(e2.code||'').includes('email-already-in-use')?'密码不对':authErr(e2); }
       } else err.textContent=authErr(e); } };
 
@@ -4715,19 +4749,17 @@ load(); render();
   window._openResetPw=function(){ const f=document.getElementById('rpForm'); if(!f) return;
     f.style.display = f.style.display==='none' ? 'flex' : 'none';
     if(f.style.display!=='none'){ const u=auth.currentUser, err=document.getElementById('rpErr'); err.textContent='';
-      if(u){ document.getElementById('rpId').value=u.displayName||''; }
+      if(u){ document.getElementById('rpId').value=dispName(_myKey()); }
       else err.textContent='请先登录你的账号，再重置密码'; } };
   window._doResetPw=async function(){ const err=document.getElementById('rpErr'); err.textContent='';
-    const id=(document.getElementById('rpId').value||'').trim().toLowerCase(), npw=document.getElementById('rpPw').value;
-    if(!id){ err.textContent='请输入 ID'; return; }
+    const npw=document.getElementById('rpPw').value;
     const u=auth.currentUser;
     if(!u){ err.textContent='请先登录该账号（用旧密码），再来重置'; return; }
-    const curRole=(u.email||'').endsWith(ST_DOM)?'st':'player', curId=(u.displayName||'').toLowerCase();
-    if(curId&&curId!==id){ err.textContent='只能重置当前登录的账号：'+(u.displayName||''); return; }
+    const curRole=(u.email||'').endsWith(ST_DOM)?'st':'player';   // v2.73.0 只能重置当前登录的账号
     err.textContent='重置中…';
     try{ await u.updatePassword(fbPw(npw));
       let otherOk=false;   // 同 ID 另一角色账号同步改成同一密码（best-effort，需要本地存有旧密码）
-      try{ const oldRaw=localStorage.getItem(curRole==='st'?'botc_stpw':'botc_ppw')||''; if(oldRaw) otherOk=await _syncOtherRolePw(id, fbPw(oldRaw), curRole==='st'?PLAYER_DOM:ST_DOM, fbPw(npw)); }catch(e){}
+      try{ const oldRaw=localStorage.getItem(curRole==='st'?'botc_stpw':'botc_ppw')||''; if(oldRaw) otherOk=await _syncOtherRolePw(_emailLocal(), fbPw(oldRaw), curRole==='st'?PLAYER_DOM:ST_DOM, fbPw(npw)); }catch(e){}
       try{ if(_remembered()){ if(curRole==='st') localStorage.setItem('botc_stpw',npw); else localStorage.setItem('botc_ppw',npw);
         if(otherOk){ if(curRole==='st') localStorage.setItem('botc_ppw',npw); else localStorage.setItem('botc_stpw',npw); } } }catch(e){}
       err.textContent=''; document.getElementById('rpPw').value=''; document.getElementById('rpForm').style.display='none'; toast(otherOk?'✅ 密码已重置（玩家/说书人已同步）':'✅ 密码已重置');
@@ -4736,8 +4768,8 @@ load(); render();
   /* 记住登录：本标签页若未登录，用本地保存的凭据自动登录（各标签页独立，互不影响） */
   async function _autoLogin(){ try{ if(!_remembered()||auth.currentUser) return;
     const role=localStorage.getItem('botc_lastrole')||'';
-    if(role==='st'){ const id=_storedId('botc_stid'); if(!id) return; await auth.signInWithEmailAndPassword(idToLocal(id)+ST_DOM, fbPw(localStorage.getItem('botc_stpw')||'')); }
-    else if(role==='player'){ const id=_storedId('botc_pid'); if(!id) return; await auth.signInWithEmailAndPassword(idToLocal(id)+PLAYER_DOM, fbPw(localStorage.getItem('botc_ppw')||'')); }
+    if(role==='st'){ const id=_storedId('botc_stek')||_storedId('botc_stid').toLowerCase(); if(!id) return; await auth.signInWithEmailAndPassword(idToLocal(id)+ST_DOM, fbPw(localStorage.getItem('botc_stpw')||'')); }
+    else if(role==='player'){ const id=_storedId('botc_pek')||_storedId('botc_pid').toLowerCase(); if(!id) return; await auth.signInWithEmailAndPassword(idToLocal(id)+PLAYER_DOM, fbPw(localStorage.getItem('botc_ppw')||'')); }
   }catch(e){} }
 
   /* ---------- 登录状态切换：黑场淡入淡出（~2.5s），背景音乐在同一时间交叉淡化 ---------- */
@@ -4771,7 +4803,7 @@ load(); render();
       _stateTransition(()=>{ if((user.email||'').endsWith(ST_DOM)){ role='st'; window.__botcRole='st'; enterSt(); } else { role='player'; window.__botcRole='player'; enterPlayer(); } }); })();
   }));
   function _storedId(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
-  function _enterStUI(){ document.getElementById('stBadge').classList.add('on'); document.body.classList.remove('pl'); document.getElementById('stName').textContent=dispName((me&&me.displayName)||_storedId('botc_stid')); bindStPlayers(); bindStAccounts(); setMode('st'); try{ if(window._stCloudLoad) _stCloudLoad(); }catch(e){} try{ _presenceStart(); }catch(e){} try{ _stSessStart(); }catch(e){} }
+  function _enterStUI(){ document.getElementById('stBadge').classList.add('on'); document.body.classList.remove('pl'); document.getElementById('stName').textContent=dispName(_myKey()); bindStPlayers(); bindStAccounts(); setMode('st'); try{ if(window._stCloudLoad) _stCloudLoad(); }catch(e){} try{ _presenceStart(); }catch(e){} try{ _stSessStart(); }catch(e){} try{ _usersRefresh(); }catch(e){} }
   function enterSt(){ _enterStUI(); }   // 说书人登录始终成功；顶号逻辑见 _stSessStart（新登录顶掉旧页面）
   /* ===== 说书人整局存档：全体说书人「共用一套魔典」的实时双向同步（本地 localStorage ↔ 云端共享节点 stState/shared，以 ts 取新，带回声保护） ===== */
   var ST_SHARED='stState/shared';   // 单一共享节点：任意说书人、任意设备登录都读写同一份魔典
@@ -4834,11 +4866,11 @@ load(); render();
     ov.style.display='flex'; }
   /* ===== 玩家「在线」标记：登录即写 accounts/{key}/online=true（断线自动清除），说书人当前名册据此显示绿点 ===== */
   let _onlineRef=null;
-  function _playerOnlineStart(){ if(!me||!me.uid) return; const nm=(me&&me.displayName)||_storedId('botc_pid'); if(!nm) return;
+  async function _playerOnlineStart(){ if(!me||!me.uid) return; await _usersReady(); const nm=_myKey(); if(!nm) return;   // v2.73.0 在线标记写到编号键
     try{ const ref=db.ref('accounts/'+rkey(nm)+'/online'); _onlineRef=ref; ref.onDisconnect().remove(); ref.set(true).catch(function(){}); }catch(e){} }
   function _playerOnlineStop(){ try{ if(_onlineRef){ try{ _onlineRef.onDisconnect().cancel(); }catch(e){} _onlineRef.remove().catch(function(){}); _onlineRef=null; } }catch(e){} }
   window._acctOnline=function(name){ try{ const a=window.__accounts||{}; const acc=a[rkey(name)]; return !!(acc&&acc.online); }catch(e){ return false; } };
-  function enterPlayer(){ document.getElementById('stBadge').classList.remove('on'); document.body.classList.add('pl'); document.getElementById('pbName').textContent=(dispName((me&&me.displayName)||_storedId('botc_pid'))||'玩家'); _nbSeatPage=false; const _np=document.getElementById('notesPanel'); if(_np) _np.classList.remove('seatpage'); bindNotes(); setMode('notes'); try{ _presenceStart(); }catch(e){} try{ _playerOnlineStart(); }catch(e){} }
+  function enterPlayer(){ document.getElementById('stBadge').classList.remove('on'); document.body.classList.add('pl'); document.getElementById('pbName').textContent=(dispName(_myKey())||'玩家'); _nbSeatPage=false; const _np=document.getElementById('notesPanel'); if(_np) _np.classList.remove('seatpage'); bindNotes(); setMode('notes'); try{ _presenceStart(); }catch(e){} try{ _playerOnlineStart(); }catch(e){} try{ _usersRefresh(); }catch(e){} }
   function bindNotes(){ if(notesRef){ notesRef.off(); notesRef=null; } if(role==='player'&&me&&curGid){ notesRef=db.ref('games/'+curGid+'/players/'+me.uid); notesRef.on('value',s=>{ S=s.val(); ensureS(); window.__myRole=(S&&S.role)||''; try{ updateRoleCard(curGid, window.__myRole); }catch(e){} try{ updateSpyGrim(); }catch(e){} try{ updateSlayerGun(); }catch(e){} if(mode==='notes') renderView(); }); } }
 
   /* ===== 玩家本局角色卡（右上角卡背 + 入场/翻开动画） ===== */
@@ -5161,7 +5193,9 @@ load(); render();
   /* 旧局记录里的名字大小写统一：小写键 -> 展示用原始大小写。名册（说书人登记）优先，历史记录里出现过的大写写法作补充；
      这样早期存成小写「cooler」的记录，在对局列表/统计/积分榜里都显示为「Cooler」，且与「Cooler」合并计分（同一人） */
   let _histNameMap={};
-  function _dn(nm){ if(!nm) return nm; const nk=nickOf(nm); if(nk) return nk; const k=norm(nm); return _histNameMap[k]||nm; }   // v2.72.0 旧局记录按 ID 追踪，显示玩家「当下」的昵称
+  function _dn(nm){ if(!nm) return nm; const id=resolveId(nm); if(id) return dispName(id); const k=norm(nm); return _histNameMap[k]||nm; }
+  function _hKey(id,nm){ const r=resolveId(id||'')||resolveId(nm||''); return r||('x:'+norm(nm||id)); }   // v2.73.0 战绩按编号聚合（旧记录经旧 ID 映射到编号）
+  function _hName(key,lab){ if(key&&key.indexOf('x:')!==0) return dispName(key); return _dn(lab||(key||'').slice(2)); }   // v2.72.0 旧局记录按 ID 追踪，显示玩家「当下」的昵称
   function _buildNameMap(games, roster){ const m={}; const hasUpper=s=>/[A-Z]/.test(s);
     const consider=nm=>{ if(!nm) return; const k=norm(nm); if(!k) return; const cur=m[k];
       if(cur===undefined){ m[k]=nm; return; } if(!hasUpper(cur)&&hasUpper(nm)) m[k]=nm; };   // 用「含大写」的写法替换「全小写」的
@@ -5176,35 +5210,35 @@ load(); render();
   function _fmtDate(ts){ if(!ts) return ''; try{ const d=new Date(ts); const p=n=>(''+n).padStart(2,'0'); return (d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }catch(e){ return ''; } }
   function _histListHTML(games){ if(!games.length) return '<div style="padding:8px;color:#8a6b3a;font-size:12px">还没有对局记录。分出胜负后会自动存档。</div>';
     let h=''; games.forEach(g=>{ const res=g.result==='good'?'好人胜利':'邪恶胜利';
-      h+='<div class="hgame"><div class="hg-h"><span class="hg-t">'+E(g.name||'本局')+' · <span class="hg-res '+g.result+'">'+res+'</span> <span style="color:#8a6b3a;font-weight:400">'+_fmtDate(g.ts)+' · 说书人 '+E(_dn(g.st)||'—')+'</span></span><button class="hg-del" onclick="_histDel(this,\''+(g.__key||'')+'\')">删除</button></div>';
-      const ps=(g.seats||[]).filter(s=>s.name).map(s=>{ const cls=s.team?('r'+s.team):''; return '<span class="'+cls+'">'+E(_dn(s.name))+(s.role&&RMAP[s.role]?'（'+RMAP[s.role].name+'）':'')+'</span>'; }).join('、');
+      h+='<div class="hgame"><div class="hg-h"><span class="hg-t">'+E(g.name||'本局')+' · <span class="hg-res '+g.result+'">'+res+'</span> <span style="color:#8a6b3a;font-weight:400">'+_fmtDate(g.ts)+' · 说书人 '+E(_hName(_hKey(g.stId,g.st),g.st)||'—')+'</span></span><button class="hg-del" onclick="_histDel(this,\''+(g.__key||'')+'\')">删除</button></div>';
+      const ps=(g.seats||[]).filter(s=>s.name||s.id).map(s=>{ const cls=s.team?('r'+s.team):''; return '<span class="'+cls+'">'+E(_hName(_hKey(s.id,s.name),s.name))+(s.role&&RMAP[s.role]?'（'+RMAP[s.role].name+'）':'')+'</span>'; }).join('、');
       h+='<div class="hg-p">'+(ps||'—')+'</div></div>'; });
     return h; }
   window._histDel=function(btn,key){ if(role!=='st'||!key) return;
     if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.textContent='确认删除？'; btn.classList.add('armed');
       clearTimeout(btn._t); btn._t=setTimeout(()=>{ if(!btn) return; btn.dataset.armed=''; btn.textContent='删除'; btn.classList.remove('armed'); },3000); return; }
     db.ref('history/'+key).remove().then(()=>{ try{ if(window._sfx) _sfx('pen-return'); }catch(e){} _renderHist(); }).catch(()=>{}); };
-  function _aggregate(games){ const P={}; const get=n=>P[n]||(P[n]={tf:{n:0,w:0},out:{n:0,w:0},min:{n:0,w:0},dem:{n:0,w:0},stN:0,stG:0,stE:0});
-    games.forEach(g=>{ const res=g.result; (g.seats||[]).forEach(s=>{ if(!s.name||!s.team||!_TEAMLBL[s.team]) return; const p=get(norm(s.name)); p[s.team].n++; if(_ALIGN(s.team)===res) p[s.team].w++; });
-      if(g.st){ const p=get(norm(g.st)); p.stN++; if(res==='good')p.stG++; else if(res==='evil')p.stE++; } });
+  function _aggregate(games){ const P={}; const get=(n,lab)=>{ const p=P[n]||(P[n]={tf:{n:0,w:0},out:{n:0,w:0},min:{n:0,w:0},dem:{n:0,w:0},stN:0,stG:0,stE:0,lab:''}); if(lab&&!p.lab) p.lab=lab; return p; };
+    games.forEach(g=>{ const res=g.result; (g.seats||[]).forEach(s=>{ if(!(s.name||s.id)||!s.team||!_TEAMLBL[s.team]) return; const p=get(_hKey(s.id,s.name),s.name); p[s.team].n++; if(_ALIGN(s.team)===res) p[s.team].w++; });
+      if(g.st||g.stId){ const p=get(_hKey(g.stId,g.st),g.st); p.stN++; if(res==='good')p.stG++; else if(res==='evil')p.stE++; } });
     return P; }
   function _pct(w,n){ return n?Math.round(w*100/n)+'%':'—'; }
   function _histStatsHTML(games){ if(!games.length) return '<div style="padding:8px;color:#8a6b3a;font-size:12px">还没有对局记录。</div>';
-    const P=_aggregate(games); const names=Object.keys(P).sort((a,b)=>String(_dn(a)).localeCompare(String(_dn(b))));
+    const P=_aggregate(games); const names=Object.keys(P).sort((a,b)=>String(_hName(a,P[a].lab)).localeCompare(String(_hName(b,P[b].lab))));
     let h='<table class="htbl"><thead><tr><th class="l">玩家</th><th class="c-tf">镇民</th><th class="c-out">外来者</th><th class="c-min">爪牙</th><th class="c-dem">恶魔</th><th class="c-st">说书人</th></tr></thead><tbody>';
     const cell=(o,cls)=>o.n?('<span class="'+cls+'">'+o.w+'/'+o.n+'<br>'+_pct(o.w,o.n)+'</span>'):'—';
     names.forEach(nm=>{ const p=P[nm];
       const st=p.stN?('<span class="c-st">'+p.stN+'</span><br><span class="c-good">'+_pct(p.stG,p.stN)+'</span>/<span class="c-evil">'+_pct(p.stE,p.stN)+'</span>'):'—';
-      h+='<tr><td class="l">'+E(_dn(nm))+'</td><td>'+cell(p.tf,'c-tf')+'</td><td>'+cell(p.out,'c-out')+'</td><td>'+cell(p.min,'c-min')+'</td><td>'+cell(p.dem,'c-dem')+'</td><td>'+st+'</td></tr>'; });
+      h+='<tr><td class="l">'+E(_hName(nm,p.lab))+'</td><td>'+cell(p.tf,'c-tf')+'</td><td>'+cell(p.out,'c-out')+'</td><td>'+cell(p.min,'c-min')+'</td><td>'+cell(p.dem,'c-dem')+'</td><td>'+st+'</td></tr>'; });
     h+='</tbody></table><div style="font-size:calc(.72*var(--sw)/100);color:#8a6b3a;margin-top:4px">阵营格式：胜/局 · 胜率 ｜ 说书人：局数 · 好人胜率/恶魔胜率</div>';
     return h; }
   function _crown(rank){ if(rank<1||rank>3) return ''; return '<img class="crown" src="assets/crown-'+rank+'.png" alt="">'; }
   function _histScoreHTML(games){ if(!games.length) return '<div style="padding:8px;color:#8a6b3a;font-size:12px">还没有对局记录。</div>';
-    const P=_aggregate(games); const rows=Object.keys(P).map(nm=>{ const p=P[nm]; const good=p.tf.w+p.out.w, evil=2*(p.min.w+p.dem.w), st=p.stN; return {nm, good, evil, st, total:good+evil+st}; });
+    const P=_aggregate(games); const rows=Object.keys(P).map(nm=>{ const p=P[nm]; const good=p.tf.w+p.out.w, evil=2*(p.min.w+p.dem.w), st=p.stN; return {nm, lab:p.lab, good, evil, st, total:good+evil+st}; });
     rows.sort((a,b)=>b.total-a.total || b.evil-a.evil);
     let h='<table class="htbl"><thead><tr><th class="l">玩家</th><th class="c-good">好人分</th><th class="c-evil">恶魔分</th><th class="c-st">说书人分</th><th class="c-total">总分</th></tr></thead><tbody>';
     rows.forEach((r,i)=>{ const cr=i<3?_crown(i+1):'';
-      h+='<tr><td class="l">'+E(_dn(r.nm))+cr+'</td><td class="c-good">'+r.good+'</td><td class="c-evil">'+r.evil+'</td><td class="c-st">'+r.st+'</td><td class="c-total"><b>'+r.total+'</b></td></tr>'; });
+      h+='<tr><td class="l">'+E(_hName(r.nm,r.lab))+cr+'</td><td class="c-good">'+r.good+'</td><td class="c-evil">'+r.evil+'</td><td class="c-st">'+r.st+'</td><td class="c-total"><b>'+r.total+'</b></td></tr>'; });
     h+='</tbody></table><div style="font-size:calc(.72*var(--sw)/100);color:#8a6b3a;margin-top:4px">好人胜+1 · 恶魔胜+2 · 说书人+1</div>';
     return h; }
 
@@ -5296,8 +5330,8 @@ load(); render();
   window._histNewRound=function(){ _histSig=null; _histKey=null; };   // 新一局/重新发牌：下一次胜负记为新的一条
   function _recordHistory(win){ if(role!=='st'||!curGid||!win) return;
     try{ const seats=[]; for(let i=0;i<N;i++){ const t=seatToken(i); const nm=(t&&t.name)?t.name:''; const m=meta[i]||{}; const rid=m.role||''; if(!nm&&!rid) continue;
-      const team = m.isDrunk?'out':(rid&&RMAP[rid]?RMAP[rid].team:''); seats.push({name:nm, role:rid, team:team, dead:!!(t&&t.dead)}); }
-      const rec={ ts:firebase.database.ServerValue.TIMESTAMP, gid:curGid, st:((me&&me.displayName)||_storedId('botc_stid')||''), name:(window.__botcGameName||'本局'), result:win.w, reason:win.r||'', count:N, seats:seats };
+      const team = m.isDrunk?'out':(rid&&RMAP[rid]?RMAP[rid].team:''); seats.push({id:nm, name:(nm?dispName(nm):''), role:rid, team:team, dead:!!(t&&t.dead)}); }   // v2.73.0 存编号 + 当时名称快照（玩家删了也能显示）
+      const rec={ ts:firebase.database.ServerValue.TIMESTAMP, gid:curGid, stId:(_myId()||''), st:dispName(_myKey()), name:(window.__botcGameName||'本局'), result:win.w, reason:win.r||'', count:N, seats:seats };
       const sig=curGid+'|'+win.w+'|'+(win.r||'');
       if(sig===_histSig && _histKey){ db.ref('history/'+_histKey).set(rec).catch(()=>{}); return; }   // 同一局同一结果：更新同一条
       const ref=db.ref('history').push(); _histKey=ref.key; _histSig=sig; ref.set(rec).catch(()=>{});   // 新一局：新增唯一记录
@@ -5315,7 +5349,7 @@ load(); render();
   function rkey(s){ return norm(s).replace(/[.#$\[\]\/]/g,'_'); }   // Firebase 安全的名单键
   /* ---------- 客人名册白名单 / 已注册账号 ---------- */
   window._checkRoster=async function(id){ try{ const s=await db.ref('roster').once('value'); if(!s.exists()) return true; return s.child(rkey(id)).exists(); }catch(e){ return true; } };
-  window._recordAccount=function(id){ try{ const nm=(auth.currentUser&&auth.currentUser.displayName)||id; db.ref('accounts/'+rkey(id)).set({name:nm, uid:(auth.currentUser&&auth.currentUser.uid)||'', ts:firebase.database.ServerValue.TIMESTAMP}); }catch(e){} };
+  window._recordAccount=function(id){ try{ db.ref('accounts/'+rkey(id)).update({name:dispName(id), uid:(auth.currentUser&&auth.currentUser.uid)||'', ts:firebase.database.ServerValue.TIMESTAMP}); }catch(e){} };   // v2.73.0 键=编号；update 保留 online
   window._isRegistered=function(name){ const a=window.__accounts||{}; return !!a[rkey(name)]; };
   window._stDelAccount=function(name){ if(role!=='st') return; const k=rkey(name);
     try{ const acc=(window.__accounts||{})[k];
@@ -5326,52 +5360,117 @@ load(); render();
   let stAccountsRef=null;
   function bindStAccounts(){ if(stAccountsRef){stAccountsRef.off();stAccountsRef=null;} window.__accounts={};
     if(role==='st'){ stAccountsRef=db.ref('accounts'); stAccountsRef.on('value',s=>{ window.__accounts=s.val()||{}; if(mode==='st'&&typeof render==='function'){ try{ render(); }catch(e){} } }); } }
-  function findSeatByName(nm){ nm=norm(nm); if(!nm||!pub||!pub.seats) return -1;
-    for(let i=0;i<pub.seats.length;i++){ if(pub.seats[i]&&norm(pub.seats[i].name)===nm) return i; } return -1; }
-  function myVoteSeat(){ if(role!=='player'||!me) return -1; return findSeatByName(me.displayName||''); }
-  /* ===== v2.72.0 固定 ID + 可改显示名称（nicks/{idKey}=昵称；全员可读，本人/说书人可写） ===== */
-  function _myId(){ return (me&&me.displayName)||_storedId(role==='st'?'botc_stid':'botc_pid')||''; }
-  function _updNameBadges(){ try{ const id=_myId(); if(!id) return;
+  function findSeatByName(nm){ if(!nm||!pub||!pub.seats) return -1;   // v2.73.0 编号 / 旧 ID 都能认出同一个人
+    for(let i=0;i<pub.seats.length;i++){ if(pub.seats[i]&&_sameUser(pub.seats[i].name,nm)) return i; } return -1; }
+  function myVoteSeat(){ if(role!=='player'||!me) return -1; let s=findSeatByName(_myKey()); if(s<0&&me.displayName) s=findSeatByName(me.displayName); return s; }
+  /* ===== v2.73.0 玩家编号 + 玩家名称（users/{编号}；全员可读，说书人可写，本人可改自己的 n） ===== */
+  function _emailLocal(){ try{ return String((me&&me.email)||'').split('@')[0]; }catch(e){ return ''; } }
+  function _myId(){ const us=window.__users||{}; const el=_emailLocal();
+    if(el){ for(const id in us){ const u=us[id]; if(u&&u.ek!=null&&idToLocal(String(u.ek))===el) return id; } }
+    return resolveId((me&&me.displayName)||'')||''; }
+  function _myLegacy(){ return (me&&me.displayName)||_storedId(role==='st'?'botc_stid':'botc_pid')||''; }
+  function _myKey(){ return _myId()||_myLegacy(); }   // 编号优先；编号系统未就绪时退回旧 ID
+  function _sameUser(a,b){ if(!a||!b) return false; const ia=resolveId(a), ib=resolveId(b); if(ia&&ib) return ia===ib; return norm(a)===norm(b); }
+  function _updNameBadges(){ try{ const k=_myKey(); if(!k) return;
       const pb=document.getElementById('pbName'), sn=document.getElementById('stName');
-      if(role==='player'&&pb) pb.textContent=dispName(id); if(role==='st'&&sn) sn.textContent=dispName(id); }catch(e){} }
-  function _nickRefresh(){ _updNameBadges();
+      if(role==='player'&&pb) pb.textContent=dispName(k); if(role==='st'&&sn) sn.textContent=dispName(k); }catch(e){} }
+  let _usersLoaded=false;
+  function _usersRefresh(){ _updNameBadges();
+    if(role==='st'){ try{ _stMigrateUsers(); }catch(e){} try{ _stLocalToIds(); }catch(e){} }
+    if(role==='player'&&me){ const u=userOf(_myId()); if(u&&u.del){ try{ toast('你的账号已被说书人删除'); }catch(e){} try{ window._logout(); }catch(e){} return; } }
     try{ if(mode==='st'){ if(typeof render==='function') render(); } else renderView(); }catch(e){}
     try{ if(window.__crOpen&&window._crOnPubChange) _crOnPubChange(); }catch(e){}
     try{ if(_histOn) _renderHist(); }catch(e){} }
-  try{ db.ref('nicks').on('value', function(s){ window.__nicks=s.val()||{}; _nickRefresh(); }, function(){ /* 规则未部署：保持空表，一律显示 ID */ }); }catch(e){}
-  /* 重名检查：新昵称不能等于其他人的登录 ID，也不能等于其他人的昵称（不分大小写） */
-  async function _nickConflict(id, nick){ const k=idKey(nick), mine=idKey(id); if(k===mine) return '';
-    let roster={}; try{ roster=(await db.ref('roster').once('value')).val()||{}; }catch(e){}
-    const nk=window.__nicks||{}, accs=window.__accounts||{};
-    const ids=new Set([].concat(Object.keys(roster), Object.keys(nk), Object.keys(accs), (typeof guests!=='undefined'?guests:[]).map(idKey)));
-    for(const x of ids){ if(!x||x===mine) continue;
-      if(x===k) return '「'+nick+'」是其他玩家的登录 ID，换一个吧';
-      if(typeof nk[x]==='string'&&idKey(nk[x])===k) return '已经有人叫「'+nk[x]+'」了，换一个吧'; }
-    return ''; }
-  /* 设置昵称：返回 '' 表示成功，否则为错误提示。nick 为空或与 ID 完全相同 = 清除昵称（显示 ID） */
-  window._setNick=async function(id, nick){ id=String(id||'').trim(); nick=String(nick==null?'':nick).trim().replace(/\s+/g,' ');
-    if(!id) return '还没有登录';
-    if(role!=='st' && idKey(id)!==idKey(_myId())) return '只能修改自己的显示名称';
-    if(nick.length>16) return '显示名称最多 16 个字';
-    if(/[<>"]/.test(nick)) return '显示名称不能包含 < > "';
-    const k=idKey(id), clear=(!nick||nick===id);
-    if(!clear){ const c=await _nickConflict(id,nick); if(c) return c; }
-    try{ if(role==='player' && me && me.uid){ try{ await db.ref('accounts/'+k+'/uid').set(me.uid); }catch(e){} }   // 规则靠 accounts/{id}/uid 认出本人
-      await db.ref('nicks/'+k).set(clear?null:nick);
-      const m=Object.assign({}, window.__nicks||{}); if(clear) delete m[k]; else m[k]=nick; window.__nicks=m; _nickRefresh();
-      return ''; }
-    catch(e){ const c=String((e&&(e.code||e.message))||''); return /permission/i.test(c)?'没有写入权限（需要先在 Firebase 部署 nicks 规则）':('保存失败：'+c); } };
+  try{ db.ref('users').on('value', function(s){ window.__users=s.val()||{}; _usersLoaded=true; _usersRefresh(); }, function(){ /* 规则未部署：保持空表，沿用旧 ID */ }); }catch(e){}
+  async function _usersReady(){ if(_usersLoaded) return; try{ window.__users=(await db.ref('users').once('value')).val()||{}; _usersLoaded=true; }catch(e){} }
+  function _nameInvalid(nm){ if(!nm) return '请输入玩家名称'; if(nm.length>16) return '玩家名称最多 16 个字'; if(/[<>"]/.test(nm)) return '玩家名称不能包含 < > "';
+    if(/^\d+$/.test(nm)) return '玩家名称不能是纯数字'; return ''; }
+  /* 一次性迁移（说书人端，幂等）：把旧 ID 玩家（名册/在座/账号/自己）编上 1001 起的编号；旧 ID（有 v2.72 昵称则用昵称）成为当下的玩家名称 */
+  let _migBusy=false, _migDone=false;
+  async function _stMigrateUsers(){ if(_migDone||_migBusy||role!=='st'||!_usersLoaded) return; _migBusy=true;
+    try{
+      const got=await Promise.all(['roster','accounts','nicks'].map(function(p){ return db.ref(p).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }); }));
+      const roster=got[0], accs=got[1], nicks=got[2];
+      const legacy=[], seen=new Set(); const add=function(n){ n=(n==null?'':String(n)).trim(); const k=idKey(n); if(!k||seen.has(k)||/^\d+$/.test(n)) return; seen.add(k); legacy.push(n); };
+      (guests||[]).forEach(add); (tokens||[]).forEach(function(t){ add(t&&t.name); }); Object.keys(roster).forEach(function(k){ add(roster[k]); });
+      Object.keys(accs).forEach(function(k){ if(/^\d+$/.test(k)) return; add((accs[k]&&accs[k].name)||k); }); if(!_myId()) add(_myLegacy());
+      const need=legacy.filter(function(n){ return !legacyToId(n) && !nameToId(n,true); });   // 已是某人当下名称的不再重复建
+      if(need.length){
+        await db.ref('users').transaction(function(cur){ cur=cur||{}; let mx=1000; const have=new Set(), names=new Set();
+          Object.keys(cur).forEach(function(k){ const v=+k; if(v>mx) mx=v; const u=cur[k]; if(!u) return; if(u.lk) have.add(idKey(u.lk)); if(!u.del) names.add(idKey(u.n)); });
+          need.forEach(function(n){ const k=idKey(n); if(have.has(k)) return; mx++;
+            let nm=(typeof nicks[k]==='string'&&nicks[k].trim())?nicks[k].trim():n; if(names.has(idKey(nm))) nm=n; if(names.has(idKey(nm))) nm=n+'('+mx+')';
+            cur[String(mx)]={n:nm, ek:k, lk:k, ts:Date.now()}; have.add(k); names.add(idKey(nm)); });
+          return cur; });
+        window.__users=(await db.ref('users').once('value')).val()||{};
+      }
+      /* 账号记录（uid/在线）从旧键复制到编号键，供名册注册点、发牌写角色、本人改名权限使用 */
+      const upd={}; Object.keys(accs).forEach(function(k){ if(/^\d+$/.test(k)) return; const a=accs[k]; if(!a||!a.uid) return; const id=legacyToId(k)||legacyToId(a.name);
+        if(id && !(accs[id]&&accs[id].uid)) upd['accounts/'+id]={name:dispName(id), uid:a.uid, ts:a.ts||0}; });
+      if(Object.keys(upd).length) await db.ref().update(upd);
+      _migDone=true; _stLocalToIds();
+    }catch(e){ }   // 规则未部署等：下次收到 users 时再试
+    _migBusy=false; }
+  /* 说书人本地名册/座位里的旧 ID → 编号（远端同步来的老数据也会在这里转换） */
+  function _stLocalToIds(){ if(role!=='st') return; let ch=false;
+    const map=function(n){ if(n==null||n==='') return n; const x=String(n); if(/^\d+$/.test(x)&&userOf(x)) return x; const id=legacyToId(x); if(id){ ch=true; return id; } return x; };
+    const g2=[]; (guests||[]).forEach(function(n){ const x=map(n); if(!g2.includes(x)) g2.push(x); });
+    (tokens||[]).forEach(function(t){ if(t) t.name=map(t.name); });
+    if(!ch) return; guests=g2;
+    try{ save(); }catch(e){} try{ autoSyncPublic(); }catch(e){} try{ if(window._syncSeats) window._syncSeats(); }catch(e){} }
+  /* 按名称取编号；没有就新建（说书人加客人时用）。被删除的同名玩家会被恢复 */
+  window._ensureUser=async function(name){ name=String(name||'').trim().replace(/\s+/g,' ');
+    const bad=_nameInvalid(name); if(bad) throw new Error(bad);
+    await _usersReady();
+    const a=nameToId(name); if(a) return a;
+    const d=nameToId(name,true); if(d){ await db.ref('users/'+d+'/del').set(null); return d; }
+    let nid=null;
+    await db.ref('users').transaction(function(cur){ cur=cur||{}; nid=null; let mx=1000, dup=null;
+      Object.keys(cur).forEach(function(k){ const v=+k; if(v>mx) mx=v; const u=cur[k]; if(u&&!u.del&&idKey(u.n)===idKey(name)) dup=k; });
+      if(dup){ nid=dup; return; } nid=String(mx+1); cur[nid]={n:name, ek:'u'+nid, ts:Date.now()}; return cur; });
+    if(!nid) throw new Error('新建玩家失败'); return nid; };
+  /* 改名：返回 '' = 成功，否则为错误提示 */
+  window._setName=async function(id, name){ id=String(id||''); name=String(name==null?'':name).trim().replace(/\s+/g,' ');
+    if(!id||!userOf(id)) return '玩家编号尚未就绪（请说书人先登录一次完成编号）';
+    if(role!=='st' && id!==_myId()) return '只能修改自己的玩家名称';
+    const bad=_nameInvalid(name); if(bad) return bad;
+    const o=nameToId(name); if(o&&o!==id) return '已经有人叫「'+name+'」了，换一个吧';
+    try{ if(role==='player'&&me&&me.uid){ try{ await db.ref('accounts/'+id+'/uid').set(me.uid); }catch(e){} }   // 规则靠 accounts/{编号}/uid 认出本人
+      await db.ref('users/'+id+'/n').set(name);
+      const m=Object.assign({}, window.__users||{}); m[id]=Object.assign({}, m[id]||{}, {n:name}); window.__users=m;
+      if(id===_myId()){ try{ localStorage.setItem(role==='st'?'botc_stid':'botc_pid', name); }catch(e){} }   // 下次登录用新名字
+      _usersRefresh(); return ''; }
+    catch(e){ const c=String((e&&(e.code||e.message))||''); return /permission/i.test(c)?'没有写入权限（需要先在 Firebase 部署 users 规则）':('保存失败：'+c); } };
   window._nickSync=function(){ const sec=document.getElementById('nickSec'); if(!sec) return; const id=(role==='st'||role==='player')?_myId():'';
     sec.style.display=id?'block':'none'; if(!id) return;
-    document.getElementById('nickId').textContent=id; document.getElementById('nickInput').value=nickOf(id); document.getElementById('nickErr').textContent=''; };
+    document.getElementById('nickId').textContent=id; document.getElementById('nickInput').value=dispName(id); document.getElementById('nickErr').textContent=''; };
   window._saveMyNick=async function(){ const inp=document.getElementById('nickInput'), err=document.getElementById('nickErr'); if(!inp) return;
-    err.textContent='保存中…'; const r=await window._setNick(_myId(), inp.value); err.textContent=r;
-    if(!r){ inp.value=nickOf(_myId()); try{ toast(inp.value?('✅ 显示名称已改为「'+inp.value+'」'):'✅ 已恢复显示登录 ID'); }catch(e){} } };
-  /* 说书人：在过往客人名册里点 ✎ 替玩家改显示名称 */
-  window._stRenameGuest=async function(id){ if(role!=='st'||!id) return;
-    let v=null; try{ v=await uiPrompt('给「'+id+'」设置显示名称（登录 ID 不变；留空=直接显示 ID）', nickOf(id), {title:'修改显示名称', ok:'保存'}); }catch(e){}
-    if(v==null) return; const r=await window._setNick(id, v);
-    try{ toast(r||(String(v).trim()?('✅ 「'+id+'」现在显示为「'+String(v).trim()+'」'):'✅ 已恢复显示登录 ID')); }catch(e){} };
+    err.textContent='保存中…'; const r=await window._setName(_myId(), inp.value); err.textContent=r;
+    if(!r){ inp.value=dispName(_myId()); try{ toast('✅ 玩家名称已改为「'+inp.value+'」，下次登录请用新名称'); }catch(e){} } };
+  /* 三选一小弹窗（body 级，不随舞台缩放） */
+  function _uiChoice(title, msg, btns){ return new Promise(function(res){ const m=document.createElement('div'); m.className='gchoice-mask';
+    m.innerHTML='<div class="gchoice-box"><div class="gc-t">'+E(title)+'</div>'+(msg?'<div class="gc-m">'+E(msg)+'</div>':'')+'<div class="gc-b">'+btns.map(function(b,i){ return '<button data-i="'+i+'" class="'+(b.cls||'')+'">'+E(b.label)+'</button>'; }).join('')+'</div></div>';
+    m.addEventListener('click',function(e){ const b=e.target.closest('button'); if(e.target===m||b){ m.remove(); res(b?btns[+b.getAttribute('data-i')].v:null); } });
+    document.body.appendChild(m); }); }
+  /* 说书人：过往客人名册 ✎ → 改名 / 删除玩家 */
+  window._stGuestMenu=async function(g){ if(role!=='st'||!g) return; const nm=dispName(g), id=resolveId(g);
+    const v=await _uiChoice('玩家「'+nm+'」', '', [{label:'修改玩家名称',v:'ren'},{label:'删除此玩家',v:'del',cls:'danger'},{label:'取消',v:null,cls:'ghost'}]);
+    if(v==='ren'){ if(!id){ try{ toast('玩家编号尚未就绪，暂时不能改名'); }catch(e){} return; }
+      let nv=null; try{ nv=await uiPrompt('给「'+nm+'」改一个新的玩家名称（也是他以后登录用的名字）', nm, {title:'修改玩家名称', ok:'保存'}); }catch(e){}
+      if(nv==null) return; const r=await window._setName(id, nv); try{ toast(r||('✅ 已改名为「'+String(nv).trim().replace(/\s+/g,' ')+'」')); }catch(e){} }
+    else if(v==='del'){ window._stDeletePlayer(g); } };
+  /* 删除玩家：标记 users/{编号}.del（保留名称，旧局记录照常显示）+ 清账号/本局笔记 + 移出名册；不改动任何战绩 */
+  window._stDeletePlayer=async function(g){ if(role!=='st'||!g) return; const nm=dispName(g), id=resolveId(g);
+    if(tokens.some(function(t){ return t.name===g&&t.seat!==null; }) && typeof gateCfg==='function' && gateCfg()) return;
+    let ok=false; try{ ok=await uiConfirm('删除玩家「'+nm+'」？\n\n删除后他将无法再登录，也会从客人名册中移除。以往对局记录里仍会保留他的名字和战绩。',{title:'删除玩家',ok:'确认删除',cancel:'取消'}); }catch(e){} if(!ok) return;
+    try{ const accs=window.__accounts||{}; const acc=accs[id||rkey(g)];
+      if(id) await db.ref('users/'+id+'/del').set(true);
+      db.ref('accounts/'+(id||rkey(g))).remove().catch(function(){});
+      if(!id) db.ref('roster/'+rkey(g)).remove().catch(function(){});
+      if(acc&&acc.uid&&curGid) db.ref('games/'+curGid+'/players/'+acc.uid).remove().catch(function(){});
+    }catch(e){ try{ toast('删除失败：'+((e&&(e.code||e.message))||'')); }catch(_){} return; }
+    guests=guests.filter(function(x){ return x!==g; }); tokens=tokens.filter(function(t){ return t.name!==g; }); if(selected!=null&&!tokens.some(function(t){ return t.id===selected; })) selected=null;
+    try{ save(); }catch(e){} try{ render(); }catch(e){} try{ toast('已删除玩家「'+nm+'」'); }catch(e){} };
   function voteArmed(){ const v=pub&&pub.vote; if(!v) return false;
     const now=Date.now()+((window.CLK&&CLK.offset)||0); return (now-(v.ts||0))>=VOTE_ARM_MS; }
   /* 鬼票是否已用（从公开提名记录判断：座位出现在任一提名的 ghost 里即已用） */
@@ -5389,7 +5488,7 @@ load(); render();
     if(dead && ghostUsedPub(seat) && on) return;   // 鬼票已用完，不能再举
     if(on && _butlerBlocked(seat) && !_butlerSoft()){ try{ if(window.toast) toast('主人未投票，你现在不能投票'); }catch(e){} updateVoteBar(); return; }   // 管家：主人没投则不能投（中毒/醉酒时能力失效，只留外观、实际放行）
     ensureS();
-    S.vote={day:v.day,by:v.by,to:v.to,hand:!!on,seat:seat,name:(me.displayName||'')};
+    S.vote={day:v.day,by:v.by,to:v.to,hand:!!on,seat:seat,name:_myKey()};
     saveNotes(); updateVoteBar(); drawSeats(); };
   function myHandOn(){ const v=pub&&pub.vote; if(!v||!S||!S.vote) return false;
     return S.vote.hand&&S.vote.day===v.day&&S.vote.by===v.by&&S.vote.to===v.to; }
@@ -6049,8 +6148,8 @@ load(); render();
     if(v){ Object.keys(all).forEach(uid=>{ const nd=all[uid]; if(!nd||!nd.vote||!nd.vote.hand) return;
       const vt=nd.vote; if(vt.day!==v.day||vt.by!==v.by||vt.to!==v.to) return;
       let seat=(typeof vt.seat==='number')?vt.seat:-1;
-      const nm=norm(vt.name||nd.name||'');
-      if(seat<0 || !(pub.seats&&pub.seats[seat]&&norm(pub.seats[seat].name)===nm)) seat=findSeatByName(nm);
+      const nm=(vt.name||nd.name||'');
+      if(seat<0 || !(pub.seats&&pub.seats[seat]&&_sameUser(pub.seats[seat].name,nm))) seat=findSeatByName(nm);
       if(seat>=0) hands[seat]=true; }); }
     window.__playerHands=hands;
     /* 说书人转播：玩家App举手 ∪ 说书人手动勾选，一并写进公开数据，让大厅/所有玩家实时看到 */
@@ -6140,10 +6239,10 @@ load(); render();
     const seats=pub.seats||[];   // 客人名单：仅显示座号+名字，不随状态变化、无结算横幅
     const _clk=(role==='anon');   // 未登录大厅：点客人名字=弹出该玩家登录框（同点墨水瓶，并预填 ID）
     nl.innerHTML=seats.map((s,i)=>'<div class="nameitem'+((_clk&&s.name)?' clickable':'')+'" data-si="'+i+'"><span class="no">'+(i+1)+'</span>'+(E(dispName(s.name))||'—')+'</div>').join('');
-    if(_clk){ nl.querySelectorAll('.nameitem.clickable').forEach(function(el){ el.addEventListener('click',function(){ const si=+el.getAttribute('data-si'); const nm=(seats[si]&&seats[si].name)||''; if(nm) window._hallNameClick(nm); }); }); }
+    if(_clk){ nl.querySelectorAll('.nameitem.clickable').forEach(function(el){ el.addEventListener('click',function(){ const si=+el.getAttribute('data-si'); const nm=(seats[si]&&seats[si].name)||''; if(nm) window._hallNameClick(dispName(nm)); }); }); }
     if(lg) lg.innerHTML=nomLogHTML();
   }
-  /* 未登录大厅点客人名字：打开玩家登录门并预填该名字为 ID（ID 即显示名，见 _canonName） */
+  /* 未登录大厅点客人名字：打开玩家登录门并预填玩家名称（v2.73.0 用名称登录） */
   window._hallNameClick=function(name){ if(role!=='anon') return; try{ openPlayerGate(); }catch(e){}
     setTimeout(function(){ const idEl=document.getElementById('pId'); if(idEl) idEl.value=name; const pwEl=document.getElementById('pPw'); if(pwEl) pwEl.focus(); },70); };
   function nomLogHTML(){ const noms=(pub&&pub.noms)||[], seats=(pub&&pub.seats)||[], days={}; noms.forEach(n=>{(days[n.day]=days[n.day]||[]).push(n);});
@@ -6359,7 +6458,7 @@ load(); render();
   let _syncT=null;
   function autoSyncPublic(){ if(role!=='st'||!me) return; clearTimeout(_syncT); _syncT=setTimeout(()=>{
     /* 发布客人名册白名单（谁能登录）——与是否已开局无关 */
-    try{ const r={}; (typeof guests!=='undefined'?guests:[]).forEach(n=>{ const k=rkey(n); if(k) r[k]=n; }); db.ref('roster').set(r).catch(()=>{}); }catch(e){}
+    try{ const _gl=(typeof guests!=='undefined'?guests:[]); if(!_gl.some(n=>/^\d+$/.test(String(n)))){ const r={}; _gl.forEach(n=>{ const k=rkey(n); if(k) r[k]=n; }); db.ref('roster').set(r).catch(()=>{}); } }catch(e){}   // v2.73.0 名册已改为编号（users）后不再覆盖旧 roster
     if(!curGid) return;
     try{ const base='games/'+curGid+'/public/'; const updates={};
       for(let i=0;i<N;i++){ const t=seatToken(i); updates[base+'seats/'+i+'/name']=(t&&t.name)?t.name:''; }
