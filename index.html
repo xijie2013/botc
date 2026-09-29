@@ -1208,9 +1208,10 @@
         <label><input type="checkbox" id="mPoison"> 中毒</label>
         <label><input type="checkbox" id="mDrunk"> 醉酒</label>
         <label><input type="checkbox" id="mShield"> 守护/免疫</label>
-        <label><input type="checkbox" id="mShot"> 已开枪</label>
-        <label><input type="checkbox" id="mMaster"> 主人</label>
-        <label><input type="checkbox" id="mHerring"> 红鲱鱼</label>
+        <label id="mShotL"><input type="checkbox" id="mShot"> 已开枪</label>
+        <label id="mMasterL"><input type="checkbox" id="mMaster"> 主人</label>
+        <label id="mHerringL"><input type="checkbox" id="mHerring"> 红鲱鱼</label>
+        <label id="mGrandL" style="display:none"><input type="checkbox" id="mGrand"> 孙辈</label>
       </div>
       <label>备注（提醒标记）</label>
       <textarea id="mNote" rows="2" placeholder="如：红鲱鱼 / 被守护 / 已开枪 …"></textarea>
@@ -1568,6 +1569,11 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.76.0', d:'2026-09-29', items:[
+    '孙辈标记：魔典座位上显示孙辈徽标（暂时借用红鲱鱼图标）；座位编辑里祖母在场时多一个「孙辈」勾选。',
+    '标记按剧本切换：黯月初升局里，玩家笔记的状态标记栏换成「中毒 / 醉酒 / 守护 / 孙辈」，去掉暗流涌动专属的「已开枪 / 红鲱鱼 / 主人」；魔典座位编辑也隐藏这三个勾选。',
+    '修复：切换剧本后，座位编辑里的角色下拉仍显示旧剧本角色的问题。',
+  ]},
   {v:'v2.75.0', d:'2026-09-29', items:[
     '祖母的孙辈改为在「角色设置」里指定（和红鲱鱼同一处），随机发牌时自动随机一名好人；孙辈跟着角色走，换座位/互换身份后仍指向同一个角色。存档会一起保存孙辈。',
     '首夜祖母那一步只负责告知：祖母健康时自动告知真孙辈与其真实角色；祖母中毒/醉酒时可以改「告知的玩家 / 告知的角色」，但真孙辈不变。魔典日志同时记录真孙辈和实际告知的内容。',
@@ -4384,6 +4390,7 @@ function renderSeats(){
         .forEach((b,k)=>{ if(b[0]) html+=badge(RA[k],b[1],b[2],b[3],b[4]); });
       if(butlerPicks[night]===i) html+=badge(0,'assets/mk-master.png','管家的主人',1.1,'#f5c542');     // 正上方：王冠·金
       if(redHerring===i) html+=badge(180,'assets/mk-herring.png','红鲱鱼',1.2,'#ff4a3a');             // 正下方：红鲱鱼·红
+      if(grandchild===i) html+=badge(180,'assets/mk-herring.png','孙辈',1.2,'#ff4a3a');               // v2.76.0 孙辈（暂借红鲱鱼图标占位；两者不会同板出现）
       s.innerHTML=html;
       /* 配置期：座位身份可拖 —— 拖到空白/名册=移除；拖到别的座位=转移（对方有身份则互换） */
       if(!cfgLocked() && (m.role||m.isDrunk)) s.setAttribute('data-drag','stseat:'+i); else s.removeAttribute('data-drag');
@@ -4458,7 +4465,7 @@ function openEditor(i){
   document.getElementById("mTitle").textContent="座位 "+(i+1);
   const _mn=document.getElementById("mName"); _mn.value=t?dispName(t.name):""; _mn.disabled=cfgLocked();
   const selEl=document.getElementById("mRole");
-  if(!selEl.dataset.built){ buildRoleSelect(selEl); selEl.dataset.built="1"; }
+  const _sid=(window.__scriptId||'tb'); if(selEl.dataset.built!==_sid){ buildRoleSelect(selEl); selEl.dataset.built=_sid; }   // v2.76.0 换板后重建角色下拉（原来只建一次，换板后仍是旧板角色）
   selEl.value=m.role||""; selEl.disabled=cfgLocked();
   document.getElementById("mDead").checked=!!(t&&t.dead);
   document.getElementById("mPoison").checked=!!m.poison;
@@ -4467,6 +4474,10 @@ function openEditor(i){
   document.getElementById("mShot").checked=!!m.mShot;
   document.getElementById("mMaster").checked=(butlerPicks[night]===i);
   document.getElementById("mHerring").checked=(redHerring===i);
+  /* v2.76.0 按剧本显示状态勾选：暗流涌动专属（已开枪/主人/红鲱鱼）在其他剧本隐藏；祖母在场时显示「孙辈」 */
+  const _tb=(_sid==='tb'); ['mShotL','mMasterL','mHerringL'].forEach(function(x){ const el=document.getElementById(x); if(el) el.style.display=_tb?'':'none'; });
+  const _gl=document.getElementById("mGrandL"); if(_gl) _gl.style.display=meta.some(mm=>mm&&mm.role==='grandmother')?'':'none';
+  document.getElementById("mGrand").checked=(grandchild===i);
   document.getElementById("mNote").value=m.note||"";
   updAlign();
   document.getElementById("mask").classList.add("on");
@@ -4495,6 +4506,7 @@ function applyEditor(){
   else if(butlerPicks[night]===i) delete butlerPicks[night];
   if(document.getElementById("mHerring").checked) redHerring=i;
   else if(redHerring===i) redHerring=-1;
+  if(document.getElementById("mGrandL").style.display!=='none'){ if(document.getElementById("mGrand").checked){ if(grandchild!==i){ grandchild=i; grandPick={}; } } else if(grandchild===i) grandchild=-1; }   // v2.76.0 孙辈（非好人会在 render 的 grandFix 里被清掉）
   m.note=document.getElementById("mNote").value;
 }
 function closeEditor(){ applyEditor(); document.getElementById("mask").classList.remove("on"); sel=-1; render(); }
@@ -4669,13 +4681,17 @@ load(); render();
   let me=null, role='anon', mode='hall', curGid=null, pub=null, S=null, sel=null, nbTab='mark';
   let notesRef=null, pubBound=null;
 
-  const BADGE={ dead:{g:'💀',t:'出局'}, poison:{g:'🧪',t:'中毒'}, drunk:{g:'🍺',t:'醉酒'}, shield:{g:'🛡️',t:'守护'}, crossbow:{g:'🏹',t:'已开枪'}, master:{g:'👑',t:'主人'}, herring:{g:'🐟',t:'红鲱鱼'} };
+  const BADGE={ dead:{g:'💀',t:'出局'}, poison:{g:'🧪',t:'中毒'}, drunk:{g:'🍺',t:'醉酒'}, shield:{g:'🛡️',t:'守护'}, crossbow:{g:'🏹',t:'已开枪'}, master:{g:'👑',t:'主人'}, herring:{g:'🐟',t:'红鲱鱼'}, grandchild:{g:'👵',t:'孙辈'} };
   const STAT_ORDER=['poison','drunk','shield','crossbow','herring','master'];
+  /* v2.76.0 标记栏按剧本切换：暗流涌动=原 6 个；黯月初升=去掉猎手/红鲱鱼/管家专属，加「孙辈」（其余 BMR 标记待定） */
+  const STAT_ORDER_BY_SCRIPT={ tb:STAT_ORDER, bmr:['poison','drunk','shield','grandchild'] };
+  function statOrder(){ return STAT_ORDER_BY_SCRIPT[window.__pubScript||'tb']||STAT_ORDER; }
   const CAUSE={ exec:{img:'assets/s-execution.png'}, claw:{img:'assets/g3-demonkill.png'}, slay:{img:'assets/mk-slayer.png'} };   // 座位死因背景图（t/g 文本与 emoji 字段此前未使用，已删）
   /* 与魔典一致的座位状态图标：[固定角度, 图片, 缩放, 光晕色] */
   const MARK={ poison:[60,'assets/mk-poison.png',1,'#3fd44f'], drunk:[90,'assets/s-drunk.png',1,'#ffe14d'],
     shield:[120,'assets/mk-shield.png',1,'#d8dae2'], crossbow:[150,'assets/mk-crossbow.png',1.2,'#4aa8ff'],
-    dead:[30,'assets/mk-dead.png',1,'#000'], master:[0,'assets/mk-master.png',1.1,'#f5c542'], herring:[180,'assets/mk-herring.png',1.2,'#ff4a3a'] };
+    dead:[30,'assets/mk-dead.png',1,'#000'], master:[0,'assets/mk-master.png',1.1,'#f5c542'], herring:[180,'assets/mk-herring.png',1.2,'#ff4a3a'],
+    grandchild:[180,'assets/mk-herring.png',1.2,'#ff4a3a'] };   // v2.76.0 孙辈暂借红鲱鱼图标
 
   window._toast=function(m){ try{ toast(m); }catch(e){} };   // 给 script3 用的别名（script4 的 toast 在 IIFE 内）
   function toast(m){ const t=document.getElementById('fbToast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('on'),7600); }   // 停留时间 +5s（原 2600ms→7600ms），消失不再太快
@@ -6272,7 +6288,7 @@ load(); render();
       { const _gi=marks.indexOf('dead'); if(_gi>=0) marks.splice(_gi,1); }   // ⑥ 骷髅头改作「已投鬼票」标识：死亡状态已由座位底图的死因体现
       if(ghostUsedPub(i)) marks.push('dead');
       const r=seatD/2, bD=seatD*0.24*1.1, dist=r*1.3;   /* v2.42.5 去掉标记徽标下限，守护/红鲱鱼等标记纯按 seatD 等比缩放 */ let bhtml='';
-      ['dead','poison','drunk','shield','crossbow','master','herring'].forEach(k=>{ if(marks.indexOf(k)<0) return; const m2=MARK[k]; if(!m2) return;
+      ['dead','poison','drunk','shield','crossbow','master','herring','grandchild'].forEach(k=>{ if(marks.indexOf(k)<0) return; const m2=MARK[k]; if(!m2) return;
         const bd=bD*(m2[2]||1), a=m2[0]*Math.PI/180, bx=r+dist*Math.sin(a), by=r-dist*Math.cos(a);
         const rmv=(mode==='notes'&&k!=='dead');   // 玩家笔记：点自己加的状态标记可移除（死亡标记除外，那是说书人给的）
         bhtml+='<div class="shieldbadge" data-mk="'+k+'" title="'+(k==='dead'?'已使用鬼票':(rmv?'点按移除':k))+'" style="width:'+bd+'px;height:'+bd+'px;left:'+(bx-bd/2)+'px;top:'+(by-bd/2)+'px;filter:drop-shadow(0 0 2px '+m2[3]+') drop-shadow(0 0 4px '+m2[3]+');'+(rmv?'pointer-events:auto;cursor:pointer;':'')+'"><img src="'+m2[1]+'" draggable="false"></div>'; });
@@ -6344,7 +6360,7 @@ load(); render();
   function markTabHTML(){ ensureS(); const crossed=new Set(_pgCrossed());
     let h='<div class="nb-pgrow">'+[1,2,3,4,5].map(p=>'<button class="nb-pg'+(p===S.pg?' on':'')+'" onclick="_nbPg('+p+')">'+p+'</button>').join('')+'</div>';
     h+='<div class="nb-sec">状态标记 · 拖到座位上添加；单击划掉</div><div>';
-    h+=STAT_ORDER.map(k=>{ const b=BADGE[k]; const gc=(MARK[k]&&MARK[k][3])||'rgba(122,83,32,.4)'; const ic=MARK[k]?'<img src="'+MARK[k][1]+'" draggable="false" style="width:17px;height:17px;object-fit:contain;vertical-align:middle;margin-right:2px">':'';
+    h+=statOrder().map(k=>{ const b=BADGE[k]; const gc=(MARK[k]&&MARK[k][3])||'rgba(122,83,32,.4)'; const ic=MARK[k]?'<img src="'+MARK[k][1]+'" draggable="false" style="width:17px;height:17px;object-fit:contain;vertical-align:middle;margin-right:2px">':'';
       return '<span class="nbtok'+(crossed.has('stat:'+k)?' crossed':'')+'" data-drag="pstat:'+k+'" onclick="_nbCross(\'stat:'+k+'\')" style="border-color:'+gc+'">'+ic+b.t+'</span>'; }).join('')+'</div>';
     h+='<div class="nb-sec">阵营标记 · 拖到座位上记录阵营判断；单击划掉</div>';
     const _vt=id=>{ const t=VTEAM[id];
