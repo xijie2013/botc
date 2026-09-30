@@ -1574,6 +1574,10 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.82.3', d:'2026-09-30', items:[
+    '疯子的伪装下拉菜单里，在场的好人角色后面标「（在场）」；🎲 随机时避开在场角色和恶魔伪装。',
+    '「恶魔伪装」也加了 🎲：随机分配三个不在场的好人角色（尽量避开疯子的伪装）。',
+  ]},
   {v:'v2.82.2', d:'2026-09-30', items:[
     '疯子设置排版：「疯子以为自己是」「疯子看到的爪牙」第一行只有标题和默认/自由按钮，第二行是恶魔名字/爪牙名字（默认）或下拉菜单（自由，爪牙有几个就几个下拉）。',
   ]},
@@ -2519,11 +2523,14 @@ function lunaMinSeats(){ if(lunaInfo.minMode!=='free') return _minSeats(); lunaF
 function lunaFix(){ if(!lunaInfo.gen && lunaSeat()>=0 && !(typeof isGameOn==='function'&&isGameOn())) lunaGen();   // 首次出现疯子（手动拖入）→ 自动生成一套伪装
   const ls=lunaSeat(), k=_minSeats().length; const a=(lunaInfo.min||[]).slice(0,k).map(x=>(x==null||x<0||x>=N||x===ls)?null:x);
   while(a.length<k) a.push(null); lunaInfo.min=a; }
-function _lunaBluffGen(){ const sh=a=>{ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
-  const inSet=new Set(meta.map(m=>m&&(m.isDrunk?'drunk':m.role)).filter(Boolean)); const real=new Set((bluffs||[]).filter(Boolean));
-  const good=curRoles().filter(r=>(r.team==='tf'||r.team==='out')&&!inSet.has(r.id)).map(r=>r.id);
-  let pool=sh(good.filter(x=>!real.has(x))); if(pool.length<3) pool=pool.concat(sh(good.filter(x=>real.has(x))));   // 尽量不与真恶魔的伪装重复
-  return [pool[0]||'',pool[1]||'',pool[2]||'']; }
+/* v2.82.3 在场角色（含酒鬼本身与酒鬼自以为的镇民——都有人「占着」）；伪装随机只从不在场好人里抽 */
+function _inPlaySet(){ const occ=new Set(); meta.forEach(m=>{ if(!m) return; if(m.isDrunk){ occ.add('drunk'); if(m.role) occ.add(m.role); } else if(m.role) occ.add(m.role); }); return occ; }
+function _shuf(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function _bluffPool(avoid){ const occ=_inPlaySet(); return _shuf(curRoles().filter(r=>(r.team==='tf'||r.team==='out')&&!occ.has(r.id)&&!lockedRoles.has(r.id)&&!(avoid&&avoid.has(r.id))).map(r=>r.id)); }
+function _lunaBluffGen(){ const p=_bluffPool(new Set((bluffs||[]).filter(Boolean))); return [p[0]||'',p[1]||'',p[2]||'']; }   // 避开在场角色 + 恶魔伪装
+function demonBluffReroll(){ if(gateCfg()) return; const av=new Set(); try{ if(lunaSeat()>=0) (lunaInfo.bl||[]).forEach(x=>{ if(x) av.add(x); }); }catch(e){}
+  let p=_bluffPool(av); if(p.length<3) p=p.concat(_bluffPool(null).filter(x=>p.indexOf(x)<0));   // 优先避开疯子的伪装，不够再放宽
+  bluffs=[p[0]||'',p[1]||'',p[2]||'']; refreshOverviewDecoys(); save(); render(); }
 function lunaGen(){ const keep=lunaInfo||{}; lunaInfo=_lunaNorm({asMode:keep.asMode, minMode:keep.minMode, as:_lunaRealDemon(), min:_minSeats(), bl:_lunaBluffGen(), gen:true}); }   // 模式保留；自由裁决的初值＝真恶魔/真爪牙
 function setLunaMode(k,v){ if(gateCfg()) return; const f=(v==='free')?'free':'auto';
   if(k==='as'){ if(f==='free'&&lunaInfo.asMode!=='free') lunaInfo.as=_lunaRealDemon(); lunaInfo.asMode=f; }
@@ -4458,7 +4465,8 @@ function renderGrim(){
           h+='<select onchange="setLunaMin('+k+',this.value)">'+o+'</select>'; }); h+='</div>'; }
       else h+=TX+(_minSeats().map(i=>(i+1)+'号 '+nameAt(i)).join('、')||'无')+'</div>';
       h+='<div class="gsec" style="display:flex;align-items:center;gap:8px">疯子的伪装<span class="regbtn" onclick="lunaReroll()" title="重新随机三个伪装">🎲</span></div><div class="bluffsel">';   // v2.82.1 与「恶魔伪装」同版式：三个下拉单独一行
-      for(let k=0;k<3;k++){ let o='<option value="">伪装'+(k+1)+'</option>'; curRoles().filter(r=>r.team==='tf'||r.team==='out').forEach(r=>{ o+='<option value="'+r.id+'"'+(lunaInfo.bl[k]===r.id?' selected':'')+'>'+r.name+'</option>'; });
+      const _occ=_inPlaySet();
+      for(let k=0;k<3;k++){ let o='<option value="">伪装'+(k+1)+'</option>'; curRoles().filter(r=>r.team==='tf'||r.team==='out').forEach(r=>{ o+='<option value="'+r.id+'"'+(lunaInfo.bl[k]===r.id?' selected':'')+'>'+r.name+(_occ.has(r.id)?'（在场）':'')+'</option>'; });
         h+='<select onchange="setLunaBl('+k+',this.value)">'+o+'</select>'; }
       h+='</div>';
     }
@@ -4468,7 +4476,7 @@ function renderGrim(){
         if(takenElsewhere && meta[dSel].role!==r.id) return;
         o+='<option value="'+r.id+'"'+(meta[dSel].role===r.id?' selected':'')+'>'+r.name+'</option>'; });
       h+='<div class="gsec" style="display:flex;align-items:center;gap:8px">酒鬼（'+(dSel+1)+'号）自以为是<select onchange="setDrunkRole(this.value)" style="flex:1;min-width:0;font-weight:400;font-size:clamp(9px,.9vw,12px);padding:3px;border:1px solid rgba(122,83,32,.5);border-radius:5px;background:rgba(255,252,244,.85);color:#3a2a12;font-family:inherit">'+o+'</select></div>'; }
-    h+='<div class="gsec">恶魔伪装</div><div class="bluffsel">'+bluffSel(0)+bluffSel(1)+bluffSel(2)+'</div>';
+    h+='<div class="gsec" style="display:flex;align-items:center;gap:8px">恶魔伪装<span class="regbtn" onclick="demonBluffReroll()" title="随机分配三个不在场的好人角色">🎲</span></div><div class="bluffsel">'+bluffSel(0)+bluffSel(1)+bluffSel(2)+'</div>';
     if(_cl) h+='</div>';   // ⑥ 只读遮罩到此结束
     h+='<div class="gsec" style="margin-top:12px;border-top:1px solid rgba(122,83,32,.25);padding-top:8px;color:#43286b">牌局</div>';
     h+='<div style="display:flex;gap:6px;margin-top:6px;align-items:stretch">'
