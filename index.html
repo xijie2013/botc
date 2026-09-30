@@ -1574,6 +1574,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.82.1', d:'2026-09-30', items:[
+    '角色设置里的「默认设置 / 自由裁决」按钮精简为「默认 / 自由」（水手、旅店老板、疯子）。','疯子的三个伪装下拉菜单单独占一行，与「恶魔伪装」同版式。',
+  ]},
   {v:'v2.82.0', d:'2026-09-30', items:[
     '黯月初升·疯子自动化：角色设置新增两项「默认设置 / 自由裁决」——「疯子以为自己是」默认＝场上的真恶魔，自由裁决出现恶魔下拉菜单；「疯子看到的爪牙」默认＝场上的真爪牙，自由裁决出现玩家下拉菜单（数量＝爪牙数）。另有「疯子的伪装」三张（发牌时随机生成，🎲 可重抽）。',
     '开局下发给疯子的角色牌是他以为的恶魔。首夜疯子自动收到与真恶魔同格式的（假）恶魔信息；真恶魔的恶魔信息里附上「疯子是谁、他以为自己是哪个恶魔」。',
@@ -2413,7 +2416,7 @@ function sailorUI(){ const sl=sailorSeat(); const r=sailorPicks[night]; if(sl<0|
   const head='水手选择 '+(r.t+1)+'号 '+nameAt(r.t)+' → ';
   if(r.sick||(r.d!=null&&r.d<0)) return '<div class="impkill done">'+head+'水手当时中毒/醉酒，<b>无人醉酒</b></div>';
   const lab=(r.d==null)?'待裁定':(r.d===sl?'水手自己':((r.d+1)+'号 '+nameAt(r.d)));
-  if(sailorMode!=='free') return '<div class="impkill done">'+head+'醉酒：<b>'+lab+'</b>（默认设置）</div>';   // 默认设置：只显示结果，不给按钮
+  if(sailorMode!=='free') return '<div class="impkill done">'+head+'醉酒：<b>'+lab+'</b>（默认）</div>';   // 默认设置：只显示结果，不给按钮
   const b=(v,txt,on)=>'<span class="regbtn'+(on?' on':'')+'" onclick="sailorDecide(\''+v+'\')">'+txt+'</span>';
   return '<div class="impkill'+(r.d==null?' warn':'')+'">'+head+'醉酒：<b>'+lab+'</b> '
     +b('s','水手',r.d===sl)+(r.t!==sl?b('t',(r.t+1)+'号 '+nameAt(r.t),r.d===r.t):'')+'</div>'; }   // 自由裁决：二选一（没有「无效」）
@@ -2495,7 +2498,7 @@ function innUI(){ const k=innSeat(); const r=innPicks[night]; if(k<0||!r) return
   if(r.sick) return '<div class="impkill done">旅店老板选择 '+two+' → 旅店老板当时中毒/醉酒，<b>无效</b>（无人受保护、无人醉酒）</div>';
   const prot=innProtected(r.a)||innProtected(r.b);
   const lab=(r.d==null)?'待裁定':((r.d+1)+'号 '+nameAt(r.d));
-  let h='<div class="impkill'+(r.d==null?' warn':' done')+'">旅店老板保护 '+two+'（'+(prot?'今夜不会死':'旅店老板已醉，保护失效')+'）→ 醉酒：<b>'+lab+'</b>'+(innMode!=='free'?'（默认设置·随机）':'');
+  let h='<div class="impkill'+(r.d==null?' warn':' done')+'">旅店老板保护 '+two+'（'+(prot?'今夜不会死':'旅店老板已醉，保护失效')+'）→ 醉酒：<b>'+lab+'</b>'+(innMode!=='free'?'（默认·随机）':'');
   if(innMode==='free'&&r.a!==r.b){ const bt=(v,txt,on)=>' <span class="regbtn'+(on?' on':'')+'" onclick="innDecide(\''+v+'\')">'+txt+'</span>'; h+=bt('a',na,r.d===r.a)+bt('b',nb,r.d===r.b); }
   return h+'</div>'; }
 /* ==================== v2.82.0 疯子（全自动）====================
@@ -4431,18 +4434,18 @@ function renderGrim(){
     }
     if(meta.some(m=>m&&m.role==="sailor")){   // v2.77.0 水手：谁喝醉的裁定方式
       h+='<div class="gsec" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">水手醉酒'
-        +'<span class="regbtn'+(sailorMode!=='free'?' on':'')+'" onclick="setSailorMode(\'auto\')" title="选到镇民→对方醉；选到其他人或自己→水手醉；水手中毒/醉酒→无效">默认设置</span>'
-        +'<span class="regbtn'+(sailorMode==='free'?' on':'')+'" onclick="setSailorMode(\'free\')" title="每晚审核后由说书人裁定谁喝醉">自由裁决</span></div>';
+        +'<span class="regbtn'+(sailorMode!=='free'?' on':'')+'" onclick="setSailorMode(\'auto\')" title="选到镇民→对方醉；选到其他人或自己→水手醉；水手中毒/醉酒→无效">默认</span>'
+        +'<span class="regbtn'+(sailorMode==='free'?' on':'')+'" onclick="setSailorMode(\'free\')" title="每晚审核后由说书人裁定谁喝醉">自由</span></div>';
     }
     if(meta.some(m=>m&&m.role==="innkeeper")){   // v2.80.0 旅店老板：谁喝醉的裁定方式
       h+='<div class="gsec" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">旅店老板醉酒'
-        +'<span class="regbtn'+(innMode!=='free'?' on':'')+'" onclick="setInnMode(\'auto\')" title="两人中随机一人醉">默认设置</span>'
-        +'<span class="regbtn'+(innMode==='free'?' on':'')+'" onclick="setInnMode(\'free\')" title="每晚审核后由说书人二选一">自由裁决</span></div>';
+        +'<span class="regbtn'+(innMode!=='free'?' on':'')+'" onclick="setInnMode(\'auto\')" title="两人中随机一人醉">默认</span>'
+        +'<span class="regbtn'+(innMode==='free'?' on':'')+'" onclick="setInnMode(\'free\')" title="每晚审核后由说书人二选一">自由</span></div>';
     }
     if(lunaSeat()>=0){   // v2.82.0 疯子：以为的恶魔 / 看到的爪牙（默认设置 / 自由裁决）+ 伪装
       lunaFix(); const ls=lunaSeat();
       const SS='style="flex:1;min-width:0;font-weight:400;font-size:clamp(9px,.9vw,12px);padding:3px;border:1px solid rgba(122,83,32,.5);border-radius:5px;background:rgba(255,252,244,.85);color:#3a2a12;font-family:inherit"';
-      const mb=(k,cur,tip)=>'<span class="regbtn'+(cur!=='free'?' on':'')+'" onclick="setLunaMode(\''+k+'\',\'auto\')" title="'+tip+'">默认设置</span><span class="regbtn'+(cur==='free'?' on':'')+'" onclick="setLunaMode(\''+k+'\',\'free\')" title="由说书人用下拉菜单指定">自由裁决</span>';
+      const mb=(k,cur,tip)=>'<span class="regbtn'+(cur!=='free'?' on':'')+'" onclick="setLunaMode(\''+k+'\',\'auto\')" title="'+tip+'">默认</span><span class="regbtn'+(cur==='free'?' on':'')+'" onclick="setLunaMode(\''+k+'\',\'free\')" title="由说书人用下拉菜单指定">自由</span>';
       h+='<div class="gsec" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">疯子（'+(ls+1)+'号）以为自己是'+mb('as',lunaInfo.asMode,'＝场上的真恶魔（'+_rn(_lunaRealDemon())+'）');
       if(lunaInfo.asMode==='free'){ let oa=''; _lunaDemons().forEach(r=>{ oa+='<option value="'+r+'"'+(lunaAs()===r?' selected':'')+'>'+_rn(r)+'</option>'; }); h+='<select onchange="setLunaAs(this.value)" '+SS+'>'+oa+'</select>'; }
       else h+='<span style="font-weight:400">'+_rn(lunaAs())+'</span>';
@@ -4452,10 +4455,10 @@ function renderGrim(){
           h+='<select onchange="setLunaMin('+k+',this.value)" '+SS+'>'+o+'</select>'; }); }
       else h+='<span style="font-weight:400">'+(_minSeats().map(i=>(i+1)+'号 '+nameAt(i)).join('、')||'无')+'</span>';
       h+='</div>';
-      h+='<div class="gsec" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">疯子的伪装';
-      for(let k=0;k<3;k++){ let o='<option value="">（未设）</option>'; curRoles().filter(r=>r.team==='tf'||r.team==='out').forEach(r=>{ o+='<option value="'+r.id+'"'+(lunaInfo.bl[k]===r.id?' selected':'')+'>'+r.name+'</option>'; });
-        h+='<select onchange="setLunaBl('+k+',this.value)" '+SS+'>'+o+'</select>'; }
-      h+='<span class="regbtn" onclick="lunaReroll()" title="重新随机三个伪装">🎲</span></div>';
+      h+='<div class="gsec" style="display:flex;align-items:center;gap:8px">疯子的伪装<span class="regbtn" onclick="lunaReroll()" title="重新随机三个伪装">🎲</span></div><div class="bluffsel">';   // v2.82.1 与「恶魔伪装」同版式：三个下拉单独一行
+      for(let k=0;k<3;k++){ let o='<option value="">伪装'+(k+1)+'</option>'; curRoles().filter(r=>r.team==='tf'||r.team==='out').forEach(r=>{ o+='<option value="'+r.id+'"'+(lunaInfo.bl[k]===r.id?' selected':'')+'>'+r.name+'</option>'; });
+        h+='<select onchange="setLunaBl('+k+',this.value)">'+o+'</select>'; }
+      h+='</div>';
     }
     if(meta.some(m=>m&&m.isDrunk)){ const dSel=meta.findIndex(m=>m&&m.isDrunk); let o='<option value="">（未定身份）</option>';
       curRoles().filter(r=>r.team==="tf" && !lockedRoles.has(r.id)).forEach(r=>{
