@@ -1259,7 +1259,7 @@ function _cfCancel(){ _cfDone(_cfMode==="prompt"?null:false); }
 const KEY="botc_seating_v2";
 let N=8, tokens=[], guests=[], uid=0, selected=null;
 let meta=[], bluffs=["","",""];
-let view="seat", gtab="list", sel=-1, night=1, listMode="all", lockedRoles=new Set(), overviewDecoys=[], redHerring=-1, grandchild=-1, sailorMode='auto', innMode='auto', customDist=null;
+let view="seat", gtab="list", sel=-1, night=1, listMode="all", lockedRoles=new Set(), overviewDecoys=[], redHerring=-1, grandchild=-1, lunaInfo={as:'',min:[],bl:['','',''],gen:false}, sailorMode='auto', innMode='auto', customDist=null;
 let openBubbles=new Set(), seatPos=[], tableCenter=null, impKills={}, poisonPicks={}, monkPicks={}, ftPicks={}, butlerPicks={}, pingPicks={}, ravenPicks={}, undertakerPicks={}, grandPick={}, sailorPicks={}, nightWoke={}, exorcistPicks={}, innPicks={}, sickAns={}, nominations={}, executions={}, virginUsed=false, slayerShot=null;
 const nightChecks={};
 const nightFlow={};   /* 夜晚信息自动化：每步流程状态 key=`${night}:${stepId}` → {stage,text,phase,pick,resultText,sid} */
@@ -1439,7 +1439,7 @@ const NIGHT={
 const NIGHT_BMR={
  first:[
   {id:"_minion",name:"爪牙相认",note:"唤醒爪牙，互认身份并认识恶魔。",special:"min"},
-  {id:"lunatic",note:"给疯子一套假的「恶魔信息」（假爪牙、假伪装）。"},
+  {id:"lunatic",note:"自动发送假的「恶魔信息」（假爪牙、假伪装在角色设置里设定）。"},
   {id:"_demon",name:"恶魔信息",note:"唤醒恶魔，认识爪牙，告知疯子是谁与3个不在场的好人伪装。",special:"dem"},
   {id:"sailor",note:"选1名存活玩家（可选自己）：他或水手喝醉到明天黄昏（自动）。"},
   {id:"courtier",note:"（可发动）选1个角色：醉3天3夜。"},
@@ -1456,7 +1456,7 @@ const NIGHT_BMR={
   {id:"devilsadvocate",note:"选1名存活玩家（不可连选同一人）：其明天被处决不死。"},
   {id:"gambler",note:"选1人并猜其角色：猜错赌徒死。"},
   {id:"exorcist",note:"选1人（不能与昨晚相同）：若是恶魔，自动通知恶魔驱魔人是谁，恶魔今夜不醒。"},
-  {id:"lunatic",note:"疯子照常「刀人」：记下他的选择，供恶魔参考。"},
+  {id:"lunatic",note:"疯子照常「刀人」（无实际效果）；他的选择会自动附在恶魔的消息里。"},
   {id:"zombuul",note:"（若昨日无人死）选1人杀。"},
   {id:"pukka",note:"选1人中毒；上一个中毒者此刻死去并恢复健康。"},
   {id:"shabaloth",note:"选2人杀死；可反刍复活一名前晚被它杀的人。"},
@@ -1478,7 +1478,7 @@ function blankMeta(){return {role:null,poison:false,drunk:false,dead:false,note:
 function ensureMeta(){ while(meta.length<N) meta.push(blankMeta()); meta.length=N; }
 
 function save(){ if(window.__stApplyingRemote) return;   // 正在应用远端同步时不重复写/上传，避免回声循环
-  try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,nightFlow,dayFlow,spySent,impKills,nightDeaths,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,grandPick,sailorPicks,sailorMode,nightWoke,exorcistPicks,innPicks,innMode,sickAns,redHerring,grandchild,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist,gameOn:!!window.__gameOn,winApproved:(window.__winApproved||''),setupSnap:(window.__setupSnap||null),script:(window.__scriptId||'tb'),ts:Date.now()})); }catch(e){}
+  try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,nightFlow,dayFlow,spySent,impKills,nightDeaths,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,grandPick,sailorPicks,sailorMode,nightWoke,exorcistPicks,innPicks,innMode,sickAns,redHerring,grandchild,lunaInfo,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist,gameOn:!!window.__gameOn,winApproved:(window.__winApproved||''),setupSnap:(window.__setupSnap||null),script:(window.__scriptId||'tb'),ts:Date.now()})); }catch(e){}
   try{ if(window._stCloudPush) window._stCloudPush(); }catch(e){} }   // 说书人存档实时云同步（防抖上传）
 function load(){
   try{ const d=JSON.parse(localStorage.getItem(KEY)||"{}");
@@ -1519,6 +1519,7 @@ function load(){
     if(typeof d.virginUsed==="boolean") virginUsed=d.virginUsed;
     if(d.slayerShot!==undefined) slayerShot=d.slayerShot;
     if(typeof d.redHerring==="number") redHerring=d.redHerring;
+    lunaInfo=_lunaNorm(d.lunaInfo);   // v2.82.0 疯子
     grandchild=(typeof d.grandchild==="number")?d.grandchild:((d.grandPick&&typeof d.grandPick.t==="number")?d.grandPick.t:-1);   // v2.75.0 孙辈（配置期设定）；兼容 v2.74 存在 grandPick.t
     if(d.nominations&&typeof d.nominations==="object") nominations=d.nominations;
     if(d.executions&&typeof d.executions==="object") executions=d.executions;
@@ -1573,6 +1574,11 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.82.0', d:'2026-09-30', items:[
+    '黯月初升·疯子自动化：角色设置新增两项「默认设置 / 自由裁决」——「疯子以为自己是」默认＝场上的真恶魔，自由裁决出现恶魔下拉菜单；「疯子看到的爪牙」默认＝场上的真爪牙，自由裁决出现玩家下拉菜单（数量＝爪牙数）。另有「疯子的伪装」三张（发牌时随机生成，🎲 可重抽）。',
+    '开局下发给疯子的角色牌是他以为的恶魔。首夜疯子自动收到与真恶魔同格式的（假）恶魔信息；真恶魔的恶魔信息里附上「疯子是谁、他以为自己是哪个恶魔」。',
+    '其余夜：疯子按他以为的恶魔选人（沙巴洛斯选两人），审核只记录、无实际效果；真恶魔那一步发出的消息开头自动附上「疯子今晚选择了谁」。发给疯子的任何文案都不会出现「疯子」字样。',
+  ]},
   {v:'v2.81.0', d:'2026-09-30', items:[
     '黯月初升 25 张角色卡上线：版式与暗流涌动的卡完全一致（阵营色边框、中英文名、阵营标签、半身像、官方中文能力全文）。玩家开局看到的身份牌和右上角角色牌不再是占位图。',
   ]},
@@ -2065,7 +2071,7 @@ async function dealRoles(){
   if(base.reduce((a,b)=>a+b,0)!==N){ _gt('各阵营数量合计与人数（'+N+'）不符，请调整后再发牌。'); return; }   // 原来调的 uiAlert 从未定义，会抛 ReferenceError
   if(!await uiConfirm("确定随机发牌？将重新分配所有身份。")) return;
   try{ if(window._histNewRound) _histNewRound(); }catch(e){}   // 新一局：胜负另记一条
-  ensureMeta(); night=1; impKills={}; nightDeaths={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; grandPick={}; sailorPicks={}; nightWoke={}; exorcistPicks={}; innPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1; grandchild=-1;
+  ensureMeta(); night=1; impKills={}; nightDeaths={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; grandPick={}; sailorPicks={}; nightWoke={}; exorcistPicks={}; innPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1; grandchild=-1; lunaInfo=_lunaNorm(null);
   Object.keys(nightChecks).forEach(k=>delete nightChecks[k]);   // 清空每夜勾选
   Object.keys(nightFlow).forEach(k=>delete nightFlow[k]);       // 清空夜晚信息流程
   Object.keys(dayFlow).forEach(k=>delete dayFlow[k]);           // 清空昼夜推进状态
@@ -2100,12 +2106,13 @@ async function dealRoles(){
   }
   // v2.75.0 孙辈：随机一名好人（非祖母本人）
   if(chosen.includes("grandmother")){ const gs=_grandCands(); if(gs.length) grandchild=gs[Math.floor(Math.random()*gs.length)]; }
+  if(meta.some(m=>m&&m.role==='lunatic')) lunaGen();   // v2.82.0 疯子：随机生成以为的恶魔 + 假爪牙 + 假伪装
   window.__gameOn=false; window.__winApproved=''; window.__winPending=null; window.__winDismissed=''; window.__setupSnap=null;   // ⑬ 随机发牌属于配置期动作
   try{ if(window._stClearPlayerNotes) _stClearPlayerNotes(); }catch(e){}   // 随机发牌：清空玩家局内信息/座位备注/标记（说书人日志已随 m.hist={} 清空）
   render();
 }
 async function resetRoles(){ if(gateCfg()) return; if(!await uiConfirm("重置所有身份、状态、备注、伪装？（保留名字与座位）")) return;
-  meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; nightDeaths={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; grandPick={}; sailorPicks={}; nightWoke={}; exorcistPicks={}; innPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1; grandchild=-1;
+  meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; nightDeaths={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; grandPick={}; sailorPicks={}; nightWoke={}; exorcistPicks={}; innPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1; grandchild=-1; lunaInfo=_lunaNorm(null);
   Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); Object.keys(dayFlow).forEach(k=>delete dayFlow[k]); Object.keys(spySent).forEach(k=>delete spySent[k]); overviewDecoys=[]; tokens.forEach(t=>t.dead=false);
   window.__gameOn=false; window.__winApproved=''; window.__winPending=null; window.__winDismissed=''; window.__setupSnap=null;
   try{ if(window._histNewRound) _histNewRound(); }catch(e){}   /* 必须在 render() 之前封存战绩（同 stEndGame，v2.65.2）：否则 renderWin→_autoResult(null) 会删掉已宣告写入的那条 */
@@ -2116,7 +2123,7 @@ function setBluff(k,v){ if(gateCfg()) return; bluffs[k]=v; refreshOverviewDecoys
 window.setScript=async function(sid){ if(gateCfg()) return; if(!SCRIPTS[sid]||sid===(window.__scriptId||'tb')) return;
   if(!await uiConfirm('切换剧本到「'+SCRIPTS[sid].name+'」？\n\n座位上已分配的角色、伪装、红鲱鱼、误判、锁定角色与阵营数量会被清空（座位与玩家保留）。'+(sid==='bmr'?'\n\n提示：黯月初升目前为手动模式——夜晚面板按官方夜序逐步提示，但结算与信息发送由说书人自行完成。':''),{title:'切换剧本',ok:'切换',cancel:'取消'})) return;
   window.__scriptId=sid;
-  meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; nightDeaths={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; grandPick={}; sailorPicks={}; nightWoke={}; exorcistPicks={}; innPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1; grandchild=-1;
+  meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; nightDeaths={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; grandPick={}; sailorPicks={}; nightWoke={}; exorcistPicks={}; innPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1; grandchild=-1; lunaInfo=_lunaNorm(null);
   Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); Object.keys(dayFlow).forEach(k=>delete dayFlow[k]); Object.keys(spySent).forEach(k=>delete spySent[k]); overviewDecoys=[]; lockedRoles=new Set(); customDist=null; tokens.forEach(t=>t.dead=false);
   window.__gameOn=false; window.__winApproved=''; window.__winPending=null; window.__winDismissed=''; window.__setupSnap=null;
   try{ if(window._histNewRound) _histNewRound(); }catch(e){}
@@ -2204,6 +2211,7 @@ function setupIssues(){ const out=[];
   if((bluffs||[]).filter(Boolean).length<3) out.push('恶魔伪装未设满 3 个');
   if(meta.some(m=>m&&m.role==='fortuneteller') && !(redHerring>=0)) out.push('红鲱鱼未指定');
   if(meta.some(m=>m&&m.role==='grandmother') && !(grandchild>=0)) out.push('孙辈未指定');
+  if(lunaSeat()>=0){ lunaFix(); if(lunaInfo.minMode==='free' && lunaInfo.min.filter(x=>x!=null).length<_minSeats().length) out.push('疯子看到的爪牙未设满 '+_minSeats().length+' 人'); }   // v2.82.0
   return out; }
 function teamSeats(team){ const r=[]; meta.forEach((m,i)=>{ if(m.role&&RMAP[m.role].team===team) r.push(i); }); return r; }
 function infoRole(i){ return meta[i]?(meta[i].isDrunk?'drunk':(meta[i].role||null)):null; }   // 信息类能力看到的"真实身份"：酒鬼真身=drunk（洗衣妇/图管/调查/守鸦/送葬统一口径）
@@ -2304,7 +2312,7 @@ function _isSemi(id){ return NIGHT_SEMI_PICK1.has(id)||NIGHT_SEMI_PICK2.has(id)|
 function stepKind(id){ if(id && id===exorcisedDemonRole()) return 'info';   // v2.79.1 被驱魔的恶魔：本步改为纯告知（驱魔人是谁），等恶魔确认
   if(NIGHT_AUTO_INFO.has(id)) return 'info'; if(NIGHT_AUTO_PICK1.has(id)) return 'pick1'; if(NIGHT_AUTO_PICK2.has(id)) return 'pick2info'; if(NIGHT_AUTO_PICK1INFO.has(id)) return 'pick1info';
   if(NIGHT_SEMI_INFO.has(id)) return night===1?'info':null;      // 祖母/教父：首夜告知；其余夜的条目是提醒，走手动勾选
-  if(id==='lunatic') return night===1?'info':'pick1';            // 疯子：首夜收（假）恶魔信息；其余夜照常「刀人」
+  if(id==='lunatic') return night===1?'info':(lunaAs()==='shabaloth'?'pick2info':'pick1');   // 疯子：首夜收（假）恶魔信息；其余夜照常「刀人」（以为是沙巴洛斯→选两人）
   if(NIGHT_SEMI_PICK1.has(id)) return 'pick1';
   if(NIGHT_SEMI_PICK2.has(id)) return 'pick2info';               // 复用 count=2 的发送/重选路径；审核走半自动分支
   return null; }
@@ -2490,10 +2498,56 @@ function innUI(){ const k=innSeat(); const r=innPicks[night]; if(k<0||!r) return
   let h='<div class="impkill'+(r.d==null?' warn':' done')+'">旅店老板保护 '+two+'（'+(prot?'今夜不会死':'旅店老板已醉，保护失效')+'）→ 醉酒：<b>'+lab+'</b>'+(innMode!=='free'?'（默认设置·随机）':'');
   if(innMode==='free'&&r.a!==r.b){ const bt=(v,txt,on)=>' <span class="regbtn'+(on?' on':'')+'" onclick="innDecide(\''+v+'\')">'+txt+'</span>'; h+=bt('a',na,r.d===r.a)+bt('b',nb,r.d===r.b); }
   return h+'</div>'; }
-function nightAutoText(id){
+/* ==================== v2.82.0 疯子（全自动）====================
+   lunaInfo={as:以为自己是的恶魔, min:[假爪牙座位…], bl:[三个伪装], gen}——配置期在「角色设置」里设定（发牌时随机生成）。
+   首夜：疯子收到与真恶魔同格式的（假）恶魔信息；真恶魔的恶魔信息附上「疯子是谁」。开局下发给疯子的角色牌 = 他以为的恶魔。
+   其余夜：疯子照常「刀人」（按以为的恶魔选 1/2 人），审核只记录；真恶魔步骤的文案开头自动附上疯子今晚的选择。 */
+function _rn(id){ return (id&&RMAP[id])?RMAP[id].name:''; }
+function _lunaNorm(v){ const o=(v&&typeof v==='object')?v:{}; return {as:(typeof o.as==='string')?o.as:'', asMode:(o.asMode==='free')?'free':'auto', minMode:(o.minMode==='free')?'free':'auto', min:Array.isArray(o.min)?o.min.map(x=>(x==null||x==='')?null:+x):[], bl:[0,1,2].map(k=>(Array.isArray(o.bl)&&o.bl[k])||''), gen:!!o.gen}; }
+function lunaSeat(){ return meta.findIndex(m=>m&&m.role==='lunatic'&&!m.isDrunk); }
+function _lunaDemons(){ return curRoles().filter(r=>r.team==='dem').map(r=>r.id); }
+function _lunaRealDemon(){ const d=_demSeat(); const r=d>=0&&meta[d]?meta[d].role:null; return r||(_lunaDemons()[0]||'imp'); }
+/* v2.82.0 两项各有「默认设置 / 自由裁决」：默认＝以为自己是真恶魔、看到的爪牙＝真爪牙；自由裁决＝说书人用下拉菜单指定 */
+function lunaAs(){ if(lunaInfo.asMode==='free'&&lunaInfo.as&&RMAP[lunaInfo.as]) return lunaInfo.as; return _lunaRealDemon(); }
+function lunaMinSeats(){ if(lunaInfo.minMode!=='free') return _minSeats(); lunaFix(); return lunaInfo.min.slice(); }
+function lunaFix(){ if(!lunaInfo.gen && lunaSeat()>=0 && !(typeof isGameOn==='function'&&isGameOn())) lunaGen();   // 首次出现疯子（手动拖入）→ 自动生成一套伪装
+  const ls=lunaSeat(), k=_minSeats().length; const a=(lunaInfo.min||[]).slice(0,k).map(x=>(x==null||x<0||x>=N||x===ls)?null:x);
+  while(a.length<k) a.push(null); lunaInfo.min=a; }
+function _lunaBluffGen(){ const sh=a=>{ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+  const inSet=new Set(meta.map(m=>m&&(m.isDrunk?'drunk':m.role)).filter(Boolean)); const real=new Set((bluffs||[]).filter(Boolean));
+  const good=curRoles().filter(r=>(r.team==='tf'||r.team==='out')&&!inSet.has(r.id)).map(r=>r.id);
+  let pool=sh(good.filter(x=>!real.has(x))); if(pool.length<3) pool=pool.concat(sh(good.filter(x=>real.has(x))));   // 尽量不与真恶魔的伪装重复
+  return [pool[0]||'',pool[1]||'',pool[2]||'']; }
+function lunaGen(){ const keep=lunaInfo||{}; lunaInfo=_lunaNorm({asMode:keep.asMode, minMode:keep.minMode, as:_lunaRealDemon(), min:_minSeats(), bl:_lunaBluffGen(), gen:true}); }   // 模式保留；自由裁决的初值＝真恶魔/真爪牙
+function setLunaMode(k,v){ if(gateCfg()) return; const f=(v==='free')?'free':'auto';
+  if(k==='as'){ if(f==='free'&&lunaInfo.asMode!=='free') lunaInfo.as=_lunaRealDemon(); lunaInfo.asMode=f; }
+  else { if(f==='free'&&lunaInfo.minMode!=='free') lunaInfo.min=_minSeats(); lunaInfo.minMode=f; }
+  lunaInfo.gen=true; save(); render(); }
+function setLunaAs(v){ if(gateCfg()) return; lunaInfo.as=v||''; lunaInfo.gen=true; save(); render(); }
+function setLunaMin(k,v){ if(gateCfg()) return; lunaFix(); lunaInfo.min[k]=(v==='')?null:+v; lunaInfo.gen=true; save(); render(); }
+function setLunaBl(k,v){ if(gateCfg()) return; lunaInfo.bl[k]=v||''; lunaInfo.gen=true; save(); render(); }
+function lunaReroll(){ if(gateCfg()) return; lunaInfo.bl=_lunaBluffGen(); lunaInfo.gen=true; save(); render(); }   // 🎲 只重抽伪装
+function lunaText(){ if(night===1){ const ms=lunaMinSeats().filter(x=>x!=null).map(i=>(i+1)+'号 '+nameAt(i)); const bl=lunaInfo.bl.filter(Boolean).map(_rn);
+    return '【恶魔信息】你的爪牙：'+(ms.join('、')||'无')+'。可伪装的身份（不在场好人）：'+(bl.join('、')||'（说书人未设置）')+'。'; }
+  return _nightAutoTextBase(lunaAs())||'【恶魔】请选择今晚要击杀的目标。'; }
+function _lunaPrefix(){ const ls=lunaSeat(); if(ls<0) return ''; const f=nightFlow[night+':lunatic']; if(!f||f.stage!=='done') return '';
+  const pk=(f.pick||[]).filter(x=>x!=null); const who='疯子（'+(ls+1)+'号 '+nameAt(ls)+'）';
+  return pk.length?('【疯子】'+who+'今晚选择了：'+_semiNames(pk)+'。'):('【疯子】'+who+'今晚没有选择目标。'); }
+function lunaUI(){ const ls=lunaSeat(); if(ls<0) return '';
+  if(night===1){ const mm=lunaMinSeats(); const ms=mm.map(x=>x==null?'（未设）':((x+1)+'号 '+nameAt(x)));
+    return '<div class="impkill'+(mm.some(x=>x==null)?' warn':' done')+'">疯子（'+(ls+1)+'号）以为自己是 <b>'+_rn(lunaAs())+'</b>'+(lunaInfo.asMode==='free'?'':'（默认）')+'；看到的爪牙：'+(ms.join('、')||'无')+'；伪装：'+(lunaInfo.bl.filter(Boolean).map(_rn).join('、')||'（未设）')+'（在「角色设置」里修改）</div>'; }
+  const f=nightFlow[nfKey('lunatic')]; if(!f||f.stage!=='done') return '';
+  const pk=(f.pick||[]).filter(x=>x!=null);
+  return '<div class="impkill done">疯子'+(pk.length?('「刀」了 '+_semiNames(pk)):'今晚没有选择')+' → 无实际效果；恶魔步骤发送时会自动告知恶魔。</div>'; }
+function nightAutoText(id){ const t=_nightAutoTextBase(id);   // v2.82.0 真恶魔（其余夜）：开头附上疯子今晚的选择
+  if(night>1 && id && id!=='lunatic' && RMAP[id] && RMAP[id].team==='dem' && id!==exorcisedDemonRole() && t) return _lunaPrefix()+t;
+  return t; }
+function _nightAutoTextBase(id){
   if(id && id===exorcisedDemonRole()){ const r=exorcistPicks[night]; const ex=exorcistSeat(); return _exorcistText(ex>=0?ex:r.t); }   // v2.79.1
   if(id==='_minion'){ const d=_demSeat(); const dn=d>=0?((d+1)+'号 '+nameAt(d)):'（未定）'; const ms=_minSeats().map(i=>(i+1)+'号 '+nameAt(i)); return '【爪牙信息】你的恶魔是：'+dn+'。同伙爪牙：'+(ms.join('、')||'无其他爪牙')+'。'; }
-  if(id==='_demon'){ const ms=_minSeats().map(i=>(i+1)+'号 '+nameAt(i)); const bl=(bluffs||[]).filter(Boolean).map(x=>RMAP[x]?RMAP[x].name:x); return '【恶魔信息】你的爪牙：'+(ms.join('、')||'无')+'。可伪装的身份（不在场好人）：'+(bl.join('、')||'（说书人未设置）')+'。'; }
+  if(id==='_demon'){ const ms=_minSeats().map(i=>(i+1)+'号 '+nameAt(i)); const bl=(bluffs||[]).filter(Boolean).map(x=>RMAP[x]?RMAP[x].name:x); const ls=lunaSeat();
+    return '【恶魔信息】你的爪牙：'+(ms.join('、')||'无')+'。可伪装的身份（不在场好人）：'+(bl.join('、')||'（说书人未设置）')+'。'
+      +(ls>=0?('场上有疯子：'+(ls+1)+'号 '+nameAt(ls)+'——他以为自己是恶魔（'+_rn(lunaAs())+'）。之后每晚他会先醒来「刀人」（无实际效果），你会得知他选了谁。'):''); }   // v2.82.0
   if(id==='poisoner') return '【投毒者】请选择今晚要下毒的一名玩家（当晚及次日中毒）。';
   if(id==='imp') return '【恶魔】请选择今晚要击杀的目标。';
   if(id==='monk') return '【僧侣】请选择今晚要守护的一名玩家（当晚免疫恶魔攻击，不能选自己）。';
@@ -2506,9 +2560,7 @@ function nightAutoText(id){
   if(id==='devilsadvocate') return '【魔鬼代言人】请选择一名存活玩家（不能与昨晚相同）：他明天被处决时不会死。';
   if(id==='gambler') return '【赌徒】请选择你要赌的玩家；选好后请把你猜的角色私聊发给说书人（或口头告知）——猜错你会立即死亡。';
   if(id==='professor') return '【教授】（一局一次）请选择一名已出局的玩家：若他是镇民，他将复活。若本夜不使用能力，请告知说书人跳过。';
-  if(id==='lunatic') return night===1
-    ? '【恶魔信息】你的爪牙：＿号 ＿＿。可伪装的身份（不在场好人）：＿＿、＿＿、＿＿。'
-    : '【恶魔】请选择今晚要击杀的目标。';   // ⚠ 疯子自以为是恶魔——发出的任何文案都不能出现「疯子/假」字样（首夜模板由说书人把＿编成假信息后发送，提示只能写在这行注释里）
+  if(id==='lunatic') return lunaText();   // v2.82.0 ⚠ 疯子自以为是恶魔——发出的任何文案都不能出现「疯子/假」字样
   if(id==='pukka') return '【恶魔】请选择今晚要下毒的目标（他明晚死去并恢复健康）。';
   if(id==='zombuul') return '【恶魔】昨天白天无人死亡，你醒来了：请选择今晚要击杀的目标。';
   if(id==='po') return '【恶魔】请选择今晚要击杀的目标；若想憋刀不杀，请告知说书人跳过（前夜没杀，下一夜可连杀三人）。';
@@ -2579,11 +2631,12 @@ function nightApprove(id){ const f=nfGet(id); if(!f.pick||!f.pick.length){ try{w
   save(); render(); }
 /* ===== v2.71.0 半自动审核/回发（黯月初升）：记录选择（魔典日志 + 玩家局内信息回执），不做任何结算 ===== */
 function _semiNames(pk){ return (pk||[]).map(s=>((+s)+1)+'号 '+nameAt(+s)).join('、'); }
-function _semiChoiceLabel(id){ if(id==='lunatic') return '恶魔'; return (RMAP[id]&&RMAP[id].name)||id; }   // ⚠ 疯子的回执必须显示「恶魔」，不能泄露真身
+function _semiChoiceLabel(id){ if(id==='lunatic') return _rn(lunaAs())||'恶魔'; return (RMAP[id]&&RMAP[id].name)||id; }   // ⚠ 疯子的回执必须显示「恶魔」，不能泄露真身
 function _semiApprove(id){ const f=nfGet(id);
   if(id==='sailor'){ _sailorApprove(); return; }   // v2.77.0 水手自动化
   if(id==='exorcist'){ _exorcistApprove(); return; }   // v2.79.0 驱魔人自动化
   if(id==='innkeeper'){ _innApprove(); return; }   // v2.80.0 旅店老板自动化
+  if(id==='lunatic'){ const ls=lunaSeat(); if(ls>=0){ try{ histSet(ls,'info','疯子「刀」：'+_semiNames(f.pick)+'（无实际效果，恶魔步骤会告知恶魔）'); }catch(e){} } nfDone(id); save(); render(); return; }   // v2.82.0
   const seat=(nightSendSeats(id)||[])[0];
   if(seat!=null&&seat>=0){ try{ histSet(seat,'info','选择：'+_semiNames(f.pick)+'（半自动·未结算，由说书人裁定）'); }catch(e){} }
   if(id==='chambermaid'){ const cm=chamberSeat(); f.fakeN=null; f.resultText=chamberText(f.pick);   // v2.78.0 侍女：自动算人数
@@ -4386,6 +4439,24 @@ function renderGrim(){
         +'<span class="regbtn'+(innMode!=='free'?' on':'')+'" onclick="setInnMode(\'auto\')" title="两人中随机一人醉">默认设置</span>'
         +'<span class="regbtn'+(innMode==='free'?' on':'')+'" onclick="setInnMode(\'free\')" title="每晚审核后由说书人二选一">自由裁决</span></div>';
     }
+    if(lunaSeat()>=0){   // v2.82.0 疯子：以为的恶魔 / 看到的爪牙（默认设置 / 自由裁决）+ 伪装
+      lunaFix(); const ls=lunaSeat();
+      const SS='style="flex:1;min-width:0;font-weight:400;font-size:clamp(9px,.9vw,12px);padding:3px;border:1px solid rgba(122,83,32,.5);border-radius:5px;background:rgba(255,252,244,.85);color:#3a2a12;font-family:inherit"';
+      const mb=(k,cur,tip)=>'<span class="regbtn'+(cur!=='free'?' on':'')+'" onclick="setLunaMode(\''+k+'\',\'auto\')" title="'+tip+'">默认设置</span><span class="regbtn'+(cur==='free'?' on':'')+'" onclick="setLunaMode(\''+k+'\',\'free\')" title="由说书人用下拉菜单指定">自由裁决</span>';
+      h+='<div class="gsec" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">疯子（'+(ls+1)+'号）以为自己是'+mb('as',lunaInfo.asMode,'＝场上的真恶魔（'+_rn(_lunaRealDemon())+'）');
+      if(lunaInfo.asMode==='free'){ let oa=''; _lunaDemons().forEach(r=>{ oa+='<option value="'+r+'"'+(lunaAs()===r?' selected':'')+'>'+_rn(r)+'</option>'; }); h+='<select onchange="setLunaAs(this.value)" '+SS+'>'+oa+'</select>'; }
+      else h+='<span style="font-weight:400">'+_rn(lunaAs())+'</span>';
+      h+='</div>';
+      h+='<div class="gsec" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">疯子看到的爪牙'+mb('min',lunaInfo.minMode,'＝场上的真爪牙');
+      if(lunaInfo.minMode==='free'){ lunaInfo.min.forEach((cur,k)=>{ let o='<option value="">（未设）</option>'; for(let i=0;i<N;i++){ if(i===ls) continue; o+='<option value="'+i+'"'+(cur===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+'</option>'; }
+          h+='<select onchange="setLunaMin('+k+',this.value)" '+SS+'>'+o+'</select>'; }); }
+      else h+='<span style="font-weight:400">'+(_minSeats().map(i=>(i+1)+'号 '+nameAt(i)).join('、')||'无')+'</span>';
+      h+='</div>';
+      h+='<div class="gsec" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">疯子的伪装';
+      for(let k=0;k<3;k++){ let o='<option value="">（未设）</option>'; curRoles().filter(r=>r.team==='tf'||r.team==='out').forEach(r=>{ o+='<option value="'+r.id+'"'+(lunaInfo.bl[k]===r.id?' selected':'')+'>'+r.name+'</option>'; });
+        h+='<select onchange="setLunaBl('+k+',this.value)" '+SS+'>'+o+'</select>'; }
+      h+='<span class="regbtn" onclick="lunaReroll()" title="重新随机三个伪装">🎲</span></div>';
+    }
     if(meta.some(m=>m&&m.isDrunk)){ const dSel=meta.findIndex(m=>m&&m.isDrunk); let o='<option value="">（未定身份）</option>';
       curRoles().filter(r=>r.team==="tf" && !lockedRoles.has(r.id)).forEach(r=>{
         const takenElsewhere=meta.some((m,i)=>i!==dSel && m && m.role===r.id);   // 该镇民已被别的座位占用 → 不列（避免重复；除非正是当前酒鬼所选）
@@ -4497,6 +4568,7 @@ function renderGrim(){
         if(s.id==="chambermaid") h+=chamberUI();   // v2.78.1 侍女：醒来人数的依据
         if(s.id==="exorcist") h+=exorcistUI();   // v2.79.0 驱魔人：结果
         if(s.id==="innkeeper") h+=innUI();   // v2.80.0 旅店老板：保护与醉酒
+        if(s.id==="lunatic") h+=lunaUI();   // v2.82.0 疯子
         if(s.id==="chef") h+=numUI("chef","相邻邪恶对数",Math.max(2,meta.filter((m,i)=>regEvil(i)).length));
         if(s.id==="empath") h+=numUI("empath","两侧存活邻座邪恶数",2);
         if(s.id==="washerwoman"||s.id==="librarian"||s.id==="investigator") h+=pingUI(s.id);   // 揭示选择器：说书人先选「真身+幌子」两张牌，发送框随之显示要告知的内容
@@ -6715,7 +6787,7 @@ load(); render();
     try{ await db.ref('storytellerUid').set({uid:me.uid, sid:_stSid, name:(me&&me.displayName)||'', ts:firebase.database.ServerValue.TIMESTAMP}); try{ db.ref('storytellerUid').onDisconnect().remove(); }catch(e){} await db.ref('games/'+gid+'/public').set(g);
       /* 私密下发每位已登录玩家本局的角色（仅本人与说书人可读；酒鬼下发其自以为的镇民牌） */
       try{ const accSnap=await db.ref('accounts').once('value'); const accs=accSnap.val()||{}; const ru={};
-        for(let i=0;i<N;i++){ const t=seatToken(i); const nm=(t&&t.name)?t.name:''; if(!nm) continue; const rid=(meta[i]&&meta[i].role)||''; if(!rid) continue; const acc=accs[rkey(nm)]; if(acc&&acc.uid) ru['games/'+gid+'/players/'+acc.uid+'/role']=rid; }
+        for(let i=0;i<N;i++){ const t=seatToken(i); const nm=(t&&t.name)?t.name:''; if(!nm) continue; let rid=(meta[i]&&meta[i].role)||''; if(!rid) continue; if(rid==='lunatic'&&!meta[i].isDrunk&&typeof lunaAs==='function') rid=lunaAs();   /* v2.82.0 疯子拿到他以为的恶魔牌 */ const acc=accs[rkey(nm)]; if(acc&&acc.uid) ru['games/'+gid+'/players/'+acc.uid+'/role']=rid; }
         if(Object.keys(ru).length) await db.ref().update(ru);
       }catch(e){}
       window.__gameOn=true; window.__gateOverride=false; window.__winApproved=''; window.__winPending=null; window.__winDismissed='';   // ⑬ 进入游戏期：座位/玩家/角色锁定
@@ -6778,6 +6850,7 @@ load(); render();
       grandRole:(typeof grandRoleId==='function'?grandRoleId():null),                          // v2.75.0 孙辈也记「角色」
       sailorMode:(typeof sailorMode!=='undefined'?sailorMode:'auto'),                          // v2.77.0 水手醉酒裁定方式
       innMode:(typeof innMode!=='undefined'?innMode:'auto'),                                   // v2.80.0 旅店老板醉酒裁定方式
+      luna:(typeof lunaInfo!=='undefined'?JSON.parse(JSON.stringify(lunaInfo)):null),         // v2.82.0 疯子设定
       locked:(typeof lockedRoles!=='undefined')?[...lockedRoles]:[],                          // 锁定的角色
       script:(window.__scriptId||'tb'),                                                       // v2.68.0 剧本随存档保存
       ts:Date.now() };
@@ -6825,6 +6898,7 @@ load(); render();
       else redHerring=(typeof c.herring==='number' && c.herring>=0 && c.herring<N) ? c.herring : -1;
       grandchild=(c.grandRole && typeof seatOfRoleId==='function')?seatOfRoleId(c.grandRole):-1; try{ grandPick={}; grandFix(); }catch(e){}
       try{ sailorMode=(c.sailorMode==='free')?'free':'auto'; innMode=(c.innMode==='free')?'free':'auto'; }catch(e){}
+      try{ lunaInfo=_lunaNorm(c.luna); }catch(e){}   // v2.82.0
       lockedRoles=new Set(Array.isArray(c.locked)?c.locked:[]);
       try{ if(typeof refreshOverviewDecoys==='function') refreshOverviewDecoys(); }catch(e){}
     } else {   // 兼容最旧的存档（只有阵营数量）
