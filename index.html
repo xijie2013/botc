@@ -1574,6 +1574,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.82.2', d:'2026-09-30', items:[
+    '疯子设置排版：「疯子以为自己是」「疯子看到的爪牙」第一行只有标题和默认/自由按钮，第二行是恶魔名字/爪牙名字（默认）或下拉菜单（自由，爪牙有几个就几个下拉）。',
+  ]},
   {v:'v2.82.1', d:'2026-09-30', items:[
     '角色设置里的「默认设置 / 自由裁决」按钮精简为「默认 / 自由」（水手、旅店老板、疯子）。','疯子的三个伪装下拉菜单单独占一行，与「恶魔伪装」同版式。',
   ]},
@@ -4446,15 +4449,14 @@ function renderGrim(){
       lunaFix(); const ls=lunaSeat();
       const SS='style="flex:1;min-width:0;font-weight:400;font-size:clamp(9px,.9vw,12px);padding:3px;border:1px solid rgba(122,83,32,.5);border-radius:5px;background:rgba(255,252,244,.85);color:#3a2a12;font-family:inherit"';
       const mb=(k,cur,tip)=>'<span class="regbtn'+(cur!=='free'?' on':'')+'" onclick="setLunaMode(\''+k+'\',\'auto\')" title="'+tip+'">默认</span><span class="regbtn'+(cur==='free'?' on':'')+'" onclick="setLunaMode(\''+k+'\',\'free\')" title="由说书人用下拉菜单指定">自由</span>';
-      h+='<div class="gsec" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">疯子（'+(ls+1)+'号）以为自己是'+mb('as',lunaInfo.asMode,'＝场上的真恶魔（'+_rn(_lunaRealDemon())+'）');
-      if(lunaInfo.asMode==='free'){ let oa=''; _lunaDemons().forEach(r=>{ oa+='<option value="'+r+'"'+(lunaAs()===r?' selected':'')+'>'+_rn(r)+'</option>'; }); h+='<select onchange="setLunaAs(this.value)" '+SS+'>'+oa+'</select>'; }
-      else h+='<span style="font-weight:400">'+_rn(lunaAs())+'</span>';
-      h+='</div>';
-      h+='<div class="gsec" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">疯子看到的爪牙'+mb('min',lunaInfo.minMode,'＝场上的真爪牙');
-      if(lunaInfo.minMode==='free'){ lunaInfo.min.forEach((cur,k)=>{ let o='<option value="">（未设）</option>'; for(let i=0;i<N;i++){ if(i===ls) continue; o+='<option value="'+i+'"'+(cur===i?' selected':'')+'>'+(i+1)+' '+nameAt(i)+'</option>'; }
-          h+='<select onchange="setLunaMin('+k+',this.value)" '+SS+'>'+o+'</select>'; }); }
-      else h+='<span style="font-weight:400">'+(_minSeats().map(i=>(i+1)+'号 '+nameAt(i)).join('、')||'无')+'</span>';
-      h+='</div>';
+      const TX='<div class="bluffsel" style="font-size:calc(.9 * var(--sw) / 100);color:#3a2a12;padding:3px 2px">';   // v2.82.2 第一行=标题+默认/自由，第二行=名字或下拉
+      h+='<div class="gsec" style="display:flex;align-items:center;gap:8px">疯子以为自己是'+mb('as',lunaInfo.asMode,'＝场上的真恶魔（'+_rn(_lunaRealDemon())+'）')+'</div>';
+      if(lunaInfo.asMode==='free'){ let oa=''; _lunaDemons().forEach(r=>{ oa+='<option value="'+r+'"'+(lunaAs()===r?' selected':'')+'>'+_rn(r)+'</option>'; }); h+='<div class="bluffsel"><select onchange="setLunaAs(this.value)">'+oa+'</select></div>'; }
+      else h+=TX+_rn(lunaAs())+'</div>';
+      h+='<div class="gsec" style="display:flex;align-items:center;gap:8px">疯子看到的爪牙'+mb('min',lunaInfo.minMode,'＝场上的真爪牙')+'</div>';
+      if(lunaInfo.minMode==='free' && lunaInfo.min.length){ h+='<div class="bluffsel">'; lunaInfo.min.forEach((cur,k)=>{ let o='<option value="">爪牙'+(k+1)+'</option>'; for(let i=0;i<N;i++){ if(i===ls) continue; o+='<option value="'+i+'"'+(cur===i?' selected':'')+'>'+(i+1)+'号 '+nameAt(i)+'</option>'; }
+          h+='<select onchange="setLunaMin('+k+',this.value)">'+o+'</select>'; }); h+='</div>'; }
+      else h+=TX+(_minSeats().map(i=>(i+1)+'号 '+nameAt(i)).join('、')||'无')+'</div>';
       h+='<div class="gsec" style="display:flex;align-items:center;gap:8px">疯子的伪装<span class="regbtn" onclick="lunaReroll()" title="重新随机三个伪装">🎲</span></div><div class="bluffsel">';   // v2.82.1 与「恶魔伪装」同版式：三个下拉单独一行
       for(let k=0;k<3;k++){ let o='<option value="">伪装'+(k+1)+'</option>'; curRoles().filter(r=>r.team==='tf'||r.team==='out').forEach(r=>{ o+='<option value="'+r.id+'"'+(lunaInfo.bl[k]===r.id?' selected':'')+'>'+r.name+'</option>'; });
         h+='<select onchange="setLunaBl('+k+',this.value)">'+o+'</select>'; }
