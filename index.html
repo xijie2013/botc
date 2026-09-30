@@ -1570,9 +1570,13 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.77.1', d:'2026-09-30', items:[
+    '水手：设置选项改名为「默认设置 / 自由裁决」；只有自由裁决时夜晚面板才出现「水手 / 被选者」两个按钮，去掉「无效」选项；水手中毒/醉酒时无论选谁都无人醉酒（自动处理）。',
+    '修正：刺客的暗杀无视「不会死」，清醒的水手被刺客暗杀时照常死亡（本夜死亡记录选「被刺客暗杀出局」）。',
+  ]},
   {v:'v2.77.0', d:'2026-09-29', items:[
     '黯月初升·水手自动化：水手每晚可选任意存活玩家（包括自己）。审核通过后自动判定谁喝醉并挂上醉酒标记，到第二天黄昏自动消失。',
-    '角色设置里新增「水手醉酒」：默认＝选到镇民则对方醉，选到其他人或自己则水手醉，水手当时中毒/醉酒则无效；自由＝每晚审核后由说书人在夜晚面板裁定。任何时候都可以在夜晚面板里改成「被选者 / 水手 / 无效」。',
+    '角色设置里新增「水手醉酒」：默认设置＝选到镇民则对方醉，选到其他人或自己则水手醉；自由裁决＝每晚审核后由说书人在夜晚面板二选一（水手 / 被选者）。水手当时中毒/醉酒时无论选谁都无人醉酒。',
     '清醒的水手不会死：本夜死亡记录会拦下并提示；白天处决清醒的水手时记为「已被处决」，但他不会死亡（不播处决视频，座位不变）。',
   ]},
   {v:'v2.76.0', d:'2026-09-29', items:[
@@ -2355,18 +2359,21 @@ function _sailorLog(){ const r=sailorPicks[night]; const sl=sailorSeat(); if(!r|
 function _sailorApprove(){ const f=nfGet('sailor'); const sl=sailorSeat(); const t=+((f.pick||[])[0]); if(sl<0||!(t>=0)){ nfDone('sailor'); save(); render(); return; }
   delete sailorPicks[night]; syncSailor();   // 先撤掉本夜旧记录，免得把本夜上一次选择造成的醉酒当成「水手中毒/醉酒」
   const sick=!healthy(sl);
-  if(sailorMode==='free'){ sailorPicks[night]={t:t,d:null,sick:sick}; f.stage='sailorpick'; _sailorLog(); save(); render(); return; }   // 自由：说书人在面板里裁定
+  if(sailorMode==='free' && !sick){ sailorPicks[night]={t:t,d:null,sick:sick}; f.stage='sailorpick'; _sailorLog(); save(); render(); return; }   // 自由裁决：说书人在面板里裁定（水手中毒/醉酒时直接无效，不用裁定）
   sailorPicks[night]={t:t,d:_sailorAutoDrunk(t,sl,sick),sick:sick}; syncSailor(); _sailorLog(); nfDone('sailor'); save(); render(); }
-function sailorDecide(v){ const r=sailorPicks[night]; if(!r) return; const sl=sailorSeat();
-  r.d=(v==='t')?r.t:(v==='s'?sl:-1); syncSailor(); _sailorLog();
+function sailorDecide(v){ const r=sailorPicks[night]; if(!r||r.sick) return; const sl=sailorSeat();
+  r.d=(v==='t')?r.t:sl; syncSailor(); _sailorLog();
   const f=nfGet('sailor'); if(f.stage==='sailorpick') nfDone('sailor'); save(); render(); }
 function setSailorMode(v){ if(gateCfg()) return; sailorMode=(v==='free')?'free':'auto'; save(); render(); }
 function sailorUI(){ const sl=sailorSeat(); const r=sailorPicks[night]; if(sl<0||!r) return '';
   const f=nightFlow[nfKey('sailor')]; if(!f||(f.stage!=='done'&&f.stage!=='sailorpick')) return '';
-  const lab=(r.d==null)?'待裁定':(r.d<0?'无效':(r.d===sl?'水手自己':((r.d+1)+'号 '+nameAt(r.d))));
+  const head='水手选择 '+(r.t+1)+'号 '+nameAt(r.t)+' → ';
+  if(r.sick||(r.d!=null&&r.d<0)) return '<div class="impkill done">'+head+'水手当时中毒/醉酒，<b>无人醉酒</b></div>';
+  const lab=(r.d==null)?'待裁定':(r.d===sl?'水手自己':((r.d+1)+'号 '+nameAt(r.d)));
+  if(sailorMode!=='free') return '<div class="impkill done">'+head+'醉酒：<b>'+lab+'</b>（默认设置）</div>';   // 默认设置：只显示结果，不给按钮
   const b=(v,txt,on)=>'<span class="regbtn'+(on?' on':'')+'" onclick="sailorDecide(\''+v+'\')">'+txt+'</span>';
-  return '<div class="impkill'+(r.d==null?' warn':'')+'">水手选择 '+(r.t+1)+'号 '+nameAt(r.t)+'（'+(r.sick?'水手当时中毒/醉酒':'水手清醒')+'）→ 醉酒：<b>'+lab+'</b> '
-    +(r.t!==sl?b('t','被选者',r.d===r.t):'')+b('s','水手',r.d===sl)+b('n','无效',r.d===-1)+'</div>'; }
+  return '<div class="impkill'+(r.d==null?' warn':'')+'">'+head+'醉酒：<b>'+lab+'</b> '
+    +b('s','水手',r.d===sl)+(r.t!==sl?b('t',(r.t+1)+'号 '+nameAt(r.t),r.d===r.t):'')+'</div>'; }   // 自由裁决：二选一（没有「无效」）
 function nightAutoText(id){
   if(id==='_minion'){ const d=_demSeat(); const dn=d>=0?((d+1)+'号 '+nameAt(d)):'（未定）'; const ms=_minSeats().map(i=>(i+1)+'号 '+nameAt(i)); return '【爪牙信息】你的恶魔是：'+dn+'。同伙爪牙：'+(ms.join('、')||'无其他爪牙')+'。'; }
   if(id==='_demon'){ const ms=_minSeats().map(i=>(i+1)+'号 '+nameAt(i)); const bl=(bluffs||[]).filter(Boolean).map(x=>RMAP[x]?RMAP[x].name:x); return '【恶魔信息】你的爪牙：'+(ms.join('、')||'无')+'。可伪装的身份（不在场好人）：'+(bl.join('、')||'（说书人未设置）')+'。'; }
@@ -2682,7 +2689,7 @@ function nightPanel(id, active){
     return h+'</div>';
   }
   if(stage==='sailorpick'){   // v2.77.0 水手·自由模式：说书人裁定谁喝醉
-    h+='<div class="nf-status">玩家已选择：<b>'+_nfEscA(_semiNames(f.pick))+'</b>——请在上方裁定谁喝醉（被选者 / 水手 / 无效）。</div>';
+    h+='<div class="nf-status">玩家已选择：<b>'+_nfEscA(_semiNames(f.pick))+'</b>——请在上方裁定谁喝醉（水手 / 被选者）。</div>';
     h+='<div class="nf-btns"><button class="nf-re" onclick="nightRetract(\''+id+'\')">退回重选</button>'
       +'<button class="nf-undo" onclick="nightUndoStep('+_q(id)+')" title="撤销这一步并重新执行">撤销</button></div>';
     return h+'</div>';
@@ -2779,7 +2786,7 @@ let nightDeaths={};
 const ND_CAUSES=['被恶魔击杀出局','被刺客暗杀出局','赌错身份死亡（赌徒）','月之子指认死亡','造谣者宣言应验死亡','其他原因死亡'];
 function ndEvents(n){ if(!nightDeaths[n]) nightDeaths[n]=[]; return nightDeaths[n]; }
 function ndKill(target,opts){ opts=opts||{}; if(target==null||target<0||target>=N||isDeadSeat(target)) return null;
-  if(sailorSober(target)) return null;   // v2.77.0 清醒的水手不会死
+  if(sailorSober(target) && opts.label!==ND_CAUSES[1]) return null;   // v2.77.0 清醒的水手不会死；v2.77.1 刺客暗杀无视「不会死」
   const label=opts.label||'夜间死亡';
   killSeat(target,true); histSet(target,'death',label);
   const ev={t:target, src:opts.src||'manual', label:label, k:'kill'};
@@ -2793,7 +2800,7 @@ function ndUndo(n,idx){ if(n!==night) return false;   // 只撤当前夜（histS
 window._ndKillTap=function(){ const s=document.getElementById('ndSeatSel'), c=document.getElementById('ndCauseSel');
   if(!s||s.value===''){ _gt('先选择要记录死亡的玩家'); return; }
   const label=ND_CAUSES[+((c&&c.value)||0)]||ND_CAUSES[ND_CAUSES.length-1];
-  if(sailorSober(+s.value)){ _gt('水手清醒（未中毒/醉酒），不会死亡——本次死亡不记录'); return; }   // v2.77.0
+  if(sailorSober(+s.value) && label!==ND_CAUSES[1]){ _gt('水手清醒（未中毒/醉酒），不会死亡——本次死亡不记录（刺客暗杀除外）'); return; }   // v2.77.0 / v2.77.1
   const ev=ndKill(+s.value,{src:'manual',label:label});
   if(ev){ try{ save(); }catch(e){} render(); } };
 window._ndUndoTap=function(ix){ if(ndUndo(night,ix)){ try{ save(); }catch(e){} render(); } };
@@ -4237,8 +4244,8 @@ function renderGrim(){
     }
     if(meta.some(m=>m&&m.role==="sailor")){   // v2.77.0 水手：谁喝醉的裁定方式
       h+='<div class="gsec" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">水手醉酒'
-        +'<span class="regbtn'+(sailorMode!=='free'?' on':'')+'" onclick="setSailorMode(\'auto\')" title="选到镇民→对方醉；选到其他人或自己→水手醉；水手中毒/醉酒→无效">默认</span>'
-        +'<span class="regbtn'+(sailorMode==='free'?' on':'')+'" onclick="setSailorMode(\'free\')" title="每晚审核后由说书人裁定谁喝醉">自由</span></div>';
+        +'<span class="regbtn'+(sailorMode!=='free'?' on':'')+'" onclick="setSailorMode(\'auto\')" title="选到镇民→对方醉；选到其他人或自己→水手醉；水手中毒/醉酒→无效">默认设置</span>'
+        +'<span class="regbtn'+(sailorMode==='free'?' on':'')+'" onclick="setSailorMode(\'free\')" title="每晚审核后由说书人裁定谁喝醉">自由裁决</span></div>';
     }
     if(meta.some(m=>m&&m.isDrunk)){ const dSel=meta.findIndex(m=>m&&m.isDrunk); let o='<option value="">（未定身份）</option>';
       curRoles().filter(r=>r.team==="tf" && !lockedRoles.has(r.id)).forEach(r=>{
