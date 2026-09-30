@@ -1572,6 +1572,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.79.1', d:'2026-09-30', items:[
+    '驱魔人：选中恶魔后不再立即通知恶魔。轮到恶魔行动那一步时，这一步自动改为「告知驱魔人是谁」：说书人点发送，恶魔收到「X号是驱魔人，他今晚选中了你，你今夜不会醒来行动」并确认后，这一步才完成（也可代确认）。恶魔今夜不选人、不行动；这次唤醒不计入侍女的醒来人数。',
+  ]},
   {v:'v2.79.0', d:'2026-09-30', items:[
     '黯月初升·驱魔人自动化：可选任何玩家（包括自己和已出局的），但不能与昨晚相同。审核通过后自动判定：选中恶魔时，恶魔会收到「驱魔人是 X 号」的通知，恶魔今夜的行动步骤自动标为「不醒」并视为完成；驱魔人中毒/醉酒时无效，恶魔照常醒。',
     '被驱魔的恶魔今夜不算「因自身能力醒来」（侍女不计）。撤销驱魔人这一步会一并撤回通知和标记。',
@@ -2287,7 +2290,8 @@ const NIGHT_SEMI_PICK2=new Set(['innkeeper','shabaloth','chambermaid']);
 const NIGHT_SEMI_INFO=new Set(['grandmother','godfather']);   // 首夜信息步；其余夜=手动提醒
 const NIGHT_SEMI_RESULT=new Set(['chambermaid']);             // 审核后需回发结果文本（说书人编辑）
 function _isSemi(id){ return NIGHT_SEMI_PICK1.has(id)||NIGHT_SEMI_PICK2.has(id)||NIGHT_SEMI_INFO.has(id); }
-function stepKind(id){ if(NIGHT_AUTO_INFO.has(id)) return 'info'; if(NIGHT_AUTO_PICK1.has(id)) return 'pick1'; if(NIGHT_AUTO_PICK2.has(id)) return 'pick2info'; if(NIGHT_AUTO_PICK1INFO.has(id)) return 'pick1info';
+function stepKind(id){ if(id && id===exorcisedDemonRole()) return 'info';   // v2.79.1 被驱魔的恶魔：本步改为纯告知（驱魔人是谁），等恶魔确认
+  if(NIGHT_AUTO_INFO.has(id)) return 'info'; if(NIGHT_AUTO_PICK1.has(id)) return 'pick1'; if(NIGHT_AUTO_PICK2.has(id)) return 'pick2info'; if(NIGHT_AUTO_PICK1INFO.has(id)) return 'pick1info';
   if(NIGHT_SEMI_INFO.has(id)) return night===1?'info':null;      // 祖母/教父：首夜告知；其余夜的条目是提醒，走手动勾选
   if(id==='lunatic') return night===1?'info':'pick1';            // 疯子：首夜收（假）恶魔信息；其余夜照常「刀人」
   if(NIGHT_SEMI_PICK1.has(id)) return 'pick1';
@@ -2397,7 +2401,8 @@ function sailorUI(){ const sl=sailorSeat(); const r=sailorPicks[night]; if(sl<0|
    爪牙相认/恶魔信息/传位通知不算（官方：非因自身能力醒来）。撤销重做会一并清掉该步的醒来记录。
    侍女：选 2 名存活玩家（不含自己）；健康→审核通过即自动发送真实人数；中毒/醉酒→停在结果步，默认真值，由说书人改后发送。 */
 const WOKE_EXCLUDE=new Set(['_minion','_demon','_newimp','_exorcised']);
-function markWoke(id){ if(WOKE_EXCLUDE.has(id)) return; const seats=(nightSendSeats(id)||[]).filter(s=>s!=null&&s>=0); if(!seats.length) return;
+function markWoke(id){ if(WOKE_EXCLUDE.has(id)) return; if(id===exorcisedDemonRole()) return;   // v2.79.1 被驱魔的恶魔是因驱魔人醒来，不算
+  const seats=(nightSendSeats(id)||[]).filter(s=>s!=null&&s>=0); if(!seats.length) return;
   const n=nightWoke[night]||(nightWoke[night]={}); n[id]=seats.slice(); }
 function unmarkWoke(id){ const n=nightWoke[night]; if(n){ delete n[id]; if(!Object.keys(n).length) delete nightWoke[night]; } }
 function wokeTonight(i){ const n=nightWoke[night]||{}; for(const k in n){ if(k!=='chambermaid' && (n[k]||[]).indexOf(i)>=0) return k; } return null; }
@@ -2429,18 +2434,19 @@ function _exorcistApprove(){ const f=nfGet('exorcist'); const ex=exorcistSeat();
   const sick=!healthy(ex), isDem=_isDemonSeat(t), hit=isDem&&!sick;
   exorcistPicks[night]={t:t, hit:hit, d:(isDem?t:null), sick:sick};
   try{ histSet(ex,'info','选择：'+(t+1)+'号 '+nameAt(t)+(isDem?(sick?'（是恶魔，但驱魔人中毒/醉酒，无效）':'（是恶魔：恶魔得知驱魔人，今夜不醒）'):'（不是恶魔）')); }catch(e){}
-  if(hit){ f.exSid=(f.exSid||0)+1; try{ histSet(t,'protected','被驱魔人选中：得知驱魔人是 '+(ex+1)+'号 '+nameAt(ex)+'，今夜不醒'); }catch(e){}
-    try{ if(window.stNightSend) window.stNightSend('_exorcised','info',_exorcistText(ex),null,[t],f.exSid); }catch(e){} }
+  if(hit){ try{ histSet(t,'protected','被驱魔人选中：得知驱魔人是 '+(ex+1)+'号 '+nameAt(ex)+'，今夜不醒'); }catch(e){} }   // v2.79.1 不再立即通知恶魔：轮到恶魔那一步时由说书人发送
   nfDone('exorcist'); save(); render(); }
 function _exorcistUndo(){ const r=exorcistPicks[night]; if(!r) return;
-  if(r.hit&&r.d!=null){ try{ histSet(r.d,'protected',null); }catch(e){} try{ if(window._stClearSeatNight) window._stClearSeatNight(r.d); }catch(e){} }
+  if(r.hit&&r.d!=null){ try{ histSet(r.d,'protected',null); }catch(e){} try{ if(window._stClearSeatNight) window._stClearSeatNight(r.d); }catch(e){}
+    const dr=meta[r.d]&&meta[r.d].role; if(dr){ delete nightFlow[night+':'+dr]; delete nightChecks[night+':'+dr]; } }   // v2.79.1 恶魔那一步（告知驱魔人）一并归零
   delete exorcistPicks[night]; }
 function exorcistUI(){ const r=exorcistPicks[night]; if(!r) return ''; const f=nightFlow[nfKey('exorcist')]; if(!f||f.stage!=='done') return '';
   const who=(r.t+1)+'号 '+nameAt(r.t);
   if(r.d!=null&&r.sick) return '<div class="impkill done">驱魔人选择 '+who+'（是恶魔）→ 驱魔人中毒/醉酒，<b>无效</b>，恶魔照常行动</div>';
-  if(r.hit) return '<div class="impkill done">驱魔人选择 '+who+' → <b>是恶魔</b>：已通知恶魔驱魔人是谁，恶魔今夜不醒</div>';
+  if(r.hit) return '<div class="impkill done">驱魔人选择 '+who+' → <b>是恶魔</b>：恶魔今夜不行动，轮到恶魔时告知他驱魔人是谁</div>';
   return '<div class="impkill done">驱魔人选择 '+who+' → 不是恶魔，无事发生</div>'; }
 function nightAutoText(id){
+  if(id && id===exorcisedDemonRole()){ const r=exorcistPicks[night]; const ex=exorcistSeat(); return _exorcistText(ex>=0?ex:r.t); }   // v2.79.1
   if(id==='_minion'){ const d=_demSeat(); const dn=d>=0?((d+1)+'号 '+nameAt(d)):'（未定）'; const ms=_minSeats().map(i=>(i+1)+'号 '+nameAt(i)); return '【爪牙信息】你的恶魔是：'+dn+'。同伙爪牙：'+(ms.join('、')||'无其他爪牙')+'。'; }
   if(id==='_demon'){ const ms=_minSeats().map(i=>(i+1)+'号 '+nameAt(i)); const bl=(bluffs||[]).filter(Boolean).map(x=>RMAP[x]?RMAP[x].name:x); return '【恶魔信息】你的爪牙：'+(ms.join('、')||'无')+'。可伪装的身份（不在场好人）：'+(bl.join('、')||'（说书人未设置）')+'。'; }
   if(id==='poisoner') return '【投毒者】请选择今晚要下毒的一名玩家（当晚及次日中毒）。';
@@ -2717,7 +2723,7 @@ function _q(x){ return "'"+String(x).replace(/'/g,"\\'")+"'"; }   // 拼 onclick
 function _nfEscA(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 function stepDone(s){ if(s.id==='ravenkeeper' && stepAutomated(s) && !ravenActive()) return true;
   if(s.id==='grandmother' && night>1) return true;
-  if(s.id && s.id===exorcisedDemonRole()) return true;   // v2.79.0 被驱魔的恶魔今夜不醒   // v2.74.0 祖母其余夜全自动（连带死亡由死亡记录触发）   // 守鸦人本夜未死亡：无需行动，视为已完成（不阻塞结束本夜）
+  /* v2.79.1 被驱魔的恶魔：走普通信息步（发送驱魔人通知 → 恶魔确认），不再自动完成 */   // v2.74.0 祖母其余夜全自动（连带死亡由死亡记录触发）   // 守鸦人本夜未死亡：无需行动，视为已完成（不阻塞结束本夜）
   if(stepAutomated(s)){ const f=nightFlow[night+':'+s.id]; return !!(f&&f.stage==='done'); } return !!nightChecks[night+':'+s.id]; }
 /* 该步对应角色是否已出局（全部座位都死→本夜无行动，只能跳过） */
 function _stepRoleDead(id){ if(id==='ravenkeeper') return false; const seats=nightSendSeats(id); if(!seats||!seats.length) return false; return seats.every(function(i){ return isDeadSeat(i); }); }   // 守鸦人正是死亡才行动，不按「出局变灰」处理
@@ -4420,8 +4426,7 @@ function renderGrim(){
       if(s.special){ name=s.name; color=s.special==="dem"?TEAMC.dem:TEAMC.min; }
       else{ const r=RMAP[s.id]; const ds=meta.some(m=>m&&m.role===s.id&&m.isDrunk);
         name=r.name+(ds?'-酒鬼':''); color=ds?TEAMC.out:TEAMC[r.team]; info=computeNightInfo(s.id); }
-      if(!s.special && s.id===exorcisedDemonRole()){   // v2.79.0 被驱魔：恶魔今夜不醒，步骤自动完成
-        h+='<div class="nstep"><span><b style="color:'+color+'">✓ '+name+'</b> <span class="nn">'+s.note+'</span><div class="ninfo">被驱魔人选中：今夜不醒、不行动</div></span></div>'; return; }
+      if(!s.special && s.id===exorcisedDemonRole()) info='<span class="ninfo-warn">被驱魔人选中：今夜不行动——只告知他驱魔人是谁，等他确认</span>';   // v2.79.1
       if(stepAutomated(s)){   // 自动化步骤：改用信息流程面板（发送/确认/审核），并按顺序门控
         const done=stepDone(s), active=(si===firstUndone);
         h+='<div class="nstep nauto"><span><b style="color:'+color+'">'+(done?'✓ ':'')+name+'</b> <span class="nn">'+s.note+'</span>'+(info?'<div class="ninfo">'+info+'</div>':'')+'</span></div>';
