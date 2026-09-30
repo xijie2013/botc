@@ -1571,6 +1571,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.78.1', d:'2026-09-30', items:[
+    '侍女：玩家选好两人后，夜晚面板上方始终显示判定依据（如「3号 小明：醒来（珀）；5号 小红：未醒 → 共 1 人」），健康和中毒/醉酒时都显示。',
+  ]},
   {v:'v2.78.0', d:'2026-09-30', items:[
     '醒来记录：夜里说书人向某个角色发送过夜间消息（或代确认/代选完成这一步），就记为该玩家今夜因自身能力醒来；爪牙相认、恶魔信息不算；撤销重做会一并清掉。',
     '黯月初升·侍女自动化：只能选 2 名存活玩家（不能选自己）；审核通过后按醒来记录自动算出人数，健康时直接发送，中毒/醉酒时停下让说书人改数字（旁边列出真实情况）。魔典日志记下两人各自醒没醒。',
@@ -2392,6 +2395,10 @@ function wokeTonight(i){ const n=nightWoke[night]||{}; for(const k in n){ if(k!=
 function chamberSeat(){ return meta.findIndex(m=>m&&m.role==='chambermaid'); }
 function chamberCount(pk){ return (pk||[]).filter(s=>s!=null&&wokeTonight(+s)!=null).length; }
 function chamberBreakdown(pk){ return (pk||[]).map(s=>{ s=+s; const k=wokeTonight(s); return (s+1)+'号 '+nameAt(s)+'：'+(k?('醒来（'+((RMAP[k]&&RMAP[k].name)||k)+'）'):'未醒'); }).join('；'); }
+function chamberUI(){ const cm=chamberSeat(); if(cm<0) return ''; const f=nightFlow[nfKey('chambermaid')]; const pk=f&&f.pick;   // v2.78.1 侍女：面板上方显示为什么是 X 人
+  if(!pk||pk.length<2||pk[0]==null||pk[1]==null) return '';
+  const sick=!healthy(cm);
+  return '<div class="impkill'+(sick?' warn':' done')+'">侍女选择 '+_semiNames(pk)+'：'+chamberBreakdown(pk)+' → 共 <b>'+chamberCount(pk)+'</b> 人'+(sick?'（侍女中毒/醉酒，可告知假数字）':'')+'</div>'; }
 function chamberText(pk){ return '【侍女】你选择的 '+_semiNames(pk)+' 中，今夜因自身能力醒来的有 '+chamberCount(pk)+' 人。'; }
 function nightAutoText(id){
   if(id==='_minion'){ const d=_demSeat(); const dn=d>=0?((d+1)+'号 '+nameAt(d)):'（未定）'; const ms=_minSeats().map(i=>(i+1)+'号 '+nameAt(i)); return '【爪牙信息】你的恶魔是：'+dn+'。同伙爪牙：'+(ms.join('、')||'无其他爪牙')+'。'; }
@@ -2721,7 +2728,6 @@ function nightPanel(id, active){
   if(stage==='semiresult'){   // v2.71.0 半自动·回发结果（如侍女的醒来人数）：说书人编辑文本后发送
     const _srt=(f.resultText!=null&&f.resultText!=='')?f.resultText:_semiResultDefault(id);
     h+='<div class="nf-status">玩家已选择：<b>'+_nfEscA(_semiNames(f.pick))+'</b>——请编辑要告知的结果后发送：</div>';
-    if(id==='chambermaid') h+='<div class="nf-hint">侍女中毒/醉酒，可告知假数字。真实情况：'+_nfEscA(chamberBreakdown(f.pick))+'（真实 '+chamberCount(f.pick)+' 人）</div>';
     h+='<textarea class="nf-ta" oninput="nightEditResult(\''+id+'\',this.value)">'+_nfEscA(_srt)+'</textarea>';
     h+='<div class="nf-btns"><button class="nf-ok" onclick="nightSendSemiResult(\''+id+'\')">发送结果</button>'
       +'<button class="nf-re" onclick="nightRetract(\''+id+'\')">退回重选</button>'
@@ -4379,6 +4385,7 @@ function renderGrim(){
         if(s.id==="undertaker") h+=undertakerUI();
         if(s.id==="grandmother") h+=grandmotherUI();   // v2.74.0 孙辈选择器（发送前）
         if(s.id==="sailor") h+=sailorUI();   // v2.77.0 水手：谁喝醉（可改）
+        if(s.id==="chambermaid") h+=chamberUI();   // v2.78.1 侍女：醒来人数的依据
         if(s.id==="chef") h+=numUI("chef","相邻邪恶对数",Math.max(2,meta.filter((m,i)=>regEvil(i)).length));
         if(s.id==="empath") h+=numUI("empath","两侧存活邻座邪恶数",2);
         if(s.id==="washerwoman"||s.id==="librarian"||s.id==="investigator") h+=pingUI(s.id);   // 揭示选择器：说书人先选「真身+幌子」两张牌，发送框随之显示要告知的内容
