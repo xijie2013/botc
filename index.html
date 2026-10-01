@@ -1579,6 +1579,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.85.5', d:'2026-10-01', items:[
+    '侍臣代玩家操作：左边「今晚不使用」、右边「选择使用对象」两个按钮；选「今晚不使用」不出下拉菜单，选「选择使用对象」才出现角色下拉菜单。',
+  ]},
   {v:'v2.85.4', d:'2026-10-01', items:[
     '侍臣：说书人夜晚面板里，玩家选「今晚不使用」显示为「今晚不使用」，选了角色则显示角色名（之前误显示成座位号）。',
   ]},
@@ -2766,8 +2769,15 @@ function _semiResultDefault(id){ if(id==='chambermaid') return '【侍女】你�
 function nightSendSemiResult(id){ const f=nfGet(id); const rtext=(f.resultText!=null&&f.resultText!=='')?f.resultText:_semiResultDefault(id);
   f.resultText=rtext; f.stage='result'; f.phase='result'; f.sid=(f.sid||0)+1;
   const seats=nightSendSeats(id); if(window.stNightSend) window.stNightSend(id,'result',rtext,null,seats,f.sid); save(); render(); }
+function courtierManualMode(v){ const f=nfGet('courtier'); if(v==='skip'){ f.pick=[-1]; f.cmode='skip'; } else { f.cmode='use'; if(f.pick&&f.pick.length&&+f.pick[0]<0) f.pick=[]; } save(); render(); }
 function semiPickSet(id,k,v){ const f=nfGet(id); if(!Array.isArray(f.pick)) f.pick=[]; f.pick[k]=(v==='')?null:+v; save(); render(); }
 function semiManualUI(id){ const cnt=(stepKind(id)==='pick2info')?2:1; const f=nfGet(id); const cur=f.pick||[];
+  if(id==='courtier'){   // v2.85.5 侍臣代选：左「今晚不使用」/ 右「选择使用对象」；选后者才出角色下拉
+    const skip=(cur.length&&+cur[0]<0), use=(f.cmode==='use')&&!skip;
+    let h='<span class="regbtn'+(skip?' on':'')+'" onclick="courtierManualMode(\'skip\')">今晚不使用</span><span class="regbtn'+(use?' on':'')+'" onclick="courtierManualMode(\'use\')">选择使用对象</span>';
+    if(use){ let o='<option value="">选择角色…</option>'; _pickOptionsFor(id).filter(op=>op.seat>=0).forEach(op=>{ o+='<option value="'+op.seat+'"'+(cur[0]===op.seat?' selected':'')+'>'+op.name+'</option>'; });
+      h+=' <select onchange="semiPickSet(\'courtier\',0,this.value)" style="margin-left:6px">'+o+'</select>'; }
+    return h; }
   let h=''; for(let k=0;k<cnt;k++){ let o='<option value="">'+(id==='courtier'?'选择角色…':'选择玩家…')+'</option>';
     _pickOptionsFor(id).forEach(op=>{ o+='<option value="'+op.seat+'"'+(cur[k]===op.seat?' selected':'')+'>'+op.name+'</option>'; });
     h+='<select onchange="semiPickSet(\''+id+'\','+k+',this.value)" style="margin-right:6px">'+o+'</select>'; }
