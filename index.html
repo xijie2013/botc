@@ -1575,6 +1575,10 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.84.0', d:'2026-10-01', items:[
+    '醉酒按来源实时判定：水手、旅店老板、侍臣造成的醉酒，只在施加者仍存活且自身健康时生效——施加者之后中毒/醉酒/出局，被弄醉的人立刻恢复清醒；施加者恢复健康（且仍在时效内）则再次醉酒。多个来源同时让一人醉，只撤掉失效的那一份。',
+    '互相弄醉（如侍臣弄醉水手、水手又弄醉侍臣）按施加先后裁定：后施加的一方当时是清醒的，其效果优先成立，不会死循环。魔典醉酒标记的提示里写明来源（水手/旅店老板/侍臣）。',
+  ]},
   {v:'v2.83.0', d:'2026-10-01', items:[
     '黯月初升·侍臣自动化：侍臣每夜收到弹窗，从下拉菜单里选一个「角色」（不是玩家），或选「今晚不使用」。说书人审核通过后自动结算：该角色在场 → 其玩家从本夜起醉酒三天三夜（到第 n+2 天黄昏，魔典显示醉酒标记，信息类能力自动按中毒/醉酒处理）；不在场 → 无事发生。',
     '侍臣当时中毒/醉酒 → 无效但能力用掉。用过之后不再醒来，夜晚面板显示当前状态。侍臣之后中毒/醉酒或出局 → 目标恢复清醒；侍臣恢复健康且仍在三天三夜内 → 目标再次醉酒。',
@@ -2566,13 +2570,12 @@ function lunaUI(){ const ls=lunaSeat(); if(ls<0||night===1) return '';   // v2.8
 function courtierSeat(){ return meta.findIndex(m=>m&&m.role==='courtier'&&!m.isDrunk); }
 function courtierUsedBefore(){ return !!(courtierUse && courtierUse.n<night); }
 function _courtierTargetSeat(){ const u=courtierUse; if(!u||!u.role) return -1; return meta.findIndex(m=>m&&m.role===u.role&&!m.isDrunk); }   // 跟着角色走；酒鬼自以为的角色不算
-function courtierActive(){ const u=courtierUse; if(!u||u.sick) return false; if(night<u.n||night>u.n+2) return false;
-  const cs=courtierSeat(); if(cs<0||isDeadSeat(cs)||!_healthyBase(cs)) return false; return true; }
+function courtierActive(){ const u=courtierUse; if(!u||u.sick) return false; if(night<u.n||night>u.n+2) return false; const t=_courtierTargetSeat(); return t>=0 && _extDrunk(t)==='侍臣'; }
 function courtierDrunk(i){ try{ return i>=0 && courtierActive() && _courtierTargetSeat()===i; }catch(e){ return false; } }
 function _courtierApprove(){ const f=nfGet('courtier'); const v=(f.pick||[])[0]; const cs=courtierSeat();
   if(v==null||+v<0){ try{ histSet(cs,'info','今晚不使用能力'); }catch(e){} nfDone('courtier'); save(); render(); return; }
   const r=curRoles()[+v]; if(!r){ try{window._toast&&_toast('角色选择无效');}catch(e){} return; }
-  courtierUse={n:night, role:r.id, sick:!_healthyBase(cs)};
+  courtierUse={n:night, role:r.id, sick:!healthy(cs)};
   try{ histSet(cs,'info','选择角色：'+r.name+' → '+courtierStatus(true)); }catch(e){}
   nfDone('courtier'); save(); render(); }
 function courtierStatus(plain){ const u=courtierUse; if(!u) return ''; const rn=_rn(u.role); const t=_courtierTargetSeat(); const end='第 '+(u.n+2)+' 天黄昏';
@@ -3064,8 +3067,28 @@ function poisonPick(v){
   reResolveKill(); render();
 }
 /* ---------- 僧侣守护 / 士兵免疫（影响恶魔击杀） ---------- */
-function _healthyBase(i){ return i>=0 && meta[i] && !meta[i].poison && !meta[i].drunk && !meta[i].isDrunk && !meta[i].sDrunk && !meta[i].iDrunk; }
-function healthy(i){ return _healthyBase(i) && !courtierDrunk(i); }   // v2.83.0 侍臣造成的醉酒（三天三夜，动态计算）   // v2.77.0（v2.80.0 iDrunk=旅店老板造成的醉酒） sDrunk=水手造成的醉酒（到黄昏）
+/* v2.84.0 醉酒按来源实时判定：水手(sDrunk)/旅店老板(iDrunk)/侍臣 造成的醉酒只在「施加者仍存活且自身健康」时生效（官方：施加者中毒/醉酒/出局 → 目标恢复清醒，施加者恢复 → 再次醉酒）。
+   自己弄醉自己的不受此限；互相弄醉形成循环时按施加先后裁定（后施加的优先）。中毒(poison)、手动醉酒(drunk)、酒鬼(isDrunk) 是无来源的静态状态。 */
+function _staticImp(i){ const m=meta[i]; return !m || !!(m.poison||m.drunk||m.isDrunk); }
+function _drunkEffects(){ const E=[];   // {src,tgt,label,t}：t=施加先后（夜×10+夜序：水手1 < 旅店老板2 < 侍臣3）
+  const sr=sailorPicks[night]; if(sr&&!sr.sick&&sr.d!=null&&sr.d>=0&&meta[sr.d]&&meta[sr.d].sDrunk) E.push({src:sailorSeat(),tgt:sr.d,label:'水手',t:night*10+1});
+  const ir=innPicks[night]; if(ir&&!ir.sick&&ir.d!=null&&ir.d>=0&&meta[ir.d]&&meta[ir.d].iDrunk) E.push({src:innSeat(),tgt:ir.d,label:'旅店老板',t:night*10+2});
+  const u=courtierUse; if(u&&!u.sick&&night>=u.n&&night<=u.n+2){ const t=_courtierTargetSeat(); if(t>=0) E.push({src:courtierSeat(),tgt:t,label:'侍臣',t:u.n*10+3}); }
+  return E; }
+/* 求「哪些醉酒效果此刻生效」：效果生效 ⇔ 施加者存活且未被（静态状态或其他生效中的效果）弄醉；自己弄醉自己的恒生效。
+   先迭代求不动点；若互相弄醉形成振荡，则按施加先后从新到旧逐个裁定（后施加的一方当时是清醒的，优先成立）。 */
+function _drunkActive(){ const E=_drunkEffects(); const n=E.length; if(!n) return {E:E,act:[]};
+  const alive=e=>e.src>=0&&!!meta[e.src]&&!isDeadSeat(e.src);
+  const imp=(x,act)=>_staticImp(x)||E.some((e,k)=>act[k]&&e.tgt===x);
+  let act=E.map(()=>false); const seen=new Set([act.join()]);
+  for(let it=0;it<2*n+2;it++){ const nx=E.map(e=>e.src===e.tgt ? true : (alive(e)&&!imp(e.src,act)));
+    const key=nx.join(); if(key===act.join()) return {E:E,act:act}; if(seen.has(key)){ act=null; break; } seen.add(key); act=nx; }
+  const ord=E.map((e,k)=>k).sort((a,b)=>E[b].t-E[a].t); const dec=E.map(()=>false);
+  ord.forEach(k=>{ const e=E[k]; dec[k]= e.src===e.tgt ? true : (alive(e)&&!imp(e.src,dec)); });
+  return {E:E,act:dec}; }
+function _extDrunk(i){ if(!meta[i]) return ''; const r=_drunkActive(); for(let k=0;k<r.E.length;k++){ if(r.act[k]&&r.E[k].tgt===i) return r.E[k].label; } return ''; }
+function _impaired(i){ return _staticImp(i) || !!_extDrunk(i); }
+function healthy(i){ return i>=0 && !!meta[i] && !_impaired(i); }
 function deathCauseLabel(i){
   const h=meta[i]&&meta[i].hist; if(!h) return "";
   let txt=""; Object.keys(h).map(Number).sort((a,b)=>a-b).forEach(n=>{ if(!txt && h[n] && h[n].death) txt=h[n].death; });   // ④ 取最早一条：死亡标志在死亡当刻固定，恶魔夜刀已死玩家不得改写
@@ -3225,7 +3248,7 @@ function _spySeatSnap(){
     const prot=!!shieldShown(i);
     const o={ i:i, name:(t&&t.name)?t.name:'', label:label, col:col,
       evil: role?isEvil(role.team):false, good: role?!isEvil(role.team):false, dead:dead,
-      bPoison:!!m.poison, bDrunk:!!(m.drunk||m.isDrunk||m.role==='drunk'||m.sDrunk||m.iDrunk||courtierDrunk(i)), bShield:!!(prot||m.mShield), bGhost:ghostVoteUsed(i),   /* 酒鬼自带醉酒标识；bGhost=⑥ 已投鬼票 */
+      bPoison:!!m.poison, bDrunk:!!(m.drunk||m.isDrunk||m.role==='drunk'||_extDrunk(i)), bShield:!!(prot||m.mShield), bGhost:ghostVoteUsed(i),   /* 酒鬼自带醉酒标识；bGhost=⑥ 已投鬼票 */
       bShot:!!((m.role==='slayer'&&slayerShot)||m.mShot),
       master:(butlerPicks[night]===i), herring:(redHerring===i), protectedBg:prot };
     if(dead){ o.claw=(deathCauseLabel(i)==='夜晚死亡'); o.deadIcon=deathCauseIcon(i); }
@@ -4717,7 +4740,7 @@ function renderSeats(){
         const gf=glow?'filter:drop-shadow(0 0 2px '+glow+') drop-shadow(0 0 4px '+glow+');':'';
         return '<div class="shieldbadge" title="'+t+'" style="width:'+bd+'px;height:'+bd+'px;left:'+(bx-bd/2)+'px;top:'+(by-bd/2)+'px;'+gf+'"><img src="'+ic+'"></div>'; };
       const RA=[30,60,90,120,150];   // 右侧固定 5 等距槽位：骷髅/毒/酒/盾/弩
-      [[ghostVoteUsed(i),'assets/mk-dead.png','已使用鬼票',1,'#000'],[m.poison,'assets/mk-poison.png','中毒',1,'#3fd44f'],[(m.drunk||m.isDrunk||m.role==='drunk'||m.sDrunk||m.iDrunk),'assets/s-drunk.png',(m.sDrunk?'醉酒（水手）':(m.iDrunk?'醉酒（旅店老板）':'醉酒')),1,'#ffe14d'],[shieldShown(i)||m.mShield,'assets/mk-shield.png','守护/免疫',1,'#d8dae2'],[(m.role==="slayer"&&slayerShot)||m.mShot,'assets/mk-crossbow.png','猎人已开枪',1.2,'#4aa8ff']]   /* 酒鬼(isDrunk 或原始 drunk 牌)自带醉酒标识 */
+      [[ghostVoteUsed(i),'assets/mk-dead.png','已使用鬼票',1,'#000'],[m.poison,'assets/mk-poison.png','中毒',1,'#3fd44f'],[(m.drunk||m.isDrunk||m.role==='drunk'||!!_extDrunk(i)),'assets/s-drunk.png',(_extDrunk(i)?('醉酒（'+_extDrunk(i)+'）'):'醉酒'),1,'#ffe14d'],[shieldShown(i)||m.mShield,'assets/mk-shield.png','守护/免疫',1,'#d8dae2'],[(m.role==="slayer"&&slayerShot)||m.mShot,'assets/mk-crossbow.png','猎人已开枪',1.2,'#4aa8ff']]   /* 酒鬼(isDrunk 或原始 drunk 牌)自带醉酒标识 */
         .forEach((b,k)=>{ if(b[0]) html+=badge(RA[k],b[1],b[2],b[3],b[4]); });
       if(butlerPicks[night]===i) html+=badge(0,'assets/mk-master.png','管家的主人',1.1,'#f5c542');     // 正上方：王冠·金
       if(redHerring===i) html+=badge(180,'assets/mk-herring.png','红鲱鱼',1.2,'#ff4a3a');             // 正下方：红鲱鱼·红
