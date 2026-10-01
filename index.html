@@ -1579,6 +1579,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.85.4', d:'2026-10-01', items:[
+    '侍臣：说书人夜晚面板里，玩家选「今晚不使用」显示为「今晚不使用」，选了角色则显示角色名（之前误显示成座位号）。',
+  ]},
   {v:'v2.85.3', d:'2026-10-01', items:[
     '侍臣的夜晚弹窗：左边「今晚不使用」按钮，右边角色下拉菜单＋提交（下拉菜单里不再有「今晚不使用」这一项）。',
   ]},
@@ -2962,8 +2965,10 @@ function nightPanel(id, active){
     return h+'</div>';
   }
   if(kind!=='info' && stage==='picked'){
-    const pk=(f.pick||[]).map(function(s){return nameAt(+s)+'（'+((+s)+1)+'号）';}).join('、');
-    h+='<div class="nf-status">玩家已选择：<b>'+_nfEscA(pk)+'</b></div>';
+    const pk=(id==='courtier')   // v2.85.4 侍臣：显示角色名 / 今晚不使用（不是座位号）
+      ? (f.pick||[]).map(function(v){ return (+v<0)?'今晚不使用':(((curRoles()[+v]||{}).name)||'？'); }).join('、')
+      : (f.pick||[]).map(function(s){return nameAt(+s)+'（'+((+s)+1)+'号）';}).join('、');
+    h+='<div class="nf-status">'+((id==='courtier'&&(f.pick||[]).length&&+f.pick[0]<0)?'玩家选择：<b>今晚不使用</b>':('玩家已选择：<b>'+_nfEscA(pk)+'</b>'))+'</div>';
     h+='<div class="nf-btns"><button class="nf-ok"'+lock+' onclick="nightApprove(\''+id+'\')">审核通过（写入魔典）</button>'
       +'<button class="nf-re" onclick="nightRetract(\''+id+'\')">退回重选</button>'
       +'<button class="nf-skip" onclick="nightSkipStep(\''+id+'\')">跳过</button>'
