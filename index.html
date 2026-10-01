@@ -1443,7 +1443,7 @@ const NIGHT_BMR={
   {id:"_demon",name:"恶魔信息",note:"唤醒恶魔，认识爪牙，告知疯子是谁与3个不在场的好人伪装。",special:"dem"},
   {id:"sailor",note:"选1名存活玩家（可选自己）：他或水手喝醉到明天黄昏（自动）。"},
   {id:"courtier",note:"（一局一次）选1个角色：该角色醉酒3天3夜（自动）。"},
-  {id:"godfather",note:"告知在场的外来者是哪些角色。"},
+  {id:"godfather",note:"自动告知在场的外来者角色。"},
   {id:"devilsadvocate",note:"选1名存活玩家：其明天被处决不死。"},
   {id:"pukka",note:"选1人中毒（延迟刀：明晚才死）。"},
   {id:"grandmother",note:"告知孙辈是谁及其角色（孙辈在角色设置中指定，信息自动生成）。"},
@@ -1462,7 +1462,7 @@ const NIGHT_BMR={
   {id:"shabaloth",note:"选2人杀死；可反刍复活一名前晚被它杀的人。"},
   {id:"po",note:"选1人杀或不杀；若前夜没杀→本夜连杀3人。"},
   {id:"assassin",note:"（一局一次）杀1人，无视一切保护。"},
-  {id:"godfather",note:"（若今日白天有外来者死亡）额外杀1人。"},
+  {id:"godfather",note:"（若今天白天有外来者死亡，自动判断）选1人：其死亡。"},
   {id:"professor",note:"（一局一次）选1名死者：若是镇民则复活。"},
   {id:"moonchild",note:"（今日得知自己死亡时）选1人：若是好人，当晚死亡。"},
   {id:"grandmother",note:"（自动）孙辈被恶魔杀死时，祖母一同死亡。"},
@@ -1575,6 +1575,10 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.85.0', d:'2026-10-01', items:[
+    '黯月初升·教父自动化：首夜自动告知在场外来者（酒鬼本身也算外来者；教父中毒/醉酒时提示说书人可改成假信息再发）。',
+    '其余夜自动判断今天白天有没有外来者死亡（处决或白天其他死亡）：没有 → 教父不醒、这一步自动完成；有 → 教父醒来选一名存活玩家，审核通过即记入本夜死亡「被教父击杀出局」（天亮公布；清醒水手、旅店老板保护照常挡；教父当时中毒/醉酒则无效）。撤销会一并退回这次死亡。',
+  ]},
   {v:'v2.84.0', d:'2026-10-01', items:[
     '醉酒按来源实时判定：水手、旅店老板、侍臣造成的醉酒，只在施加者仍存活且自身健康时生效——施加者之后中毒/醉酒/出局，被弄醉的人立刻恢复清醒；施加者恢复健康（且仍在时效内）则再次醉酒。多个来源同时让一人醉，只撤掉失效的那一份。',
     '互相弄醉（如侍臣弄醉水手、水手又弄醉侍臣）按施加先后裁定：后施加的一方当时是清醒的，其效果优先成立，不会死循环。魔典醉酒标记的提示里写明来源（水手/旅店老板/侍臣）。',
@@ -2328,11 +2332,12 @@ const NIGHT_AUTO_PICK1INFO=new Set(['ravenkeeper']);   // 选1人 + 回结果（
    **不做任何结算**——死亡走「本夜死亡记录」、中毒/醉酒/守护在座位编辑器标，均由说书人手动。 */
 const NIGHT_SEMI_PICK1=new Set(['courtier','sailor','exorcist','devilsadvocate','gambler','professor','lunatic','pukka','zombuul','po','assassin']);
 const NIGHT_SEMI_PICK2=new Set(['innkeeper','shabaloth','chambermaid']);
-const NIGHT_SEMI_INFO=new Set(['grandmother','godfather']);   // 首夜信息步；其余夜=手动提醒
+const NIGHT_SEMI_INFO=new Set(['grandmother','godfather']);   // 首夜信息步；其余夜：祖母=全自动，教父=外来者白天死亡才选人（v2.85.0）
 const NIGHT_SEMI_RESULT=new Set(['chambermaid']);             // 审核后需回发结果文本（说书人编辑）
 function _isSemi(id){ return NIGHT_SEMI_PICK1.has(id)||NIGHT_SEMI_PICK2.has(id)||NIGHT_SEMI_INFO.has(id); }
 function stepKind(id){ if(id && id===exorcisedDemonRole()) return 'info';   // v2.79.1 被驱魔的恶魔：本步改为纯告知（驱魔人是谁），等恶魔确认
   if(NIGHT_AUTO_INFO.has(id)) return 'info'; if(NIGHT_AUTO_PICK1.has(id)) return 'pick1'; if(NIGHT_AUTO_PICK2.has(id)) return 'pick2info'; if(NIGHT_AUTO_PICK1INFO.has(id)) return 'pick1info';
+  if(id==='godfather') return night===1?'info':(godfatherTriggered()?'pick1':null);   // v2.85.0
   if(NIGHT_SEMI_INFO.has(id)) return night===1?'info':null;      // 祖母/教父：首夜告知；其余夜的条目是提醒，走手动勾选
   if(id==='lunatic') return night===1?'info':(lunaAs()==='shabaloth'?'pick2info':'pick1');   // 疯子：首夜收（假）恶魔信息；其余夜照常「刀人」（以为是沙巴洛斯→选两人）
   if(NIGHT_SEMI_PICK1.has(id)) return 'pick1';
@@ -2351,6 +2356,7 @@ function deadBeforeNight(i){ if(!isDeadSeat(i)) return false; if(histIsDayNow())
 function nightSeatOptions(exclude){ const a=[]; for(let i=0;i<N;i++){ if(exclude!=null && i===exclude) continue; a.push({seat:i, name:(i+1)+'号 '+nameAt(i)+(deadBeforeNight(i)?'（已出局）':'')}); } return a; }
 /* 僧侣/管家不能选自己：从玩家的可选目标里排除该角色自身座位 */
 function _pickOptionsFor(id){
+  if(id==='godfather') return nightSeatOptions(undefined).filter(o=>!deadBeforeNight(o.seat));   // v2.85.0 教父：存活玩家（含自己）
   if(id==='courtier') return [{seat:-1,name:'今晚不使用'}].concat(curRoles().map((r,k)=>({seat:k,name:r.name})));   // v2.83.0 侍臣：选「角色」，seat 字段存剧本角色序号
   if(id==='professor'){ const a=[]; for(let i=0;i<N;i++){ if(deadBeforeNight(i)) a.push({seat:i, name:(i+1)+'号 '+nameAt(i)+'（已出局）'}); } return a; }   // v2.71.0 教授：只列公开已知的死者（不含本夜新死，防泄露）
   if(id==='devilsadvocate'){ const pf=nightFlow[(night-1)+':devilsadvocate']; const prev=(pf&&pf.pick&&pf.pick.length)?+pf.pick[0]:null;
@@ -2588,6 +2594,35 @@ function courtierStatus(plain){ const u=courtierUse; if(!u) return ''; const rn=
 function courtierUI(){ const u=courtierUse; const f=nightFlow[nfKey('courtier')]; if(!f||f.stage!=='done') return '';
   if(!u||u.n!==night) return (f.pick&&f.pick[0]!=null&&+f.pick[0]<0)?'<div class="impkill done">侍臣今晚不使用能力。</div>':'';
   return '<div class="impkill'+((u.sick||_courtierTargetSeat()<0)?'':' done')+'">'+courtierStatus()+'</div>'; }
+/* ==================== v2.85.0 教父自动化 ====================
+   首夜：自动列出在场外来者（酒鬼本身也算；中毒/醉酒时提醒说书人可改文本给假信息）。
+   其余夜：今天白天（第 night-1 天）有外来者死亡 → 教父醒来选 1 名玩家，审核通过即走夜间死亡引擎「被教父击杀出局」
+   （清醒水手 / 旅店老板保护照常挡；教父当时中毒/醉酒 → 无效）。没有外来者白天死亡 → 不醒、自动完成。 */
+function godfatherSeat(){ return meta.findIndex(m=>m&&m.role==='godfather'&&!m.isDrunk); }
+function _isOutsiderAt(i,rid){ const m=meta[i]; if(!m) return false; const r=rid||(m.isDrunk?'drunk':m.role); return !!(r&&RMAP[r]&&RMAP[r].team==='out'); }
+function godfatherDayDeaths(){ const d=night-1, out=[]; if(d<1) return out;
+  for(let i=0;i<N;i++){ const m=meta[i]; const e=m&&m.hist&&m.hist[d]; let died=false, rid=null;
+    if(e&&typeof e==='object'&&e.death&&e._d&&e._d.death){ died=true; rid=(e._r&&e._r.death)||null; if(m.isDrunk&&rid&&rid===m.role) rid='drunk'; }
+    if(!died && executions[d]===i && isDeadSeat(i)) died=true;
+    if(died && _isOutsiderAt(i,rid)) out.push(i); }
+  return out; }
+function godfatherTriggered(){ if(night<2) return false; const g=godfatherSeat(); if(g<0||isDeadSeat(g)) return false; return godfatherDayDeaths().length>0; }
+function _godfatherApprove(){ const f=nfGet('godfather'); const t=+(f.pick||[])[0]; const g=godfatherSeat(); f.gf={t:t};
+  if(!healthy(g)){ f.gf.sick=true; try{ histSet(g,'kill','选择 '+(t+1)+'号 '+nameAt(t)+' → 教父中毒/醉酒，无效'); }catch(e){} }
+  else { const ev=ndKill(t,{src:'godfather',label:ND_CAUSES[5]}); f.gf.died=!!ev;
+    try{ histSet(g,'kill','击杀 '+(t+1)+'号 '+nameAt(t)+(ev?'':'（未死亡：'+(isDeadSeat(t)?'已出局':'受保护/不会死')+'）')); }catch(e){} }
+  nfDone('godfather'); save(); render(); }
+function _godfatherUndo(){ const a=nightDeaths[night]||[]; for(let k=a.length-1;k>=0;k--){ if(a[k]&&a[k].src==='godfather') ndUndo(night,k); }
+  try{ histSet(godfatherSeat(),'kill',null); }catch(e){} }
+function godfatherUI(){ const g=godfatherSeat(); if(g<0) return '';
+  if(night===1){ if(healthy(g)) return ''; const f=nightFlow[nfKey('godfather')]; if(f&&f.stage==='done') return '';
+    return '<div class="impkill warn">教父中毒/醉酒：可在下方文本框里把外来者列表改成错误信息再发送。</div>'; }
+  if(!godfatherTriggered()) return '';
+  const dd=godfatherDayDeaths().map(i=>(i+1)+'号 '+nameAt(i)).join('、');
+  const f=nightFlow[nfKey('godfather')]; const r=f&&f.stage==='done'&&f.gf;
+  let h='<div class="impkill'+(r?' done':' warn')+'">今天白天外来者 '+dd+' 死亡 → 教父今晚出刀';
+  if(r){ const tn=(r.t+1)+'号 '+nameAt(r.t); h+='：选 '+tn+' → '+(r.sick?'教父中毒/醉酒，<b>无效</b>':(r.died?'<b>死亡</b>（天亮公布）':'<b>未死亡</b>（已出局或受保护）')); }
+  return h+'</div>'; }
 function nightAutoText(id){ const t=_nightAutoTextBase(id);   // v2.82.0 真恶魔（其余夜）：开头附上疯子今晚的选择
   if(night>1 && id && id!=='lunatic' && RMAP[id] && RMAP[id].team==='dem' && id!==exorcisedDemonRole() && t) return _lunaPrefix()+t;
   return t; }
@@ -2619,7 +2654,8 @@ function _nightAutoTextBase(id){
   if(id==='shabaloth') return '【恶魔】请选择今晚要击杀的两名玩家。';
   if(id==='chambermaid') return '【侍女】请选择两名存活玩家（不能选自己），你将得知其中今夜因自身能力醒来的人数。';
   if(id==='grandmother') return grandText();   // v2.74.0 全自动：按魔典里选定的孙辈生成
-  if(id==='godfather'){ const _os=[]; meta.forEach(m=>{ if(m&&m.role&&RMAP[m.role]&&RMAP[m.role].team==='out') _os.push(RMAP[m.role].name); });
+  if(id==='godfather'){ if(night>1) return '【教父】今天白天有外来者死亡：请选择一名玩家，他今晚死亡。';   // v2.85.0
+    const _os=[]; meta.forEach(m=>{ if(!m) return; if(m.isDrunk){ _os.push(RMAP.drunk?RMAP.drunk.name:'酒鬼'); return; } if(m.role&&RMAP[m.role]&&RMAP[m.role].team==='out') _os.push(RMAP[m.role].name); });   // 酒鬼本身也是外来者
     return '【教父】在场的外来者角色：'+(_os.join('、')||'无')+'。'; }
   if(id==='chef'){ const s=meta.findIndex(m=>m&&m.role==='chef'); const sick=s>=0&&!healthy(s); const sv=sickAns[night+':chef'];   // 中毒/醉酒且已设假值→用假值，否则真值
     if(sick&&(sv==null||sv==='')) return '';   // #4 中毒未设答案 → 不自动发真值，逼说书人先设（发送被 info 门控拦住并提示）
@@ -2687,6 +2723,7 @@ function _semiApprove(id){ const f=nfGet(id);
   if(id==='exorcist'){ _exorcistApprove(); return; }   // v2.79.0 驱魔人自动化
   if(id==='innkeeper'){ _innApprove(); return; }   // v2.80.0 旅店老板自动化
   if(id==='courtier'){ _courtierApprove(); return; }   // v2.83.0 侍臣自动化
+  if(id==='godfather' && night>1){ _godfatherApprove(); return; }   // v2.85.0 教父出刀
   if(id==='lunatic'){ const ls=lunaSeat(); if(ls>=0){ try{ histSet(ls,'info','疯子「刀」：'+_semiNames(f.pick)+'（无实际效果，恶魔步骤会告知恶魔）'); }catch(e){} } nfDone(id); save(); render(); return; }   // v2.82.0
   const seat=(nightSendSeats(id)||[])[0];
   if(seat!=null&&seat>=0){ try{ histSet(seat,'info','选择：'+_semiNames(f.pick)+'（半自动·未结算，由说书人裁定）'); }catch(e){} }
@@ -2774,7 +2811,7 @@ function _nightUndoApply(id){
   else if(id==='undertaker'){ delete undertakerPicks[night]; delete sickAns[night+':undertaker']; }
   else if(id==='chef'||id==='empath'){ delete sickAns[night+':'+id]; }
   else if(id==='washerwoman'||id==='librarian'||id==='investigator'){ delete pingPicks[id]; }
-  else if(_isSemi(id)){ const s=(nightSendSeats(id)||[])[0]; if(s!=null&&s>=0){ try{ histSet(s,'info',null); }catch(e){} } if(id==='sailor'){ delete sailorPicks[night]; syncSailor(); } if(id==='exorcist'){ _exorcistUndo(); } if(id==='courtier'&&courtierUse&&courtierUse.n===night){ courtierUse=null; } if(id==='innkeeper'){ _innUndo(); } }   // v2.71.0 半自动：清掉「选择：…」魔典记录；v2.77.0 水手退回醉酒
+  else if(_isSemi(id)){ const s=(nightSendSeats(id)||[])[0]; if(s!=null&&s>=0){ try{ histSet(s,'info',null); }catch(e){} } if(id==='sailor'){ delete sailorPicks[night]; syncSailor(); } if(id==='exorcist'){ _exorcistUndo(); } if(id==='courtier'&&courtierUse&&courtierUse.n===night){ courtierUse=null; } if(id==='godfather'){ _godfatherUndo(); } if(id==='innkeeper'){ _innUndo(); } }   // v2.71.0 半自动：清掉「选择：…」魔典记录；v2.77.0 水手退回醉酒
   /* 5) 流程状态归零 → 回到「未开始」 */
   delete nightChecks[nfKey(id)];
   delete nightFlow[nfKey(id)];
@@ -2876,6 +2913,7 @@ function _nfEscA(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,function(c)
 function stepDone(s){ if(s.id==='ravenkeeper' && stepAutomated(s) && !ravenActive()) return true;
   if(s.id==='grandmother' && night>1) return true;
   if(s.id==='courtier' && courtierUsedBefore()) return true;   // v2.83.0 侍臣已用过：不再醒来
+  if(s.id==='godfather' && night>1 && !godfatherTriggered()) return true;   // v2.85.0 今天没有外来者死亡：教父不醒
   /* v2.79.1 被驱魔的恶魔：走普通信息步（发送驱魔人通知 → 恶魔确认），不再自动完成 */   // v2.74.0 祖母其余夜全自动（连带死亡由死亡记录触发）   // 守鸦人本夜未死亡：无需行动，视为已完成（不阻塞结束本夜）
   if(stepAutomated(s)){ const f=nightFlow[night+':'+s.id]; return !!(f&&f.stage==='done'); } return !!nightChecks[night+':'+s.id]; }
 /* 该步对应角色是否已出局（全部座位都死→本夜无行动，只能跳过） */
@@ -3021,7 +3059,7 @@ function killSeat(i,dead){ const t=seatToken(i); if(t) t.dead=dead; else { ensur
    TB 的 impKills 路径完全不经这里、保持不动。第2期起恶魔自动化（多杀/延迟死/假死/复活）在此扩展。
    ⚠ histSet 按全局 night 写日志，所以 ndKill/ndUndo 只对「当前夜」的事件安全——UI 只暴露本夜列表。 */
 let nightDeaths={};
-const ND_CAUSES=['被恶魔击杀出局','被刺客暗杀出局','赌错身份死亡（赌徒）','月之子指认死亡','造谣者宣言应验死亡','其他原因死亡'];
+const ND_CAUSES=['被恶魔击杀出局','被刺客暗杀出局','赌错身份死亡（赌徒）','月之子指认死亡','造谣者宣言应验死亡','被教父击杀出局','其他原因死亡'];   // v2.85.0 +教父（「其他」保持最后一项）
 function ndEvents(n){ if(!nightDeaths[n]) nightDeaths[n]=[]; return nightDeaths[n]; }
 function ndKill(target,opts){ opts=opts||{}; if(target==null||target<0||target>=N||isDeadSeat(target)) return null;
   if(sailorSober(target) && opts.label!==ND_CAUSES[1]) return null;
@@ -4633,6 +4671,7 @@ function renderGrim(){
       else{ const r=RMAP[s.id]; const ds=meta.some(m=>m&&m.role===s.id&&m.isDrunk);
         name=r.name+(ds?'-酒鬼':''); color=ds?TEAMC.out:TEAMC[r.team]; info=computeNightInfo(s.id); }
       if(!s.special && s.id===exorcisedDemonRole()) info='<span class="ninfo-warn">被驱魔人选中：今夜不行动——只告知他驱魔人是谁，等他确认</span>';   // v2.79.1
+      if(s.id==='godfather'&&night>1&&!godfatherTriggered()){ h+='<div class="nstep"><span><b style="color:'+color+'">✓ '+name+'</b> <span class="nn">今天白天没有外来者死亡 → 教父今晚不醒来。</span></span></div>'; return; }   // v2.85.0
       if(s.id==='courtier'&&courtierUsedBefore()){ h+='<div class="nstep"><span><b style="color:'+color+'">✓ '+name+'</b> <span class="nn">能力已用过，不再醒来。</span><div class="ninfo">'+courtierStatus()+'</div></span></div>'; return; }   // v2.83.0
       if(stepAutomated(s)){   // 自动化步骤：改用信息流程面板（发送/确认/审核），并按顺序门控
         const done=stepDone(s), active=(si===firstUndone);
@@ -4645,7 +4684,8 @@ function renderGrim(){
         if(s.id==="exorcist") h+=exorcistUI();   // v2.79.0 驱魔人：结果
         if(s.id==="innkeeper") h+=innUI();   // v2.80.0 旅店老板：保护与醉酒
         if(s.id==="lunatic") h+=lunaUI();
-        if(s.id==="courtier") h+=courtierUI();   // v2.83.0 侍臣：结果   // v2.82.0 疯子
+        if(s.id==="courtier") h+=courtierUI();   // v2.83.0 侍臣：结果
+        if(s.id==="godfather") h+=godfatherUI();   // v2.85.0 教父   // v2.82.0 疯子
         if(s.id==="chef") h+=numUI("chef","相邻邪恶对数",Math.max(2,meta.filter((m,i)=>regEvil(i)).length));
         if(s.id==="empath") h+=numUI("empath","两侧存活邻座邪恶数",2);
         if(s.id==="washerwoman"||s.id==="librarian"||s.id==="investigator") h+=pingUI(s.id);   // 揭示选择器：说书人先选「真身+幌子」两张牌，发送框随之显示要告知的内容
