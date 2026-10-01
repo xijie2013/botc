@@ -1575,6 +1575,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.85.1', d:'2026-10-01', items:[
+    '教父首夜中毒/醉酒：夜晚面板改为下拉菜单（真实外来者有几个就几个），选满后自动生成要发送的消息；没选满之前不会发出真实信息。',
+  ]},
   {v:'v2.85.0', d:'2026-10-01', items:[
     '黯月初升·教父自动化：首夜自动告知在场外来者（酒鬼本身也算外来者；教父中毒/醉酒时提示说书人可改成假信息再发）。',
     '其余夜自动判断今天白天有没有外来者死亡（处决或白天其他死亡）：没有 → 教父不醒、这一步自动完成；有 → 教父醒来选一名存活玩家，审核通过即记入本夜死亡「被教父击杀出局」（天亮公布；清醒水手、旅店老板保护照常挡；教父当时中毒/醉酒则无效）。撤销会一并退回这次死亡。',
@@ -2598,6 +2601,8 @@ function courtierUI(){ const u=courtierUse; const f=nightFlow[nfKey('courtier')]
    首夜：自动列出在场外来者（酒鬼本身也算；中毒/醉酒时提醒说书人可改文本给假信息）。
    其余夜：今天白天（第 night-1 天）有外来者死亡 → 教父醒来选 1 名玩家，审核通过即走夜间死亡引擎「被教父击杀出局」
    （清醒水手 / 旅店老板保护照常挡；教父当时中毒/醉酒 → 无效）。没有外来者白天死亡 → 不醒、自动完成。 */
+function godfatherOutsiders(){ const a=[]; meta.forEach(m=>{ if(!m) return; const r=m.isDrunk?'drunk':m.role; if(r&&RMAP[r]&&RMAP[r].team==='out') a.push(r); }); return a; }   // 酒鬼本身也是外来者（本板没有酒鬼，留给以后自定义板）
+function gfFakeSet(k,v){ const key='1:godfather'; const a=(sickAns[key]||[]).slice(); a[k]=v||''; sickAns[key]=a; save(); render(); }
 function godfatherSeat(){ return meta.findIndex(m=>m&&m.role==='godfather'&&!m.isDrunk); }
 function _isOutsiderAt(i,rid){ const m=meta[i]; if(!m) return false; const r=rid||(m.isDrunk?'drunk':m.role); return !!(r&&RMAP[r]&&RMAP[r].team==='out'); }
 function godfatherDayDeaths(){ const d=night-1, out=[]; if(d<1) return out;
@@ -2615,8 +2620,13 @@ function _godfatherApprove(){ const f=nfGet('godfather'); const t=+(f.pick||[])[
 function _godfatherUndo(){ const a=nightDeaths[night]||[]; for(let k=a.length-1;k>=0;k--){ if(a[k]&&a[k].src==='godfather') ndUndo(night,k); }
   try{ histSet(godfatherSeat(),'kill',null); }catch(e){} }
 function godfatherUI(){ const g=godfatherSeat(); if(g<0) return '';
-  if(night===1){ if(healthy(g)) return ''; const f=nightFlow[nfKey('godfather')]; if(f&&f.stage==='done') return '';
-    return '<div class="impkill warn">教父中毒/醉酒：可在下方文本框里把外来者列表改成错误信息再发送。</div>'; }
+  if(night===1){ if(healthy(g)) return ''; const f=nightFlow[nfKey('godfather')]; if(f&&f.stage!=='idle'&&f.stage!=null) return '';
+    const real=godfatherOutsiders(); const k=real.length; const cur=sickAns['1:godfather']||[];
+    let h='<div class="impkill warn">教父中毒/醉酒：真实外来者是 '+(real.map(_rn).join('、')||'无')+'。'+(k?'请选择要告知他的（可假）外来者，选满后自动生成消息：':'场上没有外来者，告知「无」。')+'</div>';
+    if(k){ h+='<div class="bluffsel" style="margin:4px 0 6px">'; for(let j=0;j<k;j++){ let o='<option value="">外来者'+(j+1)+'</option>';
+        curRoles().filter(r=>r.team==='out').forEach(r=>{ o+='<option value="'+r.id+'"'+(cur[j]===r.id?' selected':'')+'>'+r.name+'</option>'; });
+        h+='<select onchange="gfFakeSet('+j+',this.value)">'+o+'</select>'; } h+='</div>'; }
+    return h; }
   if(!godfatherTriggered()) return '';
   const dd=godfatherDayDeaths().map(i=>(i+1)+'号 '+nameAt(i)).join('、');
   const f=nightFlow[nfKey('godfather')]; const r=f&&f.stage==='done'&&f.gf;
@@ -2655,7 +2665,9 @@ function _nightAutoTextBase(id){
   if(id==='chambermaid') return '【侍女】请选择两名存活玩家（不能选自己），你将得知其中今夜因自身能力醒来的人数。';
   if(id==='grandmother') return grandText();   // v2.74.0 全自动：按魔典里选定的孙辈生成
   if(id==='godfather'){ if(night>1) return '【教父】今天白天有外来者死亡：请选择一名玩家，他今晚死亡。';   // v2.85.0
-    const _os=[]; meta.forEach(m=>{ if(!m) return; if(m.isDrunk){ _os.push(RMAP.drunk?RMAP.drunk.name:'酒鬼'); return; } if(m.role&&RMAP[m.role]&&RMAP[m.role].team==='out') _os.push(RMAP[m.role].name); });   // 酒鬼本身也是外来者
+    const g=godfatherSeat(); let _os=godfatherOutsiders().map(_rn);
+    if(g>=0&&!healthy(g)){ const fk=sickAns['1:godfather']||[]; const k=_os.length; if(k&&(fk.length<k||fk.slice(0,k).some(x=>!x))) return '';   // v2.85.1 中毒/醉酒：没设完假信息前不发真值
+      _os=fk.slice(0,k).map(_rn); }
     return '【教父】在场的外来者角色：'+(_os.join('、')||'无')+'。'; }
   if(id==='chef'){ const s=meta.findIndex(m=>m&&m.role==='chef'); const sick=s>=0&&!healthy(s); const sv=sickAns[night+':chef'];   // 中毒/醉酒且已设假值→用假值，否则真值
     if(sick&&(sv==null||sv==='')) return '';   // #4 中毒未设答案 → 不自动发真值，逼说书人先设（发送被 info 门控拦住并提示）
