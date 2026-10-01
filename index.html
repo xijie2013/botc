@@ -918,6 +918,10 @@
   #nightBar .nb-btn{min-width:150px; padding:11px 30px; border-radius:14px; font-size:15px; font-weight:800; cursor:pointer;
     border:1.5px solid rgba(233,196,106,.7); background:linear-gradient(180deg,rgba(60,38,78,.98),rgba(34,20,44,.98)); color:#e9c46a; box-shadow:0 6px 20px rgba(0,0,0,.5);}
   #nightBar .nb-done{font-size:13px; color:#c9b6e6; letter-spacing:1px;}
+  #nightBar .nb-row{display:flex; gap:8px; align-items:center;}   /* v2.85.3 侍臣：左「今晚不使用」+ 右 下拉+提交 */
+  #nightBar .nb-row .nb-btn{min-width:0; padding:9px 12px; font-size:14px; flex:0 0 auto; white-space:nowrap;}
+  #nightBar .nb-row .nb-sel{flex:1; width:auto;}
+  #nightBar .nb-row .nb-skip{border-color:rgba(201,182,230,.6); color:#c9b6e6;}
   /* ===== 猎手开枪请求：说书人底部弹窗（比魔典里的请求更醒目，蓝色荧光呼应十字弩） ===== */
   #stSlayerBar{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); transform-origin:center bottom; z-index:122; display:none;
     width:350px; box-sizing:border-box; text-align:center; color:#cfe6ff; animation:vbIn .35s ease both;   /* 通知弹窗宽度固定 350px，高度随内容 */
@@ -1575,6 +1579,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.85.3', d:'2026-10-01', items:[
+    '侍臣的夜晚弹窗：左边「今晚不使用」按钮，右边角色下拉菜单＋提交（下拉菜单里不再有「今晚不使用」这一项）。',
+  ]},
   {v:'v2.85.2', d:'2026-10-01', items:[
     '教父首夜中毒/醉酒：新增「告知人数」（0～本剧本外来者总数，默认＝真实人数），下拉菜单数量随之变化；选 0 则告知「无」。',
   ]},
@@ -2656,7 +2663,7 @@ function _nightAutoTextBase(id){
   if(id==='ravenkeeper') return '【守鸦人】你今夜死亡——请选择一名玩家，你将得知其真实角色。';
   if(id==='fortuneteller') return '【占卜师】请选择今晚要占卜的两名玩家。';
   /* ===== v2.71.0 黯月初升半自动文案 ===== */
-  if(id==='courtier') return '【侍臣】（一局一次）请选择一个角色（选的是角色，不是玩家）：该角色喝醉三天三夜。今晚不想用就选「今晚不使用」。';
+  if(id==='courtier') return '【侍臣】（一局一次）请选择一个角色（选的是角色，不是玩家）：该角色喝醉三天三夜。今晚不想用就点「今晚不使用」。';
   if(id==='sailor') return '【水手】请选择一名存活玩家（可以选自己）：你或他其中一人会喝醉到明天黄昏（由说书人决定谁醉）。';
   if(id==='exorcist') return '【驱魔人】请选择一名玩家（不能与昨晚相同）：若他是恶魔，恶魔会得知你是谁，并且今夜不会醒来行动。';
   if(id==='devilsadvocate') return '【魔鬼代言人】请选择一名存活玩家（不能与昨晚相同）：他明天被处决时不会死。';
@@ -2705,7 +2712,7 @@ function nightSend(id){ const kind=stepKind(id); if(!kind) return; const f=nfGet
   const text=(f.text!=null&&f.text!=='')?f.text:nightAutoText(id);
   if(kind==='info' && (!text||!text.trim())){ try{window._toast&&_toast('请先在上方选择/设定要告知的信息');}catch(e){} return; }   // 洗衣妇等：未选好揭示内容不发送
   f.text=text;
-  let phase='info', pick=null; if(kind!=='info'){ phase='pick'; pick={count:kind==='pick2info'?2:1, options:_pickOptionsFor(id)}; if(id==='courtier') pick.ph='选择角色…'; }
+  let phase='info', pick=null; if(kind!=='info'){ phase='pick'; pick={count:kind==='pick2info'?2:1, options:_pickOptionsFor(id)}; if(id==='courtier'){ pick.ph='选择角色…'; pick.decline='今晚不使用'; pick.options=pick.options.filter(o=>o.seat>=0); } }
   f.stage='sent'; f.phase=phase; f.sid=(f.sid||0)+1; f.pick=null;
   if(id==='spy'){ try{ _spyEmitGrim(); }catch(e){} }   // 间谍：发送弹窗的同时把当夜魔典快照写入其玩家节点（发出即锁定）
   if(window.stNightSend) window.stNightSend(id, phase, text, pick, seats, f.sid);
@@ -2766,7 +2773,7 @@ function nightImpReviewDone(id){ const rec=impKills[night]||{};
   if(rec.type==='starpass' && rec.newImp==null && _minSeats().some(i=>!isDeadSeat(i))){ try{window._toast&&_toast('恶魔自杀：请先指定一名存活爪牙继任为新恶魔');}catch(e){} return; }
   _impDone(id); }
 function nightRetract(id){ const f=nfGet(id); const kind=stepKind(id); if(id==='innkeeper'){ try{ _innUndo(); }catch(e){} } if(id==='exorcist'){ try{ _exorcistUndo(); }catch(e){} } if(id==='sailor'&&sailorPicks[night]){ delete sailorPicks[night]; syncSailor(); try{ histSet(sailorSeat(),'info',null); }catch(e){} }   /* v2.77.0 */ f.pick=null; f.stage='sent'; f.phase='pick'; f.sid=(f.sid||0)+1;
-  const seats=nightSendSeats(id); const pick={count:kind==='pick2info'?2:1, options:_pickOptionsFor(id)}; if(id==='courtier') pick.ph='选择角色…';
+  const seats=nightSendSeats(id); const pick={count:kind==='pick2info'?2:1, options:_pickOptionsFor(id)}; if(id==='courtier'){ pick.ph='选择角色…'; pick.decline='今晚不使用'; pick.options=pick.options.filter(o=>o.seat>=0); }
   if(window.stNightSend) window.stNightSend(id,'pick',(f.text||nightAutoText(id)),pick,seats,f.sid); save(); render(); }
 function nightResend(id){ const f=nfGet(id);
   if(f.stage==='result'){ f.sid=(f.sid||0)+1; const seats=nightSendSeats(id); if(window.stNightSend) window.stNightSend(id,'result',(f.resultText||_resultDefaultText(id)),null,seats,f.sid); save(); render(); }
@@ -6030,7 +6037,8 @@ load(); render();
       let succ='';
       if(nm.pick.succ && nm.pick.succ.length){ const so='<option value="">选择继任爪牙…</option>'+nm.pick.succ.map(function(o){return '<option value="'+o.seat+'">'+_nbEsc(o.name)+'</option>';}).join('');
         succ='<div id="nbSuccWrap" style="display:none"><div class="nb-text" style="font-size:.9em;margin:8px 0 4px">你选择了自杀，传位给哪名爪牙：</div><select class="nb-sel" id="nbSucc">'+so+'</select></div>'; }
-      h+='<div class="nb-picks">'+sels+'</div>'+succ+'<button class="nb-btn" onclick="_nightSubmitPick('+nm.pick.count+')">提交</button>';
+      if(nm.pick.decline) h+='<div class="nb-row"><button class="nb-btn nb-skip" onclick="_nightDecline()">'+_nbEsc(nm.pick.decline)+'</button>'+sels+'<button class="nb-btn" onclick="_nightSubmitPick('+nm.pick.count+')">提交</button></div>';   // v2.85.3
+      else h+='<div class="nb-picks">'+sels+'</div>'+succ+'<button class="nb-btn" onclick="_nightSubmitPick('+nm.pick.count+')">提交</button>';
     } else { h+='<button class="nb-btn" onclick="_nightAck()">确认收到</button>'; }
     bar.innerHTML=h; }
   window.updateNightBar=updateNightBar;
@@ -6044,6 +6052,7 @@ load(); render();
       try{ notesRef.child('gameInfo').child(key).set({key:key, n:nm.n, ord:ord, text:nm.text, ts:firebase.database.ServerValue.TIMESTAMP}).catch(function(){}); }catch(e){} }
     updateNightBar(); }
   window._nightAck=function(){ if(role==='player') _nightWriteReply(null); };
+  window._nightDecline=function(){ if(role==='player') _nightWriteReply([-1]); };   // v2.85.3 「今晚不使用」= 选择 -1
   window._nightPickChange=function(){ const nm=S&&S.night; if(!nm||!nm.pick) return; const w=document.getElementById('nbSuccWrap'); if(!w) return;
     const el=document.getElementById('nbSel0'); const self=nm.pick.selfSeat;
     w.style.display=(el&&self!=null&&el.value!==''&&(+el.value)===(+self))?'block':'none'; };
