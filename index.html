@@ -1574,6 +1574,9 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.82.4', d:'2026-09-30', items:[
+    '首夜夜晚面板不再重复显示疯子的设定摘要（发送框里的信息已包含全部内容）。',
+  ]},
   {v:'v2.82.3', d:'2026-09-30', items:[
     '疯子的伪装下拉菜单里，在场的好人角色后面标「（在场）」；🎲 随机时避开在场角色和恶魔伪装。',
     '「恶魔伪装」也加了 🎲：随机分配三个不在场的好人角色（尽量避开疯子的伪装）。',
@@ -2546,9 +2549,7 @@ function lunaText(){ if(night===1){ const ms=lunaMinSeats().filter(x=>x!=null).m
 function _lunaPrefix(){ const ls=lunaSeat(); if(ls<0) return ''; const f=nightFlow[night+':lunatic']; if(!f||f.stage!=='done') return '';
   const pk=(f.pick||[]).filter(x=>x!=null); const who='疯子（'+(ls+1)+'号 '+nameAt(ls)+'）';
   return pk.length?('【疯子】'+who+'今晚选择了：'+_semiNames(pk)+'。'):('【疯子】'+who+'今晚没有选择目标。'); }
-function lunaUI(){ const ls=lunaSeat(); if(ls<0) return '';
-  if(night===1){ const mm=lunaMinSeats(); const ms=mm.map(x=>x==null?'（未设）':((x+1)+'号 '+nameAt(x)));
-    return '<div class="impkill'+(mm.some(x=>x==null)?' warn':' done')+'">疯子（'+(ls+1)+'号）以为自己是 <b>'+_rn(lunaAs())+'</b>'+(lunaInfo.asMode==='free'?'':'（默认）')+'；看到的爪牙：'+(ms.join('、')||'无')+'；伪装：'+(lunaInfo.bl.filter(Boolean).map(_rn).join('、')||'（未设）')+'（在「角色设置」里修改）</div>'; }
+function lunaUI(){ const ls=lunaSeat(); if(ls<0||night===1) return '';   // v2.82.4 首夜不再重复显示设定（发送框里已是完整信息）
   const f=nightFlow[nfKey('lunatic')]; if(!f||f.stage!=='done') return '';
   const pk=(f.pick||[]).filter(x=>x!=null);
   return '<div class="impkill done">疯子'+(pk.length?('「刀」了 '+_semiNames(pk)):'今晚没有选择')+' → 无实际效果；恶魔步骤发送时会自动告知恶魔。</div>'; }
