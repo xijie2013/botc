@@ -1264,7 +1264,7 @@ const KEY="botc_seating_v2";
 let N=8, tokens=[], guests=[], uid=0, selected=null;
 let meta=[], bluffs=["","",""];
 let view="seat", gtab="list", sel=-1, night=1, listMode="all", lockedRoles=new Set(), overviewDecoys=[], redHerring=-1, grandchild=-1, lunaInfo={as:'',min:[],bl:['','',''],gen:false}, sailorMode='auto', innMode='auto', customDist=null;
-let openBubbles=new Set(), seatPos=[], tableCenter=null, impKills={}, poisonPicks={}, monkPicks={}, ftPicks={}, butlerPicks={}, pingPicks={}, ravenPicks={}, undertakerPicks={}, grandPick={}, sailorPicks={}, nightWoke={}, exorcistPicks={}, innPicks={}, courtierUse=null, sickAns={}, nominations={}, executions={}, virginUsed=false, slayerShot=null;
+let openBubbles=new Set(), seatPos=[], tableCenter=null, impKills={}, poisonPicks={}, monkPicks={}, ftPicks={}, butlerPicks={}, pingPicks={}, ravenPicks={}, undertakerPicks={}, grandPick={}, sailorPicks={}, nightWoke={}, exorcistPicks={}, innPicks={}, courtierUse=null, daPicks={}, sickAns={}, nominations={}, executions={}, virginUsed=false, slayerShot=null;
 const nightChecks={};
 const nightFlow={};   /* 夜晚信息自动化：每步流程状态 key=`${night}:${stepId}` → {stage,text,phase,pick,resultText,sid} */
 const dayFlow={};     /* 昼夜推进：dayFlow[night]={dawn,dusk}，结束本夜/结束本日各只能点一次 */
@@ -1448,7 +1448,7 @@ const NIGHT_BMR={
   {id:"sailor",note:"选1名存活玩家（可选自己）：他或水手喝醉到明天黄昏（自动）。"},
   {id:"courtier",note:"（一局一次）选1个角色：该角色醉酒3天3夜（自动）。"},
   {id:"godfather",note:"自动告知在场的外来者角色。"},
-  {id:"devilsadvocate",note:"选1名存活玩家：其明天被处决不死。"},
+  {id:"devilsadvocate",note:"选1名存活玩家：其明天被处决不死（自动）。"},
   {id:"pukka",note:"选1人中毒（延迟刀：明晚才死）。"},
   {id:"grandmother",note:"告知孙辈是谁及其角色（孙辈在角色设置中指定，信息自动生成）。"},
   {id:"chambermaid",note:"选2名存活玩家，自动告知其中今夜醒来的人数（按今夜说书人发过消息的玩家计）。"},
@@ -1457,7 +1457,7 @@ const NIGHT_BMR={
   {id:"sailor",note:"选1名存活玩家（可选自己）：他或水手喝醉到明天黄昏（自动）。"},
   {id:"innkeeper",note:"选2人（可含自己）：今夜不会死，其中1人喝醉到明天黄昏（自动）。"},
   {id:"courtier",note:"（一局一次）选1个角色：该角色醉酒3天3夜（自动）。"},
-  {id:"devilsadvocate",note:"选1名存活玩家（不可连选同一人）：其明天被处决不死。"},
+  {id:"devilsadvocate",note:"选1名存活玩家（不可连选同一人）：其明天被处决不死（自动）。"},
   {id:"gambler",note:"选1人并猜其角色：猜错赌徒死。"},
   {id:"exorcist",note:"选1人（不能与昨晚相同）：若是恶魔，自动通知恶魔驱魔人是谁，恶魔今夜不醒。"},
   {id:"lunatic",note:"疯子照常「刀人」（无实际效果）；他的选择会自动附在恶魔的消息里。"},
@@ -1482,7 +1482,7 @@ function blankMeta(){return {role:null,poison:false,drunk:false,dead:false,note:
 function ensureMeta(){ while(meta.length<N) meta.push(blankMeta()); meta.length=N; }
 
 function save(){ if(window.__stApplyingRemote) return;   // 正在应用远端同步时不重复写/上传，避免回声循环
-  try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,nightFlow,dayFlow,spySent,impKills,nightDeaths,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,grandPick,sailorPicks,sailorMode,nightWoke,exorcistPicks,innPicks,innMode,courtierUse,sickAns,redHerring,grandchild,lunaInfo,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist,gameOn:!!window.__gameOn,winApproved:(window.__winApproved||''),setupSnap:(window.__setupSnap||null),script:(window.__scriptId||'tb'),ts:Date.now()})); }catch(e){}
+  try{ localStorage.setItem(KEY, JSON.stringify({guests,N,tokens,uid,meta,bluffs,view,gtab,night,nightChecks,nightFlow,dayFlow,spySent,impKills,nightDeaths,poisonPicks,monkPicks,ftPicks,butlerPicks,pingPicks,ravenPicks,undertakerPicks,grandPick,sailorPicks,sailorMode,nightWoke,exorcistPicks,innPicks,innMode,courtierUse,daPicks,sickAns,redHerring,grandchild,lunaInfo,nominations,executions,virginUsed,slayerShot,lockedRoles:[...lockedRoles],overviewDecoys,customDist,gameOn:!!window.__gameOn,winApproved:(window.__winApproved||''),setupSnap:(window.__setupSnap||null),script:(window.__scriptId||'tb'),ts:Date.now()})); }catch(e){}
   try{ if(window._stCloudPush) window._stCloudPush(); }catch(e){} }   // 说书人存档实时云同步（防抖上传）
 function load(){
   try{ const d=JSON.parse(localStorage.getItem(KEY)||"{}");
@@ -1518,6 +1518,7 @@ function load(){
     nightWoke=(d.nightWoke&&typeof d.nightWoke==="object")?d.nightWoke:{};
     exorcistPicks=(d.exorcistPicks&&typeof d.exorcistPicks==="object")?d.exorcistPicks:{};   // v2.79.0 驱魔人
     courtierUse=(d.courtierUse&&typeof d.courtierUse==="object")?d.courtierUse:null;   // v2.83.0 侍臣
+    daPicks=(d.daPicks&&typeof d.daPicks==="object")?d.daPicks:{};   // v2.86.0 魔鬼代言人
     innPicks=(d.innPicks&&typeof d.innPicks==="object")?d.innPicks:{}; innMode=(d.innMode==='free')?'free':'auto';   // v2.80.0 旅店老板   // v2.78.0 醒来记录
     sailorPicks=(d.sailorPicks&&typeof d.sailorPicks==="object")?d.sailorPicks:{}; sailorMode=(d.sailorMode==='free')?'free':'auto';   // v2.77.0 水手
     if(d.sickAns&&typeof d.sickAns==="object") sickAns=d.sickAns;
@@ -1579,6 +1580,10 @@ document.addEventListener('fullscreenchange',()=>{ const b=document.getElementBy
 
 /* ---------- 版本 / 更新内容 / 设置 ---------- */
 const CHANGELOG=[
+  {v:'v2.86.0', d:'2026-10-01', items:[
+    '黯月初升·魔鬼代言人自动化：每夜选一名存活玩家（可以选自己，不能与昨晚相同，下拉菜单自动排除）。审核通过后自动生效：此人第二天被处决时记为「已处决」但不会死亡（不播处决视频），白天面板显示「已处决 → 未死亡（魔鬼代言人保护）」。',
+    '魔鬼代言人选人时中毒/醉酒 → 无效；之后到处决时他中毒/醉酒或已出局 → 保护失效。撤销会一并退回这次保护。',
+  ]},
   {v:'v2.85.5', d:'2026-10-01', items:[
     '侍臣代玩家操作：左边「今晚不使用」、右边「选择使用对象」两个按钮；选「今晚不使用」不出下拉菜单，选「选择使用对象」才出现角色下拉菜单。',
   ]},
@@ -2116,7 +2121,7 @@ async function dealRoles(){
   if(base.reduce((a,b)=>a+b,0)!==N){ _gt('各阵营数量合计与人数（'+N+'）不符，请调整后再发牌。'); return; }   // 原来调的 uiAlert 从未定义，会抛 ReferenceError
   if(!await uiConfirm("确定随机发牌？将重新分配所有身份。")) return;
   try{ if(window._histNewRound) _histNewRound(); }catch(e){}   // 新一局：胜负另记一条
-  ensureMeta(); night=1; impKills={}; nightDeaths={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; grandPick={}; sailorPicks={}; nightWoke={}; exorcistPicks={}; innPicks={}; courtierUse=null; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1; grandchild=-1; lunaInfo=_lunaNorm(null);
+  ensureMeta(); night=1; impKills={}; nightDeaths={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; grandPick={}; sailorPicks={}; nightWoke={}; exorcistPicks={}; innPicks={}; courtierUse=null; daPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1; grandchild=-1; lunaInfo=_lunaNorm(null);
   Object.keys(nightChecks).forEach(k=>delete nightChecks[k]);   // 清空每夜勾选
   Object.keys(nightFlow).forEach(k=>delete nightFlow[k]);       // 清空夜晚信息流程
   Object.keys(dayFlow).forEach(k=>delete dayFlow[k]);           // 清空昼夜推进状态
@@ -2157,7 +2162,7 @@ async function dealRoles(){
   render();
 }
 async function resetRoles(){ if(gateCfg()) return; if(!await uiConfirm("重置所有身份、状态、备注、伪装？（保留名字与座位）")) return;
-  meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; nightDeaths={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; grandPick={}; sailorPicks={}; nightWoke={}; exorcistPicks={}; innPicks={}; courtierUse=null; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1; grandchild=-1; lunaInfo=_lunaNorm(null);
+  meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; nightDeaths={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; grandPick={}; sailorPicks={}; nightWoke={}; exorcistPicks={}; innPicks={}; courtierUse=null; daPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1; grandchild=-1; lunaInfo=_lunaNorm(null);
   Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); Object.keys(dayFlow).forEach(k=>delete dayFlow[k]); Object.keys(spySent).forEach(k=>delete spySent[k]); overviewDecoys=[]; tokens.forEach(t=>t.dead=false);
   window.__gameOn=false; window.__winApproved=''; window.__winPending=null; window.__winDismissed=''; window.__setupSnap=null;
   try{ if(window._histNewRound) _histNewRound(); }catch(e){}   /* 必须在 render() 之前封存战绩（同 stEndGame，v2.65.2）：否则 renderWin→_autoResult(null) 会删掉已宣告写入的那条 */
@@ -2168,7 +2173,7 @@ function setBluff(k,v){ if(gateCfg()) return; bluffs[k]=v; refreshOverviewDecoys
 window.setScript=async function(sid){ if(gateCfg()) return; if(!SCRIPTS[sid]||sid===(window.__scriptId||'tb')) return;
   if(!await uiConfirm('切换剧本到「'+SCRIPTS[sid].name+'」？\n\n座位上已分配的角色、伪装、红鲱鱼、误判、锁定角色与阵营数量会被清空（座位与玩家保留）。'+(sid==='bmr'?'\n\n提示：黯月初升目前为手动模式——夜晚面板按官方夜序逐步提示，但结算与信息发送由说书人自行完成。':''),{title:'切换剧本',ok:'切换',cancel:'取消'})) return;
   window.__scriptId=sid;
-  meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; nightDeaths={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; grandPick={}; sailorPicks={}; nightWoke={}; exorcistPicks={}; innPicks={}; courtierUse=null; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1; grandchild=-1; lunaInfo=_lunaNorm(null);
+  meta=Array.from({length:N},blankMeta); night=1; bluffs=["","",""]; impKills={}; nightDeaths={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; grandPick={}; sailorPicks={}; nightWoke={}; exorcistPicks={}; innPicks={}; courtierUse=null; daPicks={}; sickAns={}; nominations={}; executions={}; virginUsed=false; slayerShot=null; redHerring=-1; grandchild=-1; lunaInfo=_lunaNorm(null);
   Object.keys(nightChecks).forEach(k=>delete nightChecks[k]); Object.keys(nightFlow).forEach(k=>delete nightFlow[k]); Object.keys(dayFlow).forEach(k=>delete dayFlow[k]); Object.keys(spySent).forEach(k=>delete spySent[k]); overviewDecoys=[]; lockedRoles=new Set(); customDist=null; tokens.forEach(t=>t.dead=false);
   window.__gameOn=false; window.__winApproved=''; window.__winPending=null; window.__winDismissed=''; window.__setupSnap=null;
   try{ if(window._histNewRound) _histNewRound(); }catch(e){}
@@ -2378,8 +2383,8 @@ function _pickOptionsFor(id){
   if(id==='godfather') return nightSeatOptions(undefined).filter(o=>!deadBeforeNight(o.seat));   // v2.85.0 教父：存活玩家（含自己）
   if(id==='courtier') return [{seat:-1,name:'今晚不使用'}].concat(curRoles().map((r,k)=>({seat:k,name:r.name})));   // v2.83.0 侍臣：选「角色」，seat 字段存剧本角色序号
   if(id==='professor'){ const a=[]; for(let i=0;i<N;i++){ if(deadBeforeNight(i)) a.push({seat:i, name:(i+1)+'号 '+nameAt(i)+'（已出局）'}); } return a; }   // v2.71.0 教授：只列公开已知的死者（不含本夜新死，防泄露）
-  if(id==='devilsadvocate'){ const pf=nightFlow[(night-1)+':devilsadvocate']; const prev=(pf&&pf.pick&&pf.pick.length)?+pf.pick[0]:null;
-    return nightSeatOptions(undefined).filter(o=>o.seat!==prev); }   // v2.71.0 魔鬼代言人：排除昨晚已保的人（官方：不能连选）
+  if(id==='devilsadvocate'){ const pr=daPicks[night-1]; const pf=nightFlow[(night-1)+':devilsadvocate']; const prev=(pr&&pr.t!=null)?pr.t:((pf&&pf.pick&&pf.pick.length)?+pf.pick[0]:null);
+    return nightSeatOptions(undefined).filter(o=>o.seat!==prev&&!deadBeforeNight(o.seat)); }   // v2.86.0 魔鬼代言人：存活玩家（含自己），排除昨晚选过的人
   if(id==='sailor') return nightSeatOptions(undefined).filter(o=>!deadBeforeNight(o.seat));
   if(id==='innkeeper') return nightSeatOptions(undefined).filter(o=>!deadBeforeNight(o.seat));   // v2.80.0 旅店老板：存活玩家（可含自己）
   if(id==='chambermaid'){ const me=chamberSeat(); return nightSeatOptions(undefined).filter(o=>o.seat!==me && !deadBeforeNight(o.seat)); }   // v2.78.0 侍女：存活、不含自己   // v2.77.0 水手：可选自己，只能选（公开）存活玩家
@@ -2653,6 +2658,18 @@ function godfatherUI(){ const g=godfatherSeat(); if(g<0) return '';
   let h='<div class="impkill'+(r?' done':' warn')+'">今天白天外来者 '+dd+' 死亡 → 教父今晚出刀';
   if(r){ const tn=(r.t+1)+'号 '+nameAt(r.t); h+='：选 '+tn+' → '+(r.sick?'教父中毒/醉酒，<b>无效</b>':(r.died?'<b>死亡</b>（天亮公布）':'<b>未死亡</b>（已出局或受保护）')); }
   return h+'</div>'; }
+/* ==================== v2.86.0 魔鬼代言人自动化 ====================
+   daPicks[n]={t:被保护者, sick:当时魔鬼代言人中毒/醉酒}。第 n 夜的选择保护第 n 天的处决：被处决时不死（仍算处决）。
+   魔鬼代言人当时中毒/醉酒 → 无效；之后（处决当刻）中毒/醉酒或已出局 → 保护失效（持续效果随施加者失效）。不能连续两晚选同一人。 */
+function daSeat(){ return meta.findIndex(m=>m&&m.role==='devilsadvocate'&&!m.isDrunk); }
+function daProtected(i){ const r=daPicks[night]; if(!r||r.sick||r.t!==i) return false; const d=daSeat(); return d>=0 && !isDeadSeat(d) && healthy(d); }
+function _daApprove(){ const f=nfGet('devilsadvocate'); const t=+(f.pick||[])[0]; const d=daSeat(); const sick=!healthy(d);
+  daPicks[night]={t:t, sick:sick};
+  try{ histSet(d,'info','保护 '+(t+1)+'号 '+nameAt(t)+(sick?'（魔鬼代言人中毒/醉酒，无效）':'（明天被处决不会死）')); }catch(e){}
+  nfDone('devilsadvocate'); save(); render(); }
+function daUI(){ const r=daPicks[night]; const f=nightFlow[nfKey('devilsadvocate')]; if(!r||!f||f.stage!=='done') return '';
+  const tn=(r.t+1)+'号 '+nameAt(r.t);
+  return '<div class="impkill'+(r.sick?'':' done')+'">魔鬼代言人保护 '+tn+(r.sick?' → 魔鬼代言人中毒/醉酒，<b>无效</b>':' → 明天（第 '+night+' 天）被处决<b>不会死</b>')+'</div>'; }
 function nightAutoText(id){ const t=_nightAutoTextBase(id);   // v2.82.0 真恶魔（其余夜）：开头附上疯子今晚的选择
   if(night>1 && id && id!=='lunatic' && RMAP[id] && RMAP[id].team==='dem' && id!==exorcisedDemonRole() && t) return _lunaPrefix()+t;
   return t; }
@@ -2755,6 +2772,7 @@ function _semiApprove(id){ const f=nfGet(id);
   if(id==='exorcist'){ _exorcistApprove(); return; }   // v2.79.0 驱魔人自动化
   if(id==='innkeeper'){ _innApprove(); return; }   // v2.80.0 旅店老板自动化
   if(id==='courtier'){ _courtierApprove(); return; }   // v2.83.0 侍臣自动化
+  if(id==='devilsadvocate'){ _daApprove(); return; }   // v2.86.0 魔鬼代言人
   if(id==='godfather' && night>1){ _godfatherApprove(); return; }   // v2.85.0 教父出刀
   if(id==='lunatic'){ const ls=lunaSeat(); if(ls>=0){ try{ histSet(ls,'info','疯子「刀」：'+_semiNames(f.pick)+'（无实际效果，恶魔步骤会告知恶魔）'); }catch(e){} } nfDone(id); save(); render(); return; }   // v2.82.0
   const seat=(nightSendSeats(id)||[])[0];
@@ -2850,7 +2868,7 @@ function _nightUndoApply(id){
   else if(id==='undertaker'){ delete undertakerPicks[night]; delete sickAns[night+':undertaker']; }
   else if(id==='chef'||id==='empath'){ delete sickAns[night+':'+id]; }
   else if(id==='washerwoman'||id==='librarian'||id==='investigator'){ delete pingPicks[id]; }
-  else if(_isSemi(id)){ const s=(nightSendSeats(id)||[])[0]; if(s!=null&&s>=0){ try{ histSet(s,'info',null); }catch(e){} } if(id==='sailor'){ delete sailorPicks[night]; syncSailor(); } if(id==='exorcist'){ _exorcistUndo(); } if(id==='courtier'&&courtierUse&&courtierUse.n===night){ courtierUse=null; } if(id==='godfather'){ _godfatherUndo(); } if(id==='innkeeper'){ _innUndo(); } }   // v2.71.0 半自动：清掉「选择：…」魔典记录；v2.77.0 水手退回醉酒
+  else if(_isSemi(id)){ const s=(nightSendSeats(id)||[])[0]; if(s!=null&&s>=0){ try{ histSet(s,'info',null); }catch(e){} } if(id==='sailor'){ delete sailorPicks[night]; syncSailor(); } if(id==='exorcist'){ _exorcistUndo(); } if(id==='courtier'&&courtierUse&&courtierUse.n===night){ courtierUse=null; } if(id==='godfather'){ _godfatherUndo(); } if(id==='devilsadvocate'){ delete daPicks[night]; } if(id==='innkeeper'){ _innUndo(); } }   // v2.71.0 半自动：清掉「选择：…」魔典记录；v2.77.0 水手退回醉酒
   /* 5) 流程状态归零 → 回到「未开始」 */
   delete nightChecks[nfKey(id)];
   delete nightFlow[nfKey(id)];
@@ -3803,7 +3821,7 @@ window.stEndGame=async function(){
   /* 清空本局日志：每座位的夜间记录 + 开局板子快照 + 白天段落用到的提名/处决等 */
   try{ if(Array.isArray(meta)) meta.forEach(m=>{ if(m){ m.hist={}; m.info=''; } });
     window.__setupSnap=null;
-    nominations={}; executions={}; nightDeaths={}; grandPick={}; sailorPicks={}; nightWoke={}; exorcistPicks={}; innPicks={}; courtierUse=null; virginUsed=false; slayerShot=null;
+    nominations={}; executions={}; nightDeaths={}; grandPick={}; sailorPicks={}; nightWoke={}; exorcistPicks={}; innPicks={}; courtierUse=null; daPicks={}; virginUsed=false; slayerShot=null;
   }catch(e){}
   /* 收回已分享给玩家的日志与裁决面板 */
   try{ if(window._pubStLog) window._pubStLog(null); }catch(e){} window.__stLogShared=false;
@@ -4167,6 +4185,10 @@ function doExecute(seat){ const day=night; const prev=executions[day];
     if(prevSw!=null) try{ _clearSwTakeover(prevSw, day); }catch(e){} }   // 撤销上次处决触发的红唇接任通知
   try{ _clearExecFromAll(day); }catch(e){}   // 清掉本日旧的处决广播（改判/无人处决/撤销）
   if(seat<0){ executions[day]=-1; if(window._syncNoms) window._syncNoms(); if(window._syncSeats) window._syncSeats(); render(); return; }
+  if(daProtected(seat)){   // v2.86.0 魔鬼代言人保护：宣布被处决，但不会死亡
+    executions[day]=seat; histSet(seat,'protected','第'+day+'天被处决，但受魔鬼代言人保护未死亡');
+    try{ _broadcastExecToAll(day, seat); }catch(e){}
+    if(window._syncNoms) window._syncNoms(); if(window._syncSeats) window._syncSeats(); render(); _gt('魔鬼代言人保护：已记为被处决，但他没有死亡'); return; }
   if(sailorSober(seat)){   // v2.77.0 清醒的水手：宣布被处决，但不会死亡（不播处决视频、座位不变灰）
     executions[day]=seat; histSet(seat,'protected','第'+day+'天被处决，但水手清醒未死亡');
     try{ _broadcastExecToAll(day, seat); }catch(e){}
@@ -4675,6 +4697,7 @@ function renderGrim(){
     const ex=executions[day];
     if(ex!==undefined){
       if(ex===-1) h+='<div class="rrow" style="color:#2e7d43">今日无人处决 ✓</div>';
+      else if(!isDeadSeat(ex)) h+='<div class="rrow" style="color:#8a5f28">已处决：'+nameAt(ex)+' → 未死亡（'+(daProtected(ex)?'魔鬼代言人保护':(sailorSober(ex)?'水手清醒':'不会死'))+'）✓</div>';   // v2.86.0 被处决但没死：不显示圣徒/恶魔结算
       else { const r=meta[ex]&&meta[ex].role?RMAP[meta[ex].role]:null;
         h+='<div class="rrow" style="color:#b0402e">已处决：'+nameAt(ex)+'（'+(r?r.name+(meta[ex].isDrunk?'-酒鬼':''):'未分配')+'）✓</div>';
         if(meta[ex]&&meta[ex].role==="saint"){ if(meta[ex]._saintLoss) h+='<div class="rrow onblock">⚠ 圣徒被处决 → 好人落败</div>'; else h+='<div class="rrow" style="color:#8a5f28">圣徒被处决，但其中毒/醉酒 → 能力无效，好人未落败</div>'; }   // #2 与 checkWin 用同一快照，不再自相矛盾
@@ -4726,7 +4749,8 @@ function renderGrim(){
         if(s.id==="innkeeper") h+=innUI();   // v2.80.0 旅店老板：保护与醉酒
         if(s.id==="lunatic") h+=lunaUI();
         if(s.id==="courtier") h+=courtierUI();   // v2.83.0 侍臣：结果
-        if(s.id==="godfather") h+=godfatherUI();   // v2.85.0 教父   // v2.82.0 疯子
+        if(s.id==="godfather") h+=godfatherUI();   // v2.85.0 教父
+        if(s.id==="devilsadvocate") h+=daUI();   // v2.86.0 魔鬼代言人   // v2.82.0 疯子
         if(s.id==="chef") h+=numUI("chef","相邻邪恶对数",Math.max(2,meta.filter((m,i)=>regEvil(i)).length));
         if(s.id==="empath") h+=numUI("empath","两侧存活邻座邪恶数",2);
         if(s.id==="washerwoman"||s.id==="librarian"||s.id==="investigator") h+=pingUI(s.id);   // 揭示选择器：说书人先选「真身+幌子」两张牌，发送框随之显示要告知的内容
@@ -6932,7 +6956,7 @@ load(); render();
     window.__botcGameName=nm||'本局';
     /* 重置本局进程（保留座位与角色）：清空提名/处决/夜数/举手，并复活所有人 */
     try{ night=1; nominations={}; executions={}; virginUsed=false; slayerShot=null;
-      impKills={}; nightDeaths={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; grandPick={}; sailorPicks={}; nightWoke={}; exorcistPicks={}; innPicks={}; courtierUse=null; sickAns={};
+      impKills={}; nightDeaths={}; poisonPicks={}; monkPicks={}; ftPicks={}; butlerPicks={}; pingPicks={}; ravenPicks={}; undertakerPicks={}; grandPick={}; sailorPicks={}; nightWoke={}; exorcistPicks={}; innPicks={}; courtierUse=null; daPicks={}; sickAns={};
       if(typeof nightChecks==='object') Object.keys(nightChecks).forEach(k=>delete nightChecks[k]);
       if(typeof nightFlow==='object') Object.keys(nightFlow).forEach(k=>delete nightFlow[k]);
       if(typeof dayFlow==='object') Object.keys(dayFlow).forEach(k=>delete dayFlow[k]);
